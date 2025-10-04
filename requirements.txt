@@ -1,0 +1,5 @@
+#add requirements(with version) to this file so that it installs easily for others
+
+numpy==v2.3.0
+pymodbus==v3.11.3
+pyModbusTCP==v0.3.0
