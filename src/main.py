@@ -1,10 +1,15 @@
 from processSim.tankSim import tankSim
+from plcCom.plcModBusTCP import plcModBusTCP
+from plcCom.plcS7 import plcS7
 import time
 
 """Initialize process0 object"""
 
 process0 = tankSim("process0", 2000, 250, 135)
 process0.simStart()
+
+""""Initialize plc communication object"""
+
 
 # remember at what time we started
 startTime = time.time()
