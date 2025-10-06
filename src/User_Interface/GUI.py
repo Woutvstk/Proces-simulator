@@ -1,8 +1,12 @@
 import tkinter as tk
 
+
 # Maak een nieuw venster
 root = tk.Tk()
 root.title("PID Regelaar Tank")
+connectImage = tk.PhotoImage(file="C:\connect.png")
+Connect= tk.Button(root,image=connectImage, width=800,height= 500, command=root.destroy ).pack()
+
 
 
 # Gebruik windowed fullscreen (maximized) in plaats van echte fullscreen.
