@@ -21,7 +21,6 @@ class plcS7:
             if self.client.get_connected():
                 print(
                     f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
-                self.reset_registers()
                 return True
             else:
                 print(f"Cannot connect to S7 PLC at {self.ip}")
@@ -35,17 +34,13 @@ class plcS7:
         if self.client.get_connected():
             self.client.disconnect()
 
-    def check(self):
-        """Check if the connection is alive and attempt reconnection if not"""
+    def isConnected(self) -> bool:
+        """check if the connection is alive and attempt reconnection if not"""
         if not self.client.get_connected():
             print("Connection lost to the PLC!")
-            for i in range(3):  # try reconnecting up to 3 times
-                try:
-                    self.client.connect(self.ip, self.rack,
-                                        self.slot, self.tcpport)
-                except Exception as e:  # e = error object
-                    print("Reconnecting..." + str(i+1) + "/3")
-            time.sleep(2)
+            return False
+        else:
+            return True
 
     def SetDI(self, index, value, db_number=10):
         """
@@ -55,7 +50,7 @@ class plcS7:
         db_number: PLC data block
         """
         if 0 <= index < 17:
-            self.check()
+            self.isConnected()
             byte_index = index // 8  # determine which byte contains the bit
             bit_index = index % 8    # determine the bit position within the byte
             data = self.client.db_read(db_number, byte_index, 1)
@@ -72,7 +67,7 @@ class plcS7:
         db_number: PLC data block
         """
         if 0 <= index < 16:
-            self.check()
+            self.isConnected()
             val = int(value) & 0xFFFF  # ensure 16-bit
             byte_index = 4 + index * 2  # each AI occupies 2 bytes
             data = bytearray(2)
@@ -88,7 +83,7 @@ class plcS7:
         db_number: PLC data block
         """
         if 0 <= index < 16:
-            self.check()
+            self.isConnected()
             byte_index = 2 + index // 8  # determine which byte contains the bit
             bit_index = index % 8         # determine the bit position within the byte
             data = self.client.db_read(db_number, byte_index, 1)
@@ -102,7 +97,7 @@ class plcS7:
         db_number: PLC data block
         """
         if 0 <= index < 16:
-            self.check()
+            self.isConnected()
             byte_index = 36 + index * 2  # each AO occupies 2 bytes
             data = self.client.db_read(db_number, byte_index, 2)
             return s7util.get_int(data, 0)

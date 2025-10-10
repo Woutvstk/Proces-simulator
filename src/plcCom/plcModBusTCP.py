@@ -1,6 +1,7 @@
 from pymodbus.client import ModbusTcpClient
 import time
 
+
 class plcModBusTCP:
     """
     Class for Modbus TCP communication with a PLC.
@@ -17,7 +18,6 @@ class plcModBusTCP:
         self.client = ModbusTcpClient(self.ip, port=self.port)
         if self.client.connect():
             print(f"Connected to Modbus server {self.ip}:{self.port}")
-            self.reset_registers()
             return True
         else:
             print(f"Cannot connect to Modbus server {self.ip}:{self.port}")
@@ -28,16 +28,13 @@ class plcModBusTCP:
         if self.client:
             self.client.close()
 
-    def check(self):
-        """Check connection and attempt to reconnect if broken"""
+    def isConnected(self) -> bool:
+        """isConnected connection and attempt to reconnect if broken"""
         if self.client is None or not self.client.is_socket_open():
             print("Connection lost to the PLC!")
-            for i in range(3):  # try reconnecting up to 3 times
-                try:
-                    self.client.connect()
-                except Exception as e:
-                    print("Reconnecting..." + str(i+1) + "/3")
-                time.sleep(2)
+            return False
+        else:
+            return True
 
     def SetDI(self, index, value):
         """
@@ -45,7 +42,7 @@ class plcModBusTCP:
         index: register index (0-15)
         value: 0 or 1 (or True/False)
         """
-        self.check()
+        self.isConnected()
         if 0 <= index < 16:
             self.client.write_register(index, int(bool(value)))
             return int(bool(value))  # return as int
@@ -57,7 +54,7 @@ class plcModBusTCP:
         index: register index (16-31)
         value: integer value
         """
-        self.check()
+        self.isConnected()
         if 16 <= index < 32:
             val = int(value) & 0xFFFF  # ensure 16-bit
             self.client.write_register(index, val)
@@ -69,7 +66,7 @@ class plcModBusTCP:
         Read a digital output (coil) from the Modbus server.
         index: coil index
         """
-        self.check()
+        self.isConnected()
         rr = self.client.read_coils(index, count=1)
         if rr.isError():
             return 0
@@ -80,7 +77,7 @@ class plcModBusTCP:
         Read an analog output (holding register) from the Modbus server.
         index: register index
         """
-        self.check()
+        self.isConnected()
         rr = self.client.read_holding_registers(index + 32, count=1)
         if rr.isError():
             return None

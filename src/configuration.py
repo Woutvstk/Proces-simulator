@@ -9,8 +9,8 @@ class configuration:
         """
         Plc connection settings
         """
-        self.plcProtocol: str = "ModBusTCP"
-        self.plcIpAdress: str = "192.168.111.80"
+        self.plcProtocol: str = "S7"
+        self.plcIpAdress: str = "192.168.111.01"
         self.plcPort: int = 502
         self.plcRack: int = 0
         self.plcSlot: int = 1

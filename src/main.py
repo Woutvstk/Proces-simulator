@@ -78,25 +78,26 @@ while True:
         else:
             print("Error: no valid plcProtocol")
 
-        # TODO: implement PlcCom.isConnected() function. isConnected should return true if there is a valid connection
-        # if(PlcCom.isConnected()):
-        if (False):  # placeholder for line above
+        '''connect/reconnect'''
+        if PlcCom.isConnected():
             validPlcConnection = True
-            PlcCom.connect()
-            PlcCom.reset_registers()
         else:
-            validPlcConnection = False
+            if PlcCom.connect():  # run connect, returns True/False
+                validPlcConnection = True
+                PlcCom.reset_registers()
+            else:
+                validPlcConnection = False
+            # wait a bit before next try, plcsim taks some time to connect
+            time.sleep(0.2)
 
     elif (validPlcConnection == True):  # valid connection -> run main logic
 
         """
         Check if PLC is still connected
         """
-        # TODO: implement PlcCom.isConnected() function.
-        # if(PlcCom.isConnected() == False): #check if plc is still connected
-        if (False == False):  # placeholder for line above
-            validPlcConnection == False
-            continue
+        if not PlcCom.isConnected():  # check connection status
+            validPlcConnection = False
+            continue  # skip rest of loop
 
         """
         Transfer data between modules
