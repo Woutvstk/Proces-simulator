@@ -11,7 +11,7 @@ config = configuration()
 """Initialize process0 object"""
 
 
-process0 = tankSim("process0", 2000, 250, 135, 1000, 250, 21)
+process0 = tankSim("process0", 2000, 200, 135, 10000, 250, 21)
 process0.simStart()
 
 
@@ -21,7 +21,7 @@ validPlcConnection: bool = False
 # remember at what time we started
 startTime = time.time()
 
-plcAnalogMax = 65536
+plcAnalogMax = 32767
 
 
 def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
@@ -29,17 +29,17 @@ def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> 
 
 
 def sendPlcOutToProcessAndUi():
-    if (config.DQValveIn):  # if DQ valveIn = 1, ignore analog setpoint
+    if (PlcCom.GetDO(config.DQValveIn)):  # if DQ valveIn = 1, ignore analog setpoint
         process0.valveInOpenFraction = 1
     else:
         process0.valveInOpenFraction = mapValue(
             0, plcAnalogMax, 0, 1, PlcCom.GetAO(config.AQValveInFraction))
-    if (config.DQValveOut):  # if DQ valveOut = 1, ignore analog setpoint
+    if (PlcCom.GetDO(config.DQValveOut)):  # if DQ valveOut = 1, ignore analog setpoint
         process0.valveOutOpenFraction = 1
     else:
         process0.valveOutOpenFraction = mapValue(
             0, plcAnalogMax, 0, 1, PlcCom.GetAO(config.AQValveOutFraction))
-    if (config.DQHeater):  # if DQ heater = 1, ignore analog setpoint
+    if (PlcCom.GetDO(config.DQHeater)):  # if DQ heater = 1, ignore analog setpoint
         process0.heaterPowerFraction = 1
     else:
         process0.heaterPowerFraction = PlcCom.GetAO(config.AQHeaterFraction)
@@ -90,7 +90,7 @@ while True:
             else:
                 validPlcConnection = False
             # wait a bit before next try, plcsim taks some time to connect
-            time.sleep(0.2)
+            time.sleep(1)
 
     elif (validPlcConnection == True):  # valid connection -> run main logic
 

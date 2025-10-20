@@ -55,7 +55,7 @@ class tankSim:
         self.simPaused = False
 
         # internal variables
-        self._simInterval = 0.1  # time interval in seconds to do simulation calculations
+        self._simInterval = 1  # time interval in seconds to do simulation calculations
         self._stopThread = False
         self._thread = threading.Thread(
             target=self._run, args=(), daemon=True)
@@ -86,12 +86,14 @@ class tankSim:
             self.digitalLevelSensorLowTriggered = (
                 self.liquidVolume >= self.digitalLevelSensorLowTriggerLevel)
 
-            # Calculate new liquid temperature
-            self.liquidTemperature = min(
-                self.liquidTemperature+self.heaterMaxPower*self.heaterPowerFraction/self.liquidSpecificHeatCapacity/self.liquidSpecificWeight * self._simInterval, self.liquidBoilingTemp)
-
-            self.liquidTemperature = max(
-                self.liquidTemperature-self.tankHeatLoss * 1 / self.liquidSpecificHeatCapacity/self.liquidSpecificWeight * self._simInterval, self.ambientTemp)
+            if (self.liquidVolume > 0):
+                # Calculate new liquid temperature
+                self.liquidTemperature = min(
+                    self.liquidTemperature+self.heaterMaxPower*self.heaterPowerFraction/self.liquidSpecificHeatCapacity/self.liquidSpecificWeight/self.liquidVolume * self._simInterval, self.liquidBoilingTemp)
+                self.liquidTemperature = max(
+                    self.liquidTemperature-self.tankHeatLoss * 1 / self.liquidSpecificHeatCapacity/self.liquidSpecificWeight/self.liquidVolume * self._simInterval, self.ambientTemp)
+            else:
+                self.liquidTemperature = 0
 
     """
     Member functions
