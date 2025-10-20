@@ -1,7 +1,5 @@
 import snap7
 import snap7.util as s7util
-import time
-
 
 class plcS7:
     """Class for communication with a Siemens S7 PLC using Snap7"""
@@ -49,7 +47,7 @@ class plcS7:
         value: True/False or 1/0
         db_number: PLC data block
         """
-        if 0 <= index < 17:
+        if 0 <= index < 16:
             self.isConnected()
             byte_index = index // 8  # determine which byte contains the bit
             bit_index = index % 8    # determine the bit position within the byte

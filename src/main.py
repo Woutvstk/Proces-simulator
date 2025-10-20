@@ -1,13 +1,13 @@
 from processSim.tankSim import tankSim
 from plcCom.plcModBusTCP import plcModBusTCP
 from plcCom.plcS7 import plcS7
+from plcCom.logoS7 import logoS7
 import time
 from configuration import configuration
 
 
 """Initialize configuration instance with default parameters"""
 config = configuration()
-
 """Initialize process0 object"""
 
 
@@ -72,9 +72,11 @@ while True:
         """"Initialize plc communication object"""
         if config.plcProtocol == "ModBusTCP":
             PlcCom = plcModBusTCP(config.plcIpAdress, config.plcPort)
-        elif config.plcProtocol == "S7":
+        elif config.plcProtocol == "plcS7":
             # IP address, rack, slot (from HW settings)
             PlcCom = plcS7(config.plcIpAdress, config.plcRack, config.plcSlot)
+        elif config.plcProtocol == "logoS7":
+            PlcCom = logoS7(config.plcIpAdress, config.taspLogo, config.taspServer)
         else:
             print("Error: no valid plcProtocol")
 
