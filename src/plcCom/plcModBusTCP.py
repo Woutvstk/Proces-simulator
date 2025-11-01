@@ -3,6 +3,13 @@ from configuration import configurationClass
 from status import statusClass
 
 
+plcAnalogMax = 32767
+
+
+def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
+    return (old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin
+
+
 class plcModBusTCP:
     """
     Class for Modbus TCP communication with a PLC.
@@ -114,6 +121,13 @@ class plcModBusTCP:
             0, status.tankVolume, 0, plcAnalogMax, status.liquidVolume))
         self.SetAI(config.AITemperatureSensor, mapValue(-50, 250,
                    0, plcAnalogMax, status.liquidTemperature))
+
+    def resetOutputs(self, config: configurationClass, status: statusClass):
+        # only update status if controller by plc
+        if (config.plcGuiControl == "plc"):
+            status.valveInOpenFraction = 0
+            status.valveOutOpenFraction = 0
+            status.heaterPowerFraction = 0
 
     def reset_registers(self):
         """Reset all DI and AI registers to 0"""

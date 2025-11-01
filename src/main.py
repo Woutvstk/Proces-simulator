@@ -81,13 +81,17 @@ while True:
         # only try to contact plc if there is a connection
         if (validPlcConnection):
             PlcCom.updateData(config, status)
+        else:
+            # if control is plc but no plc connection, pretend plc outputs are all 0
+            PlcCom.resetOutputs(config, status)
+
         Gui0.updateData(config, status)
 
         """Update process values"""
         process0.updateData(config, status)
         """send new process status to gui"""
         Gui0.updateData(config, status)
-        # print out the current time since start and status
+        # print out the current time since start and status# print(f"Time: {int(time.time() - startTime)}, simRunning: {status.simRunning}, Liquid level: {int(status.liquidVolume)}, Liquid temp: {int(status.liquidTemperature)}")
         # print(f"Time: {int(time.time() - startTime)}, simRunning: {status.simRunning}, Liquid level: {int(status.liquidVolume)}, Liquid temp: {int(status.liquidTemperature)}")
         timeLastUpdate = time.time()
 

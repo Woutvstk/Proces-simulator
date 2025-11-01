@@ -90,6 +90,7 @@ class MainScherm:
 class TankScherm:
 
     def __init__(main, MainFrame):
+        global refTank
         main.MainFrame = MainFrame
         main.canvas = tk.Canvas(
             MainFrame, width=1000, height=700, bg="white", border=0, highlightthickness=0)
@@ -97,6 +98,7 @@ class TankScherm:
 
         main.is_running = False
         main.update_id = None
+        refTank = main
 
         # Create control panel first (permanent widgets)
         main.create_control_panel()
@@ -462,7 +464,7 @@ class SettingsScherm:
         SoortControlerlabel.grid(row=0, column=0, sticky="e")
         SoortControler = tk.StringVar()
         soortControlerMenu = tk.OptionMenu(
-            SettingsFrame, SoortControler, "ModBusTCP", "plcS7", "logoS7")
+            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "plcS7", "logoS7")
         soortControlerMenu.grid(row=0, column=1, sticky="ew")
         SoortControler.set(SaveControler)
 
@@ -625,10 +627,14 @@ kleuren = [
     "Pink"
 ]
 
+# maintain reference to current Tankscherm instance, instance is re-created when changing page to Tankscherm
+refTank: TankScherm
+
 
 class GuiClass:
 
     def __init__(self) -> None:
+        global refTank
 
         self.root = tk.Tk()
         # when window is closed, stop the rest of the program
@@ -636,6 +642,7 @@ class GuiClass:
         self.Main = MainScherm(self.root)
         self.nav = NavigationFrame(self.root, self.Main.MainFrame)
         self.Tank = TankScherm(self.Main.MainFrame)
+        refTank = self.Tank
 
     def updateGui(self) -> None:
         self.root.update_idletasks()
@@ -643,12 +650,17 @@ class GuiClass:
 
     def updateData(self, config: configurationClass, status: statusClass) -> None:
         global heating_power, inlet_valve, outlet_valve, water_level, tank_volume, temperature
-        global exitProgram, TryConnectPending, ip_adress, SaveControler
+        global exitProgram, TryConnectPending, ip_adress, SaveControler, refTank
 
         # write data to status and config
-        config.plcProtocol = SaveControler
+        if (SaveControler == "Gui"):
+            config.plcGuiControl = "gui"
+        else:
+            config.plcGuiControl = "plc"
+            config.plcProtocol = SaveControler
+
         config.doExit = exitProgram
-        status.simRunning = self.Tank.is_running
+        status.simRunning = refTank.is_running
         config.tankVolume = tank_volume
         if (TryConnectPending):
             config.plcIpAdress = ip_adress

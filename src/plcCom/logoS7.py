@@ -3,6 +3,12 @@ from configuration import configurationClass
 from status import statusClass
 # https://python-snap7.readthedocs.io/en/1.0/logo.html
 
+plcAnalogMax = 32767
+
+
+def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
+    return (old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin
+
 
 class logoS7:
     """Class for communication with a Siemens S7 PLC using Snap7"""
@@ -128,6 +134,13 @@ class logoS7:
             0, status.tankVolume, 0, plcAnalogMax, status.liquidVolume))
         self.SetAI(config.AITemperatureSensor, mapValue(-50, 250,
                    0, plcAnalogMax, status.liquidTemperature))
+
+    def resetOutputs(self, config: configurationClass, status: statusClass):
+        # only update status if controller by plc
+        if (config.plcGuiControl == "plc"):
+            status.valveInOpenFraction = 0
+            status.valveOutOpenFraction = 0
+            status.heaterPowerFraction = 0
 
     def reset_registers(self, db_number=10):
         """

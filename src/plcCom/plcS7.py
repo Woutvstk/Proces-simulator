@@ -141,6 +141,13 @@ class plcS7:
         self.SetAI(config.AITemperatureSensor, mapValue(-50, 250,
                    0, plcAnalogMax, status.liquidTemperature))
 
+    def resetOutputs(self, config: configurationClass, status: statusClass):
+        # only update status if controller by plc
+        if (config.plcGuiControl == "plc"):
+            status.valveInOpenFraction = 0
+            status.valveOutOpenFraction = 0
+            status.heaterPowerFraction = 0
+
     def reset_registers(self, db_number=10):
         """
         Reset all registers in the data block to 0.
