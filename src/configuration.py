@@ -17,7 +17,7 @@ class configurationClass:
         """
         # written by: gui
         self.plcProtocol: str = "logoS7"
-        self.plcIpAdress: str = "192.168.111.1"
+        self.plcIpAdress: str = "192.168.0.1"
         self.plcPort: int = 502
         self.plcRack: int = 0
         self.plcSlot: int = 1

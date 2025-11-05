@@ -76,7 +76,7 @@ class MainScherm:
         main.Adres = tk.Entry(main.conFrame, bg=conColor,
                               fg="White", font=("Arial", 10))
         main.Adres.place(x=970, y=12.5)
-        main.Adres.insert(0, "192.168.111.10")
+        main.Adres.insert(0, "192.168.0.1")
 
         main.MainFrame = tk.Frame(main.root, bg="white")
         main.MainFrame.place(relwidth=1.0, relheight=1.0, x=50, y=50)
