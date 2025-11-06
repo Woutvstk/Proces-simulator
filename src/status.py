@@ -1,3 +1,5 @@
+import csv
+
 
 class statusClass:
     def __init__(self):
@@ -33,3 +35,32 @@ class statusClass:
         # written by process
         self.flowRateIn = 0
         self.flowRateOut = 0
+
+    # Save config to a CSV file
+    def saveToFile(self, exportFileName, createFile: bool = False):
+        print(f"Exporting status to: {exportFileName}")
+        openMode: str
+        if (createFile):
+            openMode = "w"  # if creating new file, open in Write mode
+        else:
+            openMode = "a"  # if adding to existing file, open in append mode
+
+        with open(exportFileName, openMode, newline="") as file:
+            writer = csv.writer(file)
+            if (createFile):
+                # if creating new file, add csv header first
+                writer.writerow(["variable", "value"])
+            writer.writerow(["valveInOpenFraction", self.valveInOpenFraction])
+            writer.writerow(["heaterPowerFraction", self.heaterPowerFraction])
+            file.close
+
+    # Read status back from the CSV file
+    def loadFromFile(self, importFileName: str):
+        with open(importFileName, "r") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row["variable"] == "valveInOpenFraction":
+                    self.valveInOpenFraction = int(row["value"])
+                elif row["variable"] == "heaterPowerFraction":
+                    self.heaterPowerFraction = int(row["value"])
+        print(f"Status loaded from: {importFileName}")

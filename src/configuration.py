@@ -1,6 +1,4 @@
 import csv
-import pathlib
-import os
 
 
 class configurationClass:
@@ -12,13 +10,13 @@ class configurationClass:
     def __init__(self):
 
         # control process trough gui or plc
-        # written by: gui
+        # written by: gui, import
         self.plcGuiControl = "gui"  # options: gui/plc
         self.doExit = False
         """
         Plc connection settings
         """
-        # written by: gui
+        # written by: gui, import
         self.plcProtocol: str = "logoS7"
         self.plcIpAdress: str = "192.168.0.1"
         self.plcPort: int = 502
@@ -57,6 +55,7 @@ class configurationClass:
         """
         process settings
         """
+        # written by: gui, import
         self.tankVolume = 200
         self.valveInMaxFlow = 5
         self.valveOutMaxFlow = 2
@@ -78,19 +77,25 @@ class configurationClass:
         # boiling temperature of liquid (water: 100)
         self.liquidBoilingTemp = 100
 
-    # Save variables to a CSV file
-    def saveToFile(self, exportFileName):
+    # Save config to a CSV file
+    def saveToFile(self, exportFileName, createFile: bool = False):
         print(f"Exporting config to: {exportFileName}")
-        # current_dir = pathlib.Path(__file__).parent.resolve()
-        with open(exportFileName, "w", newline="") as file:
+        openMode: str
+        if (createFile):
+            openMode = "w"  # if creating new file, open in Write mode
+        else:
+            openMode = "a"  # if adding to existing file, open in append mode
+
+        with open(exportFileName, openMode, newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(["variable", "value"])  # header row
+            if (createFile):
+                # if creating new file, add csv header first
+                writer.writerow(["variable", "value"])
             writer.writerow(["tankVolume", self.tankVolume])
             writer.writerow(["tankHeatLoss", self.tankHeatLoss])
             file.close
-        print("Data exported to csv file")
 
-    # Read variables back from the CSV file
+    # Read config back from the CSV file
     def loadFromFile(self, importFileName: str):
         with open(importFileName, "r") as file:
             reader = csv.DictReader(file)
@@ -99,4 +104,4 @@ class configurationClass:
                     self.tankVolume = int(row["value"])
                 elif row["variable"] == "tankHeatLoss":
                     self.tankHeatLoss = int(row["value"])
-        print("Data imported from csv file")
+        print(f"Config loaded from: {importFileName}")

@@ -708,14 +708,17 @@ class GuiClass:
         if (exportCommand):
             file = filedialog.asksaveasfilename(
                 filetypes=csvFileType, defaultextension=csvFileType)
-            config.saveToFile(file)
-            exportCommand = False  # reset export command flag
-
+            # create file, add header, add config variables
+            config.saveToFile(file, True)
+            # add status variables to file
+            status.saveToFile(file)
+            # reset export command flag
+            exportCommand = False
         if (importCommand):
             file = filedialog.askopenfilename(
                 filetypes=csvFileType, defaultextension=csvFileType)
             config.loadFromFile(file)
-            importCommand = False
+            importCommand = False  # reset import command flag
 
     def onExit(self) -> None:
         global exitProgram
