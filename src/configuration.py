@@ -1,3 +1,6 @@
+import csv
+import pathlib
+import os
 
 
 class configurationClass:
@@ -74,3 +77,26 @@ class configurationClass:
         self.liquidTemperature = self.ambientTemp
         # boiling temperature of liquid (water: 100)
         self.liquidBoilingTemp = 100
+
+    # Save variables to a CSV file
+    def saveToFile(self, exportFileName):
+        print(f"Exporting config to: {exportFileName}")
+        # current_dir = pathlib.Path(__file__).parent.resolve()
+        with open(exportFileName, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["variable", "value"])  # header row
+            writer.writerow(["tankVolume", self.tankVolume])
+            writer.writerow(["tankHeatLoss", self.tankHeatLoss])
+            file.close
+        print("Data exported to csv file")
+
+    # Read variables back from the CSV file
+    def loadFromFile(self, importFileName: str):
+        with open(importFileName, "r") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row["variable"] == "tankVolume":
+                    self.tankVolume = int(row["value"])
+                elif row["variable"] == "tankHeatLoss":
+                    self.tankHeatLoss = int(row["value"])
+        print("Data imported from csv file")
