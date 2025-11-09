@@ -1,3 +1,4 @@
+import csv
 
 
 class configurationClass:
@@ -9,14 +10,14 @@ class configurationClass:
     def __init__(self):
 
         # control process trough gui or plc
-        # written by: gui
+        # written by: gui, import
         self.plcGuiControl = "gui"  # options: gui/plc
         self.doExit = False
         """
         Plc connection settings
         """
-        # written by: gui
-        self.plcProtocol: str = "logoS7"
+        # written by: gui, import
+        self.plcProtocol: str = "logoS7"  # options: Gui/ModBusTCP/plcS7/logoS7
         self.plcIpAdress: str = "192.168.0.1"
         self.plcPort: int = 502
         self.plcRack: int = 0
@@ -41,11 +42,15 @@ class configurationClass:
 
         # PLC INPUTS
         # DIGITAL
-        self.DILevelSensorHigh = {"byte": 0, "bit": 0}  # False = liquid below sensor
-        self.DILevelSensorLow = {"byte": 0, "bit": 1}   # False = liquid below sensor
+        # False = liquid below sensor
+        self.DILevelSensorHigh = {"byte": 0, "bit": 0}
+        # False = liquid below sensor
+        self.DILevelSensorLow = {"byte": 0, "bit": 1}
         # ANALOG
-        self.AILevelSensor = {"byte": 2}                # 0 = empty tank, MAX = full tank
-        self.AITemperatureSensor = {"byte": 4}          # 0 = -50°C, MAX = 250°C
+        # 0 = empty tank, MAX = full tank
+        self.AILevelSensor = {"byte": 2}
+        # 0 = -50°C, MAX = 250°C
+        self.AITemperatureSensor = {"byte": 4}
 
         self.lowestByte, self.highestByte = self.get_byte_range()
 
@@ -56,34 +61,66 @@ class configurationClass:
         """
         process settings
         """
-        self.tankVolume = 200
-        self.valveInMaxFlow = 5
-        self.valveOutMaxFlow = 2
-        self.ambientTemp = 21
+        # written by: gui, import
+        self.tankVolume: float = 200.0
+        self.valveInMaxFlow: float = 5.0
+        self.valveOutMaxFlow: float = 2.0
+        self.ambientTemp: float = 21.0
         # default at 90%
-        self.digitalLevelSensorHighTriggerLevel = 0.9 * self.tankVolume
+        self.digitalLevelSensorHighTriggerLevel: float = 0.9 * self.tankVolume
         # default at 10%
-        self.digitalLevelSensorLowTriggerLevel = 0.1 * self.tankVolume
+        self.digitalLevelSensorLowTriggerLevel: float = 0.1 * self.tankVolume
         # heater power in watts
-        self.heaterMaxPower = 10000
+        self.heaterMaxPower: float = 10000.0
         # tank heat loss
-        self.tankHeatLoss = 150
+        self.tankHeatLoss: float = 150.0
         # specific heat capacity in Joeles/Kg*°C (4186 for water)
-        self.liquidSpecificHeatCapacity: float = 4186
+        self.liquidSpecificHeatCapacity: float = 4186.0
         # specific weight in kg per liter (water: 1)
-        self.liquidSpecificWeight: float = 1
-        # initialize liquid temp at ambient
-        self.liquidTemperature = self.ambientTemp
+        self.liquidSpecificWeight: float = 0.997
         # boiling temperature of liquid (water: 100)
-        self.liquidBoilingTemp = 100
 
+        self.liquidBoilingTemp: float = 100.0
+
+        self.importExportVariableList = ["tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp", "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel", "heaterMaxPower", "tankHeatLoss",
+                                         "liquidSpecificHeatCapacity", "liquidBoilingTemp", "liquidSpecificWeight"]
+
+    # Save config to a CSV file
+    def saveToFile(self, exportFileName, createFile: bool = False):
+        print(f"Exporting config to: {exportFileName}")
+        openMode: str
+        if (createFile):
+            openMode = "w"  # if creating new file, open in Write mode
+        else:
+            openMode = "a"  # if adding to existing file, open in append mode
+
+        with open(exportFileName, openMode, newline="") as file:
+            writer = csv.writer(file)
+            if (createFile):
+                # if creating new file, add csv header first
+                writer.writerow(["variable", "value"])
+            # write all variables from list with value to csv
+            for variable in self.importExportVariableList:
+                writer.writerow([variable, getattr(self, variable)])
+            file.close
+
+    # Read config back from the CSV file
+    def loadFromFile(self, importFileName: str):
+        with open(importFileName, "r") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                for variable in self.importExportVariableList:
+                    if row["variable"] == variable:
+                        setattr(self, variable, type(
+                            getattr(self, variable))(row["value"]))
+        print(f"Config loaded from: {importFileName}")
 
     def get_byte_range(self):
         """
         Return the lowest and highest byte used in all IO definitions.
         Scans all dicts in the current object that have a 'byte' key.
         """
-        #function used for resetSendInputs in plcCom
+        # function used for resetSendInputs in plcCom
         bytes_used = []
 
         for _, value in self.__dict__.items():

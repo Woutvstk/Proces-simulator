@@ -8,6 +8,7 @@ plcAnalogMax = 32767
    due to the different mapping in logo we get now :
    i1 = byte:0 bit :0 // i10 = byte:1 bit :1,..."""
 
+
 def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
     return (old - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin
 
@@ -38,7 +39,6 @@ class logoS7:
     def disconnect(self):
         if self.logo.get_connected():
             self.logo.disconnect()
-           
 
     def isConnected(self) -> bool:
         return self.logo.get_connected()
@@ -73,7 +73,7 @@ class logoS7:
     def SetAI(self, byte: int, value: int):
         """
         Zet een analoge input (AI) via byte."""
-        if byte  >= 0:
+        if byte >= 0:
             val = int(value) & 0xFFFF
             address = f"VW{byte+1032}"
             self.logo.write(address, val)
@@ -92,13 +92,15 @@ class logoS7:
         return 0
 
     def updateData(self, config: configurationClass, status: statusClass):
+
         if config.plcGuiControl == "plc":
             # Valve IN
             if self.GetDO(config.DQValveIn_byte, config.DQValveIn_bit):
-                status.valveInOpenFraction = 1
+                status.valveInOpenFraction = float(1)
             else:
                 status.valveInOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction_byte)
+                    0, plcAnalogMax, 0, 1, self.GetAO(
+                        config.AQValveInFraction_byte)
                 )
 
             # Valve OUT
@@ -106,14 +108,16 @@ class logoS7:
                 status.valveOutOpenFraction = 1
             else:
                 status.valveOutOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveOutFraction_byte)
+                    0, plcAnalogMax, 0, 1, self.GetAO(
+                        config.AQValveOutFraction_byte)
                 )
 
             # Heater
             if self.GetDO(config.DQHeater_byte, config.DQHeater_bit):
                 status.heaterPowerFraction = 1
             else:
-                status.heaterPowerFraction = self.GetAO(config.AQHeaterFraction_byte)
+                status.heaterPowerFraction = self.GetAO(
+                    config.AQHeaterFraction_byte)
 
         # Inputs updaten
         self.SetDI(config.DILevelSensorHigh_byte,
@@ -127,12 +131,13 @@ class logoS7:
             -50, 250, 0, plcAnalogMax, status.liquidTemperature))
 
     def resetOutputs(self, config: configurationClass, status: statusClass):
-        if config.plcGuiControl == "plc":
-            status.valveInOpenFraction = 0
-            status.valveOutOpenFraction = 0
-            status.heaterPowerFraction = 0
+        # only update status if controller by plc
+        if (config.plcGuiControl == "plc"):
+            status.valveInOpenFraction = float(0)
+            status.valveOutOpenFraction = float(0)
+            status.heaterPowerFraction = float(0)
 
     def reset_registers(self):
         """Reset alle V geheugen naar 0"""
         for byte in range(1024, 1468):
-             self.logo.write(f"VW{byte}", 0)
+            self.logo.write(f"VW{byte}", 0)

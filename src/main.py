@@ -85,8 +85,6 @@ while True:
             # if control is plc but no plc connection, pretend plc outputs are all 0
             PlcCom.resetOutputs(config, status)
 
-        Gui0.updateData(config, status)
-
         """Update process values"""
         process0.updateData(config, status)
         """send new process status to gui"""
