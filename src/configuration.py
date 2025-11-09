@@ -17,7 +17,7 @@ class configurationClass:
         Plc connection settings
         """
         # written by: gui, import
-        self.plcProtocol: str = "logoS7"
+        self.plcProtocol: str = "logoS7"  # options: Gui/ModBusTCP/plcS7/logoS7
         self.plcIpAdress: str = "192.168.0.1"
         self.plcPort: int = 502
         self.plcRack: int = 0
@@ -56,26 +56,27 @@ class configurationClass:
         process settings
         """
         # written by: gui, import
-        self.tankVolume = 200
-        self.valveInMaxFlow = 5
-        self.valveOutMaxFlow = 2
-        self.ambientTemp = 21
+        self.tankVolume: float = 200.0
+        self.valveInMaxFlow: float = 5.0
+        self.valveOutMaxFlow: float = 2.0
+        self.ambientTemp: float = 21.0
         # default at 90%
-        self.digitalLevelSensorHighTriggerLevel = 0.9 * self.tankVolume
+        self.digitalLevelSensorHighTriggerLevel: float = 0.9 * self.tankVolume
         # default at 10%
-        self.digitalLevelSensorLowTriggerLevel = 0.1 * self.tankVolume
+        self.digitalLevelSensorLowTriggerLevel: float = 0.1 * self.tankVolume
         # heater power in watts
-        self.heaterMaxPower = 10000
+        self.heaterMaxPower: float = 10000.0
         # tank heat loss
-        self.tankHeatLoss = 150
+        self.tankHeatLoss: float = 150.0
         # specific heat capacity in Joeles/Kg*°C (4186 for water)
-        self.liquidSpecificHeatCapacity: float = 4186
+        self.liquidSpecificHeatCapacity: float = 4186.0
         # specific weight in kg per liter (water: 1)
-        self.liquidSpecificWeight: float = 1
-        # initialize liquid temp at ambient
-        self.liquidTemperature = self.ambientTemp
+        self.liquidSpecificWeight: float = 0.997
         # boiling temperature of liquid (water: 100)
-        self.liquidBoilingTemp = 100
+        self.liquidBoilingTemp: float = 100.0
+
+        self.importExportVariableList = ["tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp", "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel", "heaterMaxPower", "tankHeatLoss",
+                                         "liquidSpecificHeatCapacity", "liquidBoilingTemp", "liquidSpecificWeight"]
 
     # Save config to a CSV file
     def saveToFile(self, exportFileName, createFile: bool = False):
@@ -91,8 +92,9 @@ class configurationClass:
             if (createFile):
                 # if creating new file, add csv header first
                 writer.writerow(["variable", "value"])
-            writer.writerow(["tankVolume", self.tankVolume])
-            writer.writerow(["tankHeatLoss", self.tankHeatLoss])
+            # write all variables from list with value to csv
+            for variable in self.importExportVariableList:
+                writer.writerow([variable, getattr(self, variable)])
             file.close
 
     # Read config back from the CSV file
@@ -100,8 +102,8 @@ class configurationClass:
         with open(importFileName, "r") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                if row["variable"] == "tankVolume":
-                    self.tankVolume = int(row["value"])
-                elif row["variable"] == "tankHeatLoss":
-                    self.tankHeatLoss = int(row["value"])
+                for variable in self.importExportVariableList:
+                    if row["variable"] == variable:
+                        setattr(self, variable, type(
+                            getattr(self, variable))(row["value"]))
         print(f"Config loaded from: {importFileName}")

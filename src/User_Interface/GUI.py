@@ -35,8 +35,9 @@ importCommand: bool = False
 SaveKleur = "blue"
 SaveBreedte = 1000
 SaveHoogte = 2000
-SaveDebiet = 100
-SaveDichtheid = 997
+SaveDebietMaxIn = defaultConfig.valveInMaxFlow
+SaveDebietMaxOut = defaultConfig.valveOutMaxFlow
+SaveDichtheid = defaultConfig.liquidSpecificWeight*1000
 SaveControler = "ModBusTCP"
 SaveKlepen = 1
 SaveWeerstand = 1
@@ -449,7 +450,7 @@ class SettingsScherm:
 
         def ApplySettings():
             global SaveBreedte, SaveKleur, SaveDichtheid, SaveHoogtemeting
-            global SaveWeerstand, SaveKlepen, SaveDebiet, SaveHoogte, SaveControler
+            global SaveWeerstand, SaveKlepen, SaveDebietMaxIn, SaveHoogte, SaveControler
 
             SaveBreedte = Breedte.get()
             SaveKleur = KleurVloeistof.get().lower()
@@ -457,7 +458,7 @@ class SettingsScherm:
             SaveHoogtemeting = DigitaleHoogte.get()
             SaveWeerstand = RegelbareWeerstand.get()
             SaveKlepen = RegelbareKlepen.get()
-            SaveDebiet = Debiet.get()
+            SaveDebietMaxIn = DebietMaxIn.get()
             SaveHoogte = Hoogte.get()
             SaveControler = SoortControler.get()
 
@@ -491,12 +492,12 @@ class SettingsScherm:
         Hoogte.grid(row=3, column=1)
         Hoogte.insert(0, SaveHoogte)
 
-        DebietLabel = tk.Label(
+        DebietMaxInLabel = tk.Label(
             SettingsFrame, text="Toekomend debiet (l/min):", bg="white", fg="black", font=("Arial", 10))
-        DebietLabel.grid(row=4, column=0, sticky="e")
-        Debiet = tk.Entry(SettingsFrame)
-        Debiet.grid(row=4, column=1)
-        Debiet.insert(0, SaveDebiet)
+        DebietMaxInLabel.grid(row=4, column=0, sticky="e")
+        DebietMaxIn = tk.Entry(SettingsFrame)
+        DebietMaxIn.grid(row=4, column=1)
+        DebietMaxIn.insert(0, SaveDebietMaxIn)
 
         RegelingLabel = tk.Label(
             SettingsFrame, text="Regeling:", bg="white", fg="black", font=("Arial", 10))
@@ -670,7 +671,7 @@ class GuiClass:
         self.root.update()
 
     def updateData(self, config: configurationClass, status: statusClass) -> None:
-        global heating_power, inlet_valve, outlet_valve, water_level, tank_volume, temperature
+        global heating_power, inlet_valve, outlet_valve, water_level, tank_volume, temperature, SaveDebietMaxIn, SaveDichtheid
         global exitProgram, TryConnectPending, ip_adress, SaveControler, refTank
         global exportCommand, importCommand
 
@@ -710,11 +711,12 @@ class GuiClass:
             importCommand = False  # reset import command flag
 
         # read data from status and config (can include our imported changes)
+        # write data to status and config
+        tank_volume = config.tankVolume
         water_level = status.liquidVolume
         temperature = status.liquidTemperature
-        inlet_valve = status.valveInOpenFraction*100
-        outlet_valve = status.valveOutOpenFraction*100
-        heating_power = status.heaterPowerFraction*100
+        SaveDichtheid = config.liquidSpecificWeight*1000
+        SaveDebietMaxIn = config.valveInMaxFlow
 
         # export status and config after all changes are done
         if (exportCommand):

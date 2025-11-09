@@ -108,7 +108,7 @@ class logoS7:
         # only update status if controller by plc
         if (config.plcGuiControl == "plc"):
             if (self.GetDO(config.DQValveIn)):  # if DQ valveIn = 1, ignore analog setpoint
-                status.valveInOpenFraction = 1
+                status.valveInOpenFraction = float(1)
             else:
                 status.valveInOpenFraction = mapValue(
                     0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction))
@@ -138,9 +138,9 @@ class logoS7:
     def resetOutputs(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
         if (config.plcGuiControl == "plc"):
-            status.valveInOpenFraction = 0
-            status.valveOutOpenFraction = 0
-            status.heaterPowerFraction = 0
+            status.valveInOpenFraction = float(0)
+            status.valveOutOpenFraction = float(0)
+            status.heaterPowerFraction = float(0)
 
     def reset_registers(self, db_number=10):
         """
