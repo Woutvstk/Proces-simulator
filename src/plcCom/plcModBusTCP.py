@@ -113,7 +113,7 @@ class plcModBusTCP:
         # Only update if PLC controls process
         if config.plcGuiControl == "plc":
             if self.GetDO(config.DQValveIn["byte"], config.DQValveIn["bit"]):
-                status.valveInOpenFraction = 1
+                status.valveInOpenFraction = float(1)
             else:
                 status.valveInOpenFraction = mapValue(
                     0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction))
@@ -127,7 +127,8 @@ class plcModBusTCP:
             if self.GetDO(config.DQHeater["byte"], config.DQHeater["bit"]):
                 status.heaterPowerFraction = 1
             else:
-                status.heaterPowerFraction = self.GetAO(config.AQHeaterFraction)
+                status.heaterPowerFraction = self.GetAO(
+                    config.AQHeaterFraction)
 
         # Always send process inputs to PLC
         self.SetDI(config.DILevelSensorHigh["byte"], config.DILevelSensorHigh["bit"],
@@ -140,11 +141,11 @@ class plcModBusTCP:
             -50, 250, 0, plcAnalogMax, status.liquidTemperature))
 
     def resetOutputs(self, config: configurationClass, status: statusClass):
-        """Reset process fractions when PLC control active"""
+        """Reset process inputs when PLC control active"""
         if config.plcGuiControl == "plc":
-            status.valveInOpenFraction = 0
-            status.valveOutOpenFraction = 0
-            status.heaterPowerFraction = 0
+            status.valveInOpenFraction = float(0)
+            status.valveOutOpenFraction = float(0)
+            status.heaterPowerFraction = float(0)
 
     def reset_registers(self, start_byte: int = 0, end_byte: int = 48):
         """Reset all Modbus registers in range to 0"""
