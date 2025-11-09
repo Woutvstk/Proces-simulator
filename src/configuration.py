@@ -42,11 +42,15 @@ class configurationClass:
 
         # PLC INPUTS
         # DIGITAL
-        self.DILevelSensorHigh = {"byte": 0, "bit": 0}  # False = liquid below sensor
-        self.DILevelSensorLow = {"byte": 0, "bit": 1}   # False = liquid below sensor
+        # False = liquid below sensor
+        self.DILevelSensorHigh = {"byte": 0, "bit": 0}
+        # False = liquid below sensor
+        self.DILevelSensorLow = {"byte": 0, "bit": 1}
         # ANALOG
-        self.AILevelSensor = {"byte": 2}                # 0 = empty tank, MAX = full tank
-        self.AITemperatureSensor = {"byte": 4}          # 0 = -50°C, MAX = 250°C
+        # 0 = empty tank, MAX = full tank
+        self.AILevelSensor = {"byte": 2}
+        # 0 = -50°C, MAX = 250°C
+        self.AITemperatureSensor = {"byte": 4}
 
         self.lowestByte, self.highestByte = self.get_byte_range()
 
@@ -111,14 +115,12 @@ class configurationClass:
                             getattr(self, variable))(row["value"]))
         print(f"Config loaded from: {importFileName}")
 
-
-
     def get_byte_range(self):
         """
         Return the lowest and highest byte used in all IO definitions.
         Scans all dicts in the current object that have a 'byte' key.
         """
-        #function used for resetSendInputs in plcCom
+        # function used for resetSendInputs in plcCom
         bytes_used = []
 
         for _, value in self.__dict__.items():
@@ -141,4 +143,3 @@ class configurationClass:
         Call this when IO data changes (e.g. GUI edits addresses).
         """
         self.lowestByte, self.highestByte = self.get_byte_range()
-

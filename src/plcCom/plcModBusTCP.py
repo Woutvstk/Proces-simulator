@@ -127,7 +127,8 @@ class plcModBusTCP:
             if self.GetDO(config.DQHeater["byte"], config.DQHeater["bit"]):
                 status.heaterPowerFraction = 1
             else:
-                status.heaterPowerFraction = self.GetAO(config.AQHeaterFraction)
+                status.heaterPowerFraction = self.GetAO(
+                    config.AQHeaterFraction)
 
         # Always send process inputs to PLC
         self.SetDI(config.DILevelSensorHigh["byte"], config.DILevelSensorHigh["bit"],

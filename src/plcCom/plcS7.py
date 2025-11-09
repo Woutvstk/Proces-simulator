@@ -4,13 +4,16 @@ from configuration import configurationClass
 from status import statusClass
 
 plcAnalogMax = 32767
+
+
 def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
-        return (old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin
+    return (old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin
+
 
 class plcS7:
 
     """Class for communication with a Siemens S7 PLC using Snap7"""
-    
+
     def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102):
         """Initialize the PLC client with IP, rack, slot, and TCP port"""
         self.ip = ip
@@ -24,7 +27,8 @@ class plcS7:
         try:
             self.client.connect(self.ip, self.rack, self.slot, self.tcpport)
             if self.client.get_connected():
-                print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
+                print(
+                    f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
                 return True
             else:
                 print(f"Cannot connect to S7 PLC at {self.ip}")
@@ -46,7 +50,7 @@ class plcS7:
         else:
             return True
 
-    def SetDI(self, byte: int, bit: int, value: int):    
+    def SetDI(self, byte: int, bit: int, value: int):
         """
         Set a digital input (DI) bit in the PLC input process image (E/I area).
 
@@ -58,13 +62,14 @@ class plcS7:
         if byte >= 0:
             if 7 >= bit >= 0:
                 if value:  # if the value is > 0
-                    buffer_DI[0] |= (1 << bit)  # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
+                    # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
+                    buffer_DI[0] |= (1 << bit)
                 else:
-                    buffer_DI[0] &= ~(1 << bit)  # invert bit mask, e.g. ~(1 << 3) = 11110111
+                    # invert bit mask, e.g. ~(1 << 3) = 11110111
+                    buffer_DI[0] &= ~(1 << bit)
                 self.client.eb_write(start=byte, size=1, data=buffer_DI)
                 return int(bool(value))
         return -1
-
 
     def GetDO(self, byte: int, bit: int):
         """
@@ -97,6 +102,7 @@ class plcS7:
                 return int(value)
             return -1
         return -1
+
     def updateData(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
         if (config.plcGuiControl == "plc"):
@@ -120,13 +126,13 @@ class plcS7:
 
             # always set PLC inputs even if gui controls process
             self.SetDI(config.DILevelSensorHigh,
-                    status.digitalLevelSensorHighTriggered)
+                       status.digitalLevelSensorHighTriggered)
             self.SetDI(config.DILevelSensorLow,
-                    status.digitalLevelSensorLowTriggered)
+                       status.digitalLevelSensorLowTriggered)
             self.SetAI(config.AILevelSensor, mapValue(
                 0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
             self.SetAI(config.AITemperatureSensor, mapValue(-50, 250,
-                    0, plcAnalogMax, status.liquidTemperature))
+                                                            0, plcAnalogMax, status.liquidTemperature))
 
     def resetOutputs(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
@@ -135,10 +141,10 @@ class plcS7:
             status.valveOutOpenFraction = float(0)
             status.heaterPowerFraction = float(0)
 
-    def resetSendInputs(self, startByte:int, endByte:int):
+    def resetSendInputs(self, startByte: int, endByte: int):
         """
         Resets all send input data to the PLC (DI, AI)
         """
         bufferEmpty = bytearray(2)
-        self.client.eb_write(start= startByte, size=endByte, data=bufferEmpty)
-        self.client.ab_write(start= startByte, size=endByte, data=bufferEmpty)
+        self.client.eb_write(start=startByte, size=endByte, data=bufferEmpty)
+        self.client.ab_write(start=startByte, size=endByte, data=bufferEmpty)
