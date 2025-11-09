@@ -97,6 +97,18 @@ class plcS7:
                 return int(value)
             return -1
         return -1
+    
+    def GetAO(self,byte: int):
+        """
+        Read an analog output (AO) value as a 16-bit SIGNED INTEGER (-32768–32767) from the PLC output process image (A/Q area).
+
+        byte: selects which output byte in the PLC is used, as defined by the GUI
+        """
+        if byte >= 0:
+            data =self.client.ab_read(start=byte, size=2)
+            return s7util.get_int(data, 0)
+        return -1
+
     def updateData(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
         if (config.plcGuiControl == "plc"):
