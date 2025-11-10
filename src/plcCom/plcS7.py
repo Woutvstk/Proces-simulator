@@ -58,18 +58,19 @@ class plcS7:
         bit: bit position (0–7) within the selected byte  
         value: True/False or 1/0 to set or clear the bit
         """
-        buffer_DI = bytearray(2)
-        if byte >= 0:
-            if 7 >= bit >= 0:
-                if value:  # if the value is > 0
-                    # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
-                    buffer_DI[0] |= (1 << bit)
-                else:
-                    # invert bit mask, e.g. ~(1 << 3) = 11110111
-                    buffer_DI[0] &= ~(1 << bit)
-                self.client.eb_write(start=byte, size=1, data=buffer_DI)
-                return int(bool(value))
-        return -1
+        if self.isConnected():
+            buffer_DI = bytearray(2)
+            if byte >= 0:
+                if 7 >= bit >= 0:
+                    if value:  # if the value is > 0
+                        # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
+                        buffer_DI[0] |= (1 << bit)
+                    else:
+                        # invert bit mask, e.g. ~(1 << 3) = 11110111
+                        buffer_DI[0] &= ~(1 << bit)
+                    self.client.eb_write(start=byte, size=1, data=buffer_DI)
+                    return int(bool(value))
+            return -1
 
     def GetDO(self, byte: int, bit: int):
         """
@@ -78,61 +79,80 @@ class plcS7:
         byte: selects which output byte in the PLC is used, as defined by the GUI  
         bit: bit position (0–7) within the selected byte
         """
-        if byte >= 0:
-            if 7 >= bit >= 0:
-                data = self.client.ab_read(byte, 1)
-                return int(s7util.get_bool(data, 0, bit))
-        return -1
+        if self.isConnected():
+            if byte >= 0:
+                if 7 >= bit >= 0:
+                    data = self.client.ab_read(byte, 1)
+                    return int(s7util.get_bool(data, 0, bit))
+            return -1
 
-    def SetAI(self, byte: int, value: int):
+    def SetAI(self, startByte: int, value: int):
         """
         Set an analog input (AI) value as a 16-bit UNSIGNED INTEGER (0–65535) in the PLC input process image (E/I area).
 
         byte: selects which input byte in the PLC is used, as defined by the GUI  
         value: 0–65535 (word)
         """
-        buffer_AI = bytearray(32)
-        if byte >= 0:
-            if 0 <= value <= 65535:
-                lowByte = value & 0xFF  # 0xFF = mask for one byte (0b11111111)
-                highByte = (value >> 8) & 0xFF
-                buffer_AI[0] = highByte
-                buffer_AI[1] = lowByte
-                self.client.eb_write(start=byte, size=2, data=buffer_AI)
-                return int(value)
+        if self.isConnected():
+            buffer_AI = bytearray(2)
+            if startByte >= 0:
+                if 0 <= value <= 65535:
+                    if type(value) is float:
+                        lowByte = int(round(value)) & 0xFF  # 0xFF = mask for one byte (0b11111111)
+                        highByte = (int(round(value)) >> 8) & 0xFF
+
+                    elif type(value) is int:
+                        lowByte = value & 0xFF  # 0xFF = mask for one byte (0b11111111)
+                        highByte = (value >> 8) & 0xFF
+
+                    buffer_AI[0] = highByte
+                    buffer_AI[1] = lowByte
+                    self.client.eb_write(start=startByte, size=2, data=buffer_AI)
+                    return int(value)
+                return -1
             return -1
-        return -1
+        
+    def GetAO(self,startByte: int):
+        """
+        Read an analog output (AO) value as a 16-bit SIGNED INTEGER (-32768–32767) from the PLC output process image (A/Q area).
+
+        byte: selects which output byte in the PLC is used, as defined by the GUI
+        """
+        if self.isConnected():
+            if startByte >= 0:
+                data = self.client.ab_read(start=startByte, size=2)
+                return s7util.get_int(data, 0)
+            return -1
 
     def updateData(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
         if (config.plcGuiControl == "plc"):
-            if (self.GetDO(config.DQValveIn)):  # if DQ valveIn = 1, ignore analog setpoint
+            if (self.GetDO(config.DQValveIn["byte"],config.DQValveIn["bit"])):  # if DQ valveIn = 1, ignore analog setpoint
                 status.valveInOpenFraction = float(1)
             else:
                 status.valveInOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction))
+                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction["byte"]))
 
-            if (self.GetDO(config.DQValveOut)):  # if DQ valveOut = 1, ignore analog setpoint
+            if (self.GetDO(config.DQValveOut["byte"],config.DQValveOut["bit"])):  # if DQ valveOut = 1, ignore analog setpoint
                 status.valveOutOpenFraction = 1
             else:
                 status.valveOutOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveOutFraction))
+                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveOutFraction["byte"]))
 
-            if (self.GetDO(config.DQHeater)):  # if DQ heater = 1, ignore analog setpoint
+            if (self.GetDO(config.DQHeater["byte"],config.DQHeater["bit"] )):  # if DQ heater = 1, ignore analog setpoint
                 status.heaterPowerFraction = 1
             else:
-                status.heaterPowerFraction = self.GetAO(
-                    config.AQHeaterFraction)
+                status.heaterPowerFraction = self.GetAO(config.AQHeaterFraction["byte"])
 
             # always set PLC inputs even if gui controls process
-            self.SetDI(config.DILevelSensorHigh,
-                       status.digitalLevelSensorHighTriggered)
-            self.SetDI(config.DILevelSensorLow,
-                       status.digitalLevelSensorLowTriggered)
-            self.SetAI(config.AILevelSensor, mapValue(
-                0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
-            self.SetAI(config.AITemperatureSensor, mapValue(-50, 250,
-                                                            0, plcAnalogMax, status.liquidTemperature))
+            self.SetDI(config.DILevelSensorHigh["byte"],
+                       config.DILevelSensorHigh["bit"],status.digitalLevelSensorHighTriggered)
+            self.SetDI(config.DILevelSensorLow["byte"],
+                       config.DILevelSensorLow["bit"],status.digitalLevelSensorLowTriggered)
+            self.SetAI(config.AILevelSensor["byte"], 
+                       mapValue(0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
+            self.SetAI(config.AITemperatureSensor["byte"], 
+                       mapValue(-50, 250,0, plcAnalogMax, status.liquidTemperature))
 
     def resetOutputs(self, config: configurationClass, status: statusClass):
         # only update status if controller by plc
@@ -145,6 +165,12 @@ class plcS7:
         """
         Resets all send input data to the PLC (DI, AI)
         """
-        bufferEmpty = bytearray(2)
-        self.client.eb_write(start=startByte, size=endByte, data=bufferEmpty)
-        self.client.ab_write(start=startByte, size=endByte, data=bufferEmpty)
+        if self.isConnected():
+            if startByte <= 0 and endByte > 0:
+                bufferEmpty = bytearray(2)
+                self.client.eb_write(start=startByte, size=(endByte - startByte), data=bufferEmpty)
+                self.client.ab_write(start=startByte, size=(endByte - startByte), data=bufferEmpty)
+                return True
+            else:
+                return False
+    

@@ -27,7 +27,7 @@ startTime = time.time()
 
 
 def tryConnectToPlc():
-    global config, validPlcConnection, PlcCom
+    global config, validPlcConnection, PlcCom #creates a global var inside a function(normaly local)
     """"Initialize plc communication object"""
     if config.plcProtocol == "ModBusTCP":
         PlcCom = plcModBusTCP(config.plcIpAdress, config.plcPort)
@@ -47,7 +47,7 @@ def tryConnectToPlc():
     else:
         if PlcCom.connect():  # run connect, returns True/False
             validPlcConnection = True
-            PlcCom.reset_registers()
+            PlcCom.resetSendInputs(config.highestByte, config.lowestByte)      
         else:
             validPlcConnection = False
 

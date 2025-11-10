@@ -131,9 +131,9 @@ class configurationClass:
 
         # Als er minstens één byte gevonden is → bepaal laagste en hoogste
         if bytes_used:
-            lowest = min(bytes_used)
-            highest = max(bytes_used)
-            return lowest, highest
+            lowestByte = min(bytes_used)
+            highestByte = max(bytes_used)
+            return lowestByte, highestByte
         else:
             return None, None
 
