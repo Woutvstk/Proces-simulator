@@ -1,14 +1,5 @@
 import snap7
 import snap7.util as s7util
-from configuration import configurationClass
-from status import statusClass
-
-plcAnalogMax = 32767
-
-
-def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
-    return (old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin
-
 
 class plcS7:
 
@@ -123,43 +114,6 @@ class plcS7:
                 data = self.client.ab_read(start=startByte, size=2)
                 return s7util.get_int(data, 0)
             return -1
-
-    def updateData(self, config: configurationClass, status: statusClass):
-        # only update status if controller by plc
-        if (config.plcGuiControl == "plc"):
-            if (self.GetDO(config.DQValveIn["byte"],config.DQValveIn["bit"])):  # if DQ valveIn = 1, ignore analog setpoint
-                status.valveInOpenFraction = float(1)
-            else:
-                status.valveInOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction["byte"]))
-
-            if (self.GetDO(config.DQValveOut["byte"],config.DQValveOut["bit"])):  # if DQ valveOut = 1, ignore analog setpoint
-                status.valveOutOpenFraction = 1
-            else:
-                status.valveOutOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveOutFraction["byte"]))
-
-            if (self.GetDO(config.DQHeater["byte"],config.DQHeater["bit"] )):  # if DQ heater = 1, ignore analog setpoint
-                status.heaterPowerFraction = 1
-            else:
-                status.heaterPowerFraction = self.GetAO(config.AQHeaterFraction["byte"])
-
-            # always set PLC inputs even if gui controls process
-            self.SetDI(config.DILevelSensorHigh["byte"],
-                       config.DILevelSensorHigh["bit"],status.digitalLevelSensorHighTriggered)
-            self.SetDI(config.DILevelSensorLow["byte"],
-                       config.DILevelSensorLow["bit"],status.digitalLevelSensorLowTriggered)
-            self.SetAI(config.AILevelSensor["byte"], 
-                       mapValue(0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
-            self.SetAI(config.AITemperatureSensor["byte"], 
-                       mapValue(-50, 250,0, plcAnalogMax, status.liquidTemperature))
-
-    def resetOutputs(self, config: configurationClass, status: statusClass):
-        # only update status if controller by plc
-        if (config.plcGuiControl == "plc"):
-            status.valveInOpenFraction = float(0)
-            status.valveOutOpenFraction = float(0)
-            status.heaterPowerFraction = float(0)
 
     def resetSendInputs(self, startByte: int, endByte: int):
         """

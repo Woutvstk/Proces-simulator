@@ -1,6 +1,4 @@
 import snap7
-from configuration import configurationClass
-from status import statusClass
 
 plcAnalogMax = 32767
 
@@ -91,53 +89,7 @@ class logoS7:
             return int(data)
         return 0
 
-    def updateData(self, config: configurationClass, status: statusClass):
-
-        if config.plcGuiControl == "plc":
-            # Valve IN
-            if self.GetDO(config.DQValveIn_byte, config.DQValveIn_bit):
-                status.valveInOpenFraction = float(1)
-            else:
-                status.valveInOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(
-                        config.AQValveInFraction_byte)
-                )
-
-            # Valve OUT
-            if self.GetDO(config.DQValveOut_byte, config.DQValveOut_bit):
-                status.valveOutOpenFraction = 1
-            else:
-                status.valveOutOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(
-                        config.AQValveOutFraction_byte)
-                )
-
-            # Heater
-            if self.GetDO(config.DQHeater_byte, config.DQHeater_bit):
-                status.heaterPowerFraction = 1
-            else:
-                status.heaterPowerFraction = self.GetAO(
-                    config.AQHeaterFraction_byte)
-
-        # Inputs updaten
-        self.SetDI(config.DILevelSensorHigh_byte,
-                   config.DILevelSensorHigh_bit, status.digitalLevelSensorHighTriggered)
-        self.SetDI(config.DILevelSensorLow_byte,
-                   config.DILevelSensorLow_bit, status.digitalLevelSensorLowTriggered)
-
-        self.SetAI(config.AILevelSensor_byte, mapValue(
-            0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
-        self.SetAI(config.AITemperatureSensor_byte, mapValue(
-            -50, 250, 0, plcAnalogMax, status.liquidTemperature))
-
-    def resetOutputs(self, config: configurationClass, status: statusClass):
-        # only update status if controller by plc
-        if (config.plcGuiControl == "plc"):
-            status.valveInOpenFraction = float(0)
-            status.valveOutOpenFraction = float(0)
-            status.heaterPowerFraction = float(0)
-
-    def reset_registers(self):
+    def resetSendInputs(self):
         """Reset alle V geheugen naar 0"""
         for byte in range(1024, 1468):
             self.logo.write(f"VW{byte}", 0)

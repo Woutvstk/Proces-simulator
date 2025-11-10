@@ -1,13 +1,4 @@
 from pymodbus.client import ModbusTcpClient
-from configuration import configurationClass
-from status import statusClass
-
-plcAnalogMax = 32767
-
-
-def mapValue(oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
-    return (old - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin
-
 
 class plcModBusTCP:
     """
@@ -109,45 +100,7 @@ class plcModBusTCP:
             return rr.registers[0]
         return None
 
-    def updateData(self, config: configurationClass, status: statusClass):
-        # Only update if PLC controls process
-        if config.plcGuiControl == "plc":
-            if self.GetDO(config.DQValveIn["byte"], config.DQValveIn["bit"]):
-                status.valveInOpenFraction = float(1)
-            else:
-                status.valveInOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveInFraction))
-
-            if self.GetDO(config.DQValveOut["byte"], config.DQValveOut["bit"]):
-                status.valveOutOpenFraction = 1
-            else:
-                status.valveOutOpenFraction = mapValue(
-                    0, plcAnalogMax, 0, 1, self.GetAO(config.AQValveOutFraction))
-
-            if self.GetDO(config.DQHeater["byte"], config.DQHeater["bit"]):
-                status.heaterPowerFraction = 1
-            else:
-                status.heaterPowerFraction = self.GetAO(
-                    config.AQHeaterFraction)
-
-        # Always send process inputs to PLC
-        self.SetDI(config.DILevelSensorHigh["byte"], config.DILevelSensorHigh["bit"],
-                   status.digitalLevelSensorHighTriggered)
-        self.SetDI(config.DILevelSensorLow["byte"], config.DILevelSensorLow["bit"],
-                   status.digitalLevelSensorLowTriggered)
-        self.SetAI(config.AILevelSensor, mapValue(
-            0, config.tankVolume, 0, plcAnalogMax, status.liquidVolume))
-        self.SetAI(config.AITemperatureSensor, mapValue(
-            -50, 250, 0, plcAnalogMax, status.liquidTemperature))
-
-    def resetOutputs(self, config: configurationClass, status: statusClass):
-        """Reset process inputs when PLC control active"""
-        if config.plcGuiControl == "plc":
-            status.valveInOpenFraction = float(0)
-            status.valveOutOpenFraction = float(0)
-            status.heaterPowerFraction = float(0)
-
-    def reset_registers(self, start_byte: int = 0, end_byte: int = 48):
+    def resetSendInputs(self, start_byte: int = 0, end_byte: int = 48):
         """Reset all Modbus registers in range to 0"""
         self.isConnected()
         for byte in range(start_byte, end_byte):

@@ -1,6 +1,6 @@
 import time
-from configuration import configurationClass
-from status import statusClass
+from processSim.configuration import configurationClass
+from processSim.status import statusClass
 
 
 class tankSim:

@@ -4,8 +4,8 @@ import pathlib
 import os
 from PIL import Image, ImageTk
 import math
-from configuration import configurationClass
-from status import statusClass
+from processSim.configuration import configurationClass
+from processSim.status import statusClass
 
 
 navColor = '#383838'
