@@ -73,7 +73,7 @@ if __name__ == "__main__":
             validPlcConnection = False
             config.tryConnect = False
             print(
-                f"Try connection to PLC at IP: {config.plcIpAdress} using protocol: {config.plcProtocol}")
+                f"Try connection to PLC at IP: {config.plcIpAdress} using: {config.plcProtocol}")
             tryConnectToPlc()  # updates validPlcConnection
 
         """Get process control from plc or gui (config.plcGuiControl)"""

@@ -80,14 +80,17 @@ class plcS7:
         int: The value set (1/0), -1 on error
         """
         if self.isConnected():
-            buffer_DI = bytearray(2)
             if byte >= 0 and 0 <= bit <= 7:
-                if value:
-                    buffer_DI[0] |= (1 << bit)
-                else:
-                    buffer_DI[0] &= ~(1 << bit)
-                self.client.eb_write(start=byte, size=1, data=buffer_DI)
-                return int(bool(value))
+                try:
+                    buffer_DI = bytearray(2)
+                    if value:
+                        buffer_DI[0] |= (1 << bit)
+                    else:
+                        buffer_DI[0] &= ~(1 << bit)
+                    self.client.eb_write(start=byte, size=1, data=buffer_DI)
+                    return int(bool(value))
+                except Exception:
+                    return -1
             return -1
         return -1
 
@@ -104,8 +107,11 @@ class plcS7:
         """
         if self.isConnected():
             if byte >= 0 and 0 <= bit <= 7:
-                data = self.client.ab_read(byte, 1)
-                return int(s7util.get_bool(data, 0, bit))
+                try:
+                    data = self.client.ab_read(byte, 1)
+                    return int(s7util.get_bool(data, 0, bit))
+                except Exception:
+                    return -1
             return -1
         return -1
 
@@ -121,15 +127,18 @@ class plcS7:
         int: Value set, -1 on error
         """
         if self.isConnected():
-            buffer_AI = bytearray(2)
             if startByte >= 0 and 0 <= value <= 65535:
-                val_int = int(round(value)) if isinstance(value, float) else int(value)
-                lowByte = val_int & 0xFF
-                highByte = (val_int >> 8) & 0xFF
-                buffer_AI[0] = highByte
-                buffer_AI[1] = lowByte
-                self.client.eb_write(start=startByte, size=2, data=buffer_AI)
-                return val_int
+                try:
+                    buffer_AI = bytearray(2)
+                    val_int = int(round(value)) if isinstance(value, float) else int(value)
+                    lowByte = val_int & 0xFF
+                    highByte = (val_int >> 8) & 0xFF
+                    buffer_AI[0] = highByte
+                    buffer_AI[1] = lowByte
+                    self.client.eb_write(start=startByte, size=2, data=buffer_AI)
+                    return val_int
+                except Exception:
+                    return -1
             return -1
         return -1
 
@@ -145,8 +154,11 @@ class plcS7:
         """
         if self.isConnected():
             if startByte >= 0:
-                data = self.client.ab_read(start=startByte, size=2)
-                return s7util.get_int(data, 0)
+                try:
+                    data = self.client.ab_read(start=startByte, size=2)
+                    return s7util.get_int(data, 0)
+                except Exception:
+                    return -1
             return -1
         return -1
 
@@ -163,7 +175,7 @@ class plcS7:
         """
         if self.isConnected():
             if startByte >= 0 and endByte > startByte:
-                bufferEmpty = bytearray(2)
+                bufferEmpty = bytearray(endByte - startByte + 1)
                 self.client.eb_write(start=startByte, size=(endByte - startByte + 1), data=bufferEmpty)
                 return True
             return False
