@@ -31,13 +31,19 @@ class plcSimAPI:
         self.simulation_instance = None
 
     def connect(self, instance_name: str | None = None) -> bool:
-        """Connect to the specified PLC simulation instance.
-           Returns True if connected, False otherwise.
         """
-        instances = self.manager.RegisteredInstanceInfo  # altijd up-to-date lijst
+        Connect to a PLC simulation instance.
+
+        Parameters:
+        instance_name (str | None): Name of the instance to connect to. If None, the first available instance will be used.
+
+        Returns:
+        bool: True if connected successfully, False otherwise.
+        """
+        instances = self.manager.RegisteredInstanceInfo
 
         if instance_name is not None:
-            # Zoek specifieke instantie
+            # Search for a specific instance
             for inst in instances:
                 if inst.Name == instance_name:
                     try:
@@ -46,14 +52,13 @@ class plcSimAPI:
                         print(f"OperatingState: {self.simulation_instance.OperatingState}")
                         return True
                     except Exception as e:
-                        print(f"Fout bij het maken van de interface voor {instance_name}: {e}")
+                        print(f"Error creating interface for {instance_name}: {e}")
                         return False
-            print(f"Instantie '{instance_name}' niet gevonden.")
+            print(f"Instance '{instance_name}' not found.")
             return False
-
         else:
-            # Geen naam opgegeven: probeer eerste beschikbare instantie
-            print(f"{'-'*10} No instance defined, trying first available instance  {'-'*10}")
+            # No name specified: try the first available instance
+            print(f"{'-'*10} No instance_name defined, trying first available instance {'-'*10}")
             for inst in instances:
                 try:
                     self.simulation_instance = self.manager.CreateInterface(inst.Name)
@@ -67,9 +72,13 @@ class plcSimAPI:
             print("No running instances found. Please check if a PLC simulator is running.")
             return False
 
-
     def isConnected(self) -> bool:
-        """Check if the connection to the PLC simulator is alive"""
+        """
+        Check if a PLC simulation instance is connected.
+
+        Returns:
+        bool: True if connected, False otherwise.
+        """
         try:
             if self.simulation_instance is not None:
                 return True
@@ -80,88 +89,146 @@ class plcSimAPI:
             print("Connection error:", e)
             return False
         
-    def Disconnect(self, instance):
-        """Disconnect from the PLC simulator instance"""
-        try:
-            if self.simulation_instance is not None:
-                self.simulation_instance = None
-                for inst in instance:
-                    self.simulation_instance = self.manager.DestroyInterface(inst.ID)
-                print("Disconnected from PLC simulator instance.")
-        except Exception as e:
-            print("Disconnection error:", e)
-
-    def SetDI(self, startByte:int, bit:int, value: int):
+    def Disconnect(self, instance_name: str | None = None) -> bool:
         """
-        Set a digital input (DI) bit in the PLC input process image (E/I area).
+        Disconnect a PLC simulation instance.
 
-        byte: selects which input byte in the PLC is used, as defined by the GUI  
-        bit: bit position (0–7) within the selected byte  
-        value: True/False or 1/0 to set or clear the bit
+        Parameters:
+        instance_name (str | None): Name of the instance to disconnect. If None, all instances will be disconnected.
+
+        Returns:
+        bool: True if successfully disconnected, False otherwise.
+        """
+        instances = self.manager.RegisteredInstanceInfo
+
+        if instance_name is not None:
+            # Search for a specific instance
+            for inst in instances:
+                if inst.Name == instance_name:
+                    try:
+                        if hasattr(self, "simulation_instance") and self.simulation_instance is not None:
+                            self.simulation_instance.Dispose()
+                            self.simulation_instance = None
+                        print(f"Interface disconnected for instance: {inst.Name}")
+                        return True
+                    except Exception as e:
+                        print(f"Error disconnecting the interface for {instance_name}: {e}")
+                        return False
+            print(f"Instance '{instance_name}' not found.")
+            return False
+        else:
+            # No name specified: try all available instances
+            print(f"{'-'*10} No instance defined, disconnecting all interfaces {'-'*10}")
+            success = False
+            for inst in instances:
+                try:
+                    if hasattr(self, "simulation_instance") and self.simulation_instance is not None:
+                        self.simulation_instance.Dispose()
+                        self.simulation_instance = None
+                    print(f"Disconnected instance: {inst.Name}")
+                    success = True
+                except Exception as e:
+                    print(f"Could not disconnect {inst.Name}: {e}")
+                    continue
+            if not success:
+                print("No running instances found. Please check if a PLC simulator is running.")
+            return success     
+
+    def SetDI(self, startByte: int, bit: int, value: int):
+        """
+        Set a digital input (DI) bit in the PLC input process image.
+
+        Parameters:
+        startByte (int): Byte index in the PLC input area (E/I).  
+        bit (int): Bit position (0-7) within the byte.  
+        value (int): Value to set (0 or 1, False or True).
+
+        Returns:
+        int: 0 or 1 if successful, -1 on error.
         """
         if self.isConnected():
             if startByte >= 0 and 0 <= bit < 8:
-                self.simulation_instance.InputArea.WriteBit(startByte,bit, bool(value))
+                self.simulation_instance.InputArea.WriteBit(startByte, bit, bool(value))
+                return int(bool(value))
+            return -1
+        return -1
     
-    def GetDO(self,startbyte: int, bit: int):
+    def GetDO(self, startByte: int, bit: int) -> int:
         """
-        Read a digital output (DO) bit from the PLC output process image (A/Q area).
+        Read a digital output (DO) bit from the PLC output process image.
 
-        byte: selects which output byte in the PLC is used, as defined by the GUI  
-        bit: bit position (0–7) within the selected byte
+        Parameters:
+        startByte (int): Byte index in the PLC output area (A/Q).  
+        bit (int): Bit position (0-7) within the byte.
+
+        Returns:
+        int: 0 or 1 if successful, -1 on error.
         """
         if self.isConnected():
-            if startbyte >= 0:
-                if 7 >= bit >= 0:
-                    data = bytes(1)
-                    data = self.simulation_instance.OutputArea.ReadBit(startbyte,bit)
-                    return int(data)
+            if startByte >= 0 and 0 <= bit <= 7:
+                data = self.simulation_instance.OutputArea.ReadBit(startByte, bit)
+                return int(data)
             return -1
+        return -1
 
-
-    def SetAI(self,byte: int, value: int):
+    def SetAI(self, byte: int, value: int) -> int:
         """
-        Set an analog input (AI) value as a 16-bit UNSIGNED INTEGER (0–65535) in the PLC input process image (E/I area).
+        Set an analog input (AI) value in the PLC input process image.
 
-        byte: selects which input byte in the PLC is used, as defined by the GUI  
-        value: 0–65535 (word)
+        Parameters:
+        byte (int): Byte index in the PLC input area (E/I).  
+        value (int | float): Analog value to set (0-65535).
+
+        Returns:
+        int: Value set, or -1 on error.
         """
         if self.isConnected():
             buffer_AI = bytearray(2)
             if byte >= 0:
-                if 0 <= value <= 65535:
-                    lowByte = value & 0xFF  # 0xFF = mask for one byte (0b11111111)
-                    highByte = (value >> 8) & 0xFF
-                    buffer_AI[0] = highByte
-                    buffer_AI[1] = lowByte
-                    self.simulation_instance.InputArea.WriteBytes(byte,2,buffer_AI)
-                    return int(value)
-                return -1
+                if isinstance(value, float):
+                    val_int = int(round(value))
+                else:
+                    val_int = int(value)
+                lowByte = val_int & 0xFF
+                highByte = (val_int >> 8) & 0xFF
+                buffer_AI[0] = highByte
+                buffer_AI[1] = lowByte
+                self.simulation_instance.InputArea.WriteBytes(byte, 2, buffer_AI)
+                return val_int
             return -1
+        return -1
 
-
-    def GetAO(self, startByte: int):
+    def GetAO(self, startByte: int) -> int:
         """
-        Read an analog output (AO) value as a 16-bit SIGNED INTEGER (-32768–32767) from the PLC output process image (A/Q area).
+        Read an analog output (AO) value from the PLC output process image.
 
-        byte: selects which output byte in the PLC is used, as defined by the GUI
+        Parameters:
+        startByte (int): Byte index in the PLC output area (A/Q).
+
+        Returns:
+        int: Signed 16-bit value (-32768 to 32767).
+        Returns -1 on error.
         """
         if self.isConnected():
             if startByte >= 0:
-                data = bytes(2)
-                data = self.simulation_instance.OutputArea.ReadBytes(startByte,2)
-                value = int.from_bytes(data, byteorder='big', signed = True)
-                return int(value)
-            
+                data = self.simulation_instance.OutputArea.ReadBytes(startByte, 2)
+                value = int.from_bytes(data, byteorder='big', signed=True)
+                return value
+        return -1
+
     def resetSendInputs(self, startByte: int, endByte: int):
         """
-        Resets all send input data to the PLC (DI, AI)
+        Reset all input data sent to the PLC (DI, AI).
+
+        Parameters:
+        startByte (int): Start byte index to reset.  
+        endByte (int): End byte index to reset.
         """
         if self.isConnected():
             if startByte >= 0 and endByte > startByte:
                 size = endByte - startByte + 1
-                Empty_buffer = bytearray(size)
-                self.simulation_instance.InputArea.WriteBytes(startByte, size, Empty_buffer)
+                empty_buffer = bytearray(size)
+                self.simulation_instance.InputArea.WriteBytes(startByte, size, empty_buffer)
 
     def print_status(self):
         if not self.isConnected():
@@ -194,18 +261,21 @@ class plcSimAPI:
         print("-" * 90)
 
 simulator = plcSimAPI()
+if simulator.isConnected() == False:
+    simulator.connect()
 
 while True:  
-    if simulator.isConnected() == False:
         
-        simulator.connect()
     simulator.print_status()
     simulator.SetDI(0,0,1)
     simulator.SetDI(0,1,1)
     simulator.SetDI(1,0,1)
     simulator.SetDI(1,0,1)
+    simulator.SetAI(2, 1234)
+    simulator.SetAI(4, 5678)
 
     time.sleep(1)
     simulator.resetSendInputs(0,33)
+    #simulator.Disconnect()
 
     time.sleep(1)    

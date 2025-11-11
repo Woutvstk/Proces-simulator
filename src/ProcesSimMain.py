@@ -2,6 +2,7 @@ from processSim.tankSim import tankSim
 from plcCom.plcModBusTCP import plcModBusTCP
 from plcCom.plcS7 import plcS7
 from plcCom.logoS7 import logoS7
+from plcCom.PLCSimAPI import plcSimAPI
 from processSim.configuration import configurationClass
 from processSim.status import statusClass
 from User_Interface.GUI import GuiClass
@@ -34,13 +35,14 @@ def tryConnectToPlc():
     """"Initialize plc communication object"""
     if config.plcProtocol == "ModBusTCP":
         PlcCom = plcModBusTCP(config.plcIpAdress, config.plcPort)
-    elif config.plcProtocol == "plcS7":
-        # IP address, rack, slot (from HW settings)
+    elif config.plcProtocol == "PLC S7-1500/1200/400/300":
         PlcCom = plcS7(config.plcIpAdress,
                        config.plcRack, config.plcSlot)
-    elif config.plcProtocol == "logoS7":
+    elif config.plcProtocol == "logo!":
         PlcCom = logoS7(config.plcIpAdress,
                         config.tsapLogo, config.tsapServer)
+    elif config.plcProtocol == "PLCSim":
+        PlcCom = plcSimAPI()
     else:
         print("Error: no valid plcProtocol")
 
@@ -50,7 +52,7 @@ def tryConnectToPlc():
     else:
         if PlcCom.connect():  # run connect, returns True/False
             validPlcConnection = True
-            PlcCom.resetSendInputs(config.highestByte, config.lowestByte) 
+            PlcCom.resetSendInputs(config.lowestByte, config.highestByte) 
         else:
             validPlcConnection = False
 

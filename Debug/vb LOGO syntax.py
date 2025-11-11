@@ -1,8 +1,9 @@
 import logging
 import snap7
+import time 
 
-import time # sleep()
  #https://medium.com/@biero-llagas/setup-exploit-and-harden-a-physical-ics-lab-s7comm-part2-e75ddf52ef70
+
 logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)

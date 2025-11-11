@@ -7,12 +7,19 @@ class plcModBusTCP:
     """
 
     def __init__(self, ip: str, port: int = 502):
+        """
+        Initialize the Modbus TCP client.
+
+        Parameters:
+        ip (str): IP address of the Modbus server
+        port (int): TCP port (default: 502)
+        """
         self.ip = ip
         self.port = port
         self.client = None
 
-    def connect(self):
-        """Connect to the Modbus server"""
+    def connect(self) -> bool:
+        """Connect to the Modbus server and return True if successful."""
         self.client = ModbusTcpClient(self.ip, port=self.port)
         if self.client.connect():
             print(f"Connected to Modbus server {self.ip}:{self.port}")
@@ -22,23 +29,28 @@ class plcModBusTCP:
             return False
 
     def disconnect(self):
-        """Disconnect from the Modbus server"""
+        """Disconnect from the Modbus server."""
         if self.client:
             self.client.close()
 
     def isConnected(self) -> bool:
-        """Check if connection is alive"""
+        """Check if the connection to the Modbus server is alive."""
         if self.client is None or not self.client.is_socket_open():
             print("Connection lost to the PLC!")
             return False
         return True
 
-    def SetDI(self, byte: int, bit: int, value: int):
+    def SetDI(self, byte: int, bit: int, value: int) -> int:
         """
         Set a digital input (DI) bit in the PLC register map.
-        byte: selects Modbus register (0–15)
-        bit: bit position (0–7)
-        value: True/False or 1/0
+
+        Parameters:
+        byte (int): Modbus register address (0–15)
+        bit (int): Bit position within the register (0–7)
+        value (int): True/False or 1/0 to set or clear the bit
+
+        Returns:
+        int: Value set (1/0), -1 on error
         """
         self.isConnected()
         if byte >= 0 and 0 <= bit <= 7:
@@ -56,11 +68,16 @@ class plcModBusTCP:
             return int(bool(value))
         return -1
 
-    def GetDO(self, byte: int, bit: int):
+    def GetDO(self, byte: int, bit: int) -> int:
         """
         Read a digital output (DO) bit from Modbus coils.
-        byte: selects coil byte
-        bit: bit position (0–7)
+
+        Parameters:
+        byte (int): Coil byte address
+        bit (int): Bit position within the byte (0–7)
+
+        Returns:
+        int: 0 or 1 if successful, -1 on error
         """
         self.isConnected()
         if byte >= 0 and 0 <= bit <= 7:
@@ -71,11 +88,16 @@ class plcModBusTCP:
             return int(rr.bits[bit])
         return -1
 
-    def SetAI(self, byte: int, value: int):
+    def SetAI(self, byte: int, value: int) -> int:
         """
         Set an analog input (AI) value (16-bit unsigned) in Modbus registers.
-        byte: Modbus register address (16–31 typical)
-        value: 0–65535
+
+        Parameters:
+        byte (int): Modbus register address (16–31 typical)
+        value (int): Analog value (0–65535)
+
+        Returns:
+        int: Value set, -1 on error
         """
         self.isConnected()
         if byte >= 0:
@@ -90,7 +112,12 @@ class plcModBusTCP:
     def GetAO(self, byte: int):
         """
         Read an analog output (AO) value (16-bit unsigned) from Modbus registers.
-        byte: Modbus register address (typically 32+)
+
+        Parameters:
+        byte (int): Modbus register address (typically 32+)
+
+        Returns:
+        int: Value read from the register, None on error
         """
         self.isConnected()
         if byte >= 0:
@@ -101,7 +128,13 @@ class plcModBusTCP:
         return None
 
     def resetSendInputs(self, start_byte: int = 0, end_byte: int = 48):
-        """Reset all Modbus registers in range to 0"""
+        """
+        Reset all Modbus registers in the specified range to 0.
+
+        Parameters:
+        start_byte (int): Starting register address (default 0)
+        end_byte (int): Ending register address (default 48)
+        """
         self.isConnected()
         for byte in range(start_byte, end_byte):
             self.client.write_register(byte, 0)

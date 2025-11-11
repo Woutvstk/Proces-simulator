@@ -38,7 +38,7 @@ SaveHoogte = 2000
 SaveDebietMaxIn = defaultConfig.valveInMaxFlow
 SaveDebietMaxOut = defaultConfig.valveOutMaxFlow
 SaveDichtheid = defaultConfig.liquidSpecificWeight*1000
-SaveControler = "ModBusTCP"
+SaveControler = "PLC S7-1500/1200/400/300"
 SaveKlepen = 1
 SaveWeerstand = 1
 SaveHoogtemeting = 1
@@ -470,7 +470,7 @@ class SettingsScherm:
         SoortControlerlabel.grid(row=0, column=0, sticky="e")
         SoortControler = tk.StringVar()
         soortControlerMenu = tk.OptionMenu(
-            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "plcS7", "logoS7")
+            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "PLC S7-1500/1200/400/300", "logo!", "PLCSim")
         soortControlerMenu.grid(row=0, column=1, sticky="ew")
         SoortControler.set(SaveControler)
 

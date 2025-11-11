@@ -16,9 +16,9 @@ class configurationClass:
         Plc connection settings
         """
         # written by: gui, import
-        self.plcProtocol: str = "logoS7"  # options: Gui/ModBusTCP/plcS7/logoS7
+        self.plcProtocol: str = "PLC S7-1500/1200/400/300"  # options: "Gui","ModbusTCP","PLC S7-1500/1200/400/300","PLC S7-300/400", "logo!","PLCSim")
         self.plcIpAdress: str = "192.168.0.1"
-        self.plcPort: int = 502
+        self.plcPort: int = 502 # ModBusTCP default port
         self.plcRack: int = 0
         self.plcSlot: int = 1
         self.tsapLogo: int = 0x0300
@@ -114,6 +114,7 @@ class configurationClass:
                             getattr(self, variable))(row["value"]))
         print(f"Config loaded from: {importFileName}")
 
+     # ----------------------------------------------------------
     def get_byte_range(self):
         """
         Return the lowest and highest byte used in all IO definitions.

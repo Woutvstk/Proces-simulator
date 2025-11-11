@@ -3,127 +3,168 @@ import snap7.util as s7util
 
 class plcS7:
 
-    """Class for communication with a Siemens S7 PLC using Snap7"""
+    """Class for communication with a Siemens S7 PLC using Snap7."""
 
     def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102):
-        """Initialize the PLC client with IP, rack, slot, and TCP port"""
+        """
+        Initialize the PLC client with IP, rack, slot, and TCP port.
+
+        Parameters:
+        ip (str): IP address of the PLC
+        rack (int): Rack number of the PLC
+        slot (int): Slot number of the PLC
+        tcpport (int): TCP port for the connection (default: 102)
+        """
         self.ip = ip
         self.rack = rack
         self.slot = slot
         self.tcpport = tcpport
         self.client = snap7.client.Client()
 
-    def connect(self):
-        """Connect to the PLC, returns "true" if connected"""
+    def connect(self) -> bool:
+        """
+        Connect to the PLC.
+
+        Returns:
+        bool: True if connected successfully, False otherwise.
+        """
         try:
             self.client.connect(self.ip, self.rack, self.slot, self.tcpport)
             if self.client.get_connected():
-                print(
-                    f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
+                print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
                 return True
             else:
                 print(f"Cannot connect to S7 PLC at {self.ip}")
                 return False
         except Exception as e:
+            # Try different slots in case of an S7-400/300
+            for i in range(0, 5):
+                try:
+                    self.client.connect(self.ip, self.rack, i, self.tcpport)
+                    print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {i})")
+                    return True
+                except Exception:
+                    continue
             print("Connection error:", e)
             return False
 
     def disconnect(self):
-        """Disconnect from the PLC if the connection is active"""
+        """
+        Disconnect from the PLC if the connection is active.
+        """
         if self.client.get_connected():
             self.client.disconnect()
 
     def isConnected(self) -> bool:
-        """check if the connection is alive, connected returns "true" """
+        """
+        Check if the connection to the PLC is alive.
+
+        Returns:
+        bool: True if connected, False otherwise.
+        """
         if not self.client.get_connected():
             print("Connection lost to the PLC!")
             return False
-        else:
-            return True
+        return True
 
-    def SetDI(self, byte: int, bit: int, value: int):
+    def SetDI(self, byte: int, bit: int, value: int) -> int:
         """
-        Set a digital input (DI) bit in the PLC input process image (E/I area).
+        Set a digital input (DI) bit in the PLC input process image.
 
-        byte: selects which input byte in the PLC is used, as defined by the GUI  
-        bit: bit position (0–7) within the selected byte  
-        value: True/False or 1/0 to set or clear the bit
+        Parameters:
+        byte (int): Byte index in the PLC input area (E/I)
+        bit (int): Bit position (0–7) within the byte
+        value (int): 1/0 or True/False to set or clear the bit
+
+        Returns:
+        int: The value set (1/0), -1 on error
         """
         if self.isConnected():
             buffer_DI = bytearray(2)
-            if byte >= 0:
-                if 7 >= bit >= 0:
-                    if value:  # if the value is > 0
-                        # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
-                        buffer_DI[0] |= (1 << bit)
-                    else:
-                        # invert bit mask, e.g. ~(1 << 3) = 11110111
-                        buffer_DI[0] &= ~(1 << bit)
-                    self.client.eb_write(start=byte, size=1, data=buffer_DI)
-                    return int(bool(value))
+            if byte >= 0 and 0 <= bit <= 7:
+                if value:
+                    buffer_DI[0] |= (1 << bit)
+                else:
+                    buffer_DI[0] &= ~(1 << bit)
+                self.client.eb_write(start=byte, size=1, data=buffer_DI)
+                return int(bool(value))
             return -1
+        return -1
 
-    def GetDO(self, byte: int, bit: int):
+    def GetDO(self, byte: int, bit: int) -> int:
         """
-        Read a digital output (DO) bit from the PLC output process image (A/Q area).
+        Read a digital output (DO) bit from the PLC output process image.
 
-        byte: selects which output byte in the PLC is used, as defined by the GUI  
-        bit: bit position (0–7) within the selected byte
+        Parameters:
+        byte (int): Byte index in the PLC output area (A/Q)
+        bit (int): Bit position (0–7) within the byte
+
+        Returns:
+        int: 0 or 1 if successful, -1 on error
         """
         if self.isConnected():
-            if byte >= 0:
-                if 7 >= bit >= 0:
-                    data = self.client.ab_read(byte, 1)
-                    return int(s7util.get_bool(data, 0, bit))
+            if byte >= 0 and 0 <= bit <= 7:
+                data = self.client.ab_read(byte, 1)
+                return int(s7util.get_bool(data, 0, bit))
             return -1
+        return -1
 
-    def SetAI(self, startByte: int, value: int):
+    def SetAI(self, startByte: int, value: int) -> int:
         """
-        Set an analog input (AI) value as a 16-bit UNSIGNED INTEGER (0–65535) in the PLC input process image (E/I area).
+        Set an analog input (AI) value as a 16-bit UNSIGNED INTEGER in the PLC input process image.
 
-        byte: selects which input byte in the PLC is used, as defined by the GUI  
-        value: 0–65535 (word)
+        Parameters:
+        startByte (int): Byte index in the PLC input area (E/I)
+        value (int | float): Analog value (0–65535)
+
+        Returns:
+        int: Value set, -1 on error
         """
         if self.isConnected():
             buffer_AI = bytearray(2)
-            if startByte >= 0:
-                if 0 <= value <= 65535:
-                    if type(value) is float:
-                        lowByte = int(round(value)) & 0xFF  # 0xFF = mask for one byte (0b11111111)
-                        highByte = (int(round(value)) >> 8) & 0xFF
-
-                    elif type(value) is int:
-                        lowByte = value & 0xFF  # 0xFF = mask for one byte (0b11111111)
-                        highByte = (value >> 8) & 0xFF
-
-                    buffer_AI[0] = highByte
-                    buffer_AI[1] = lowByte
-                    self.client.eb_write(start=startByte, size=2, data=buffer_AI)
-                    return int(value)
-                return -1
+            if startByte >= 0 and 0 <= value <= 65535:
+                val_int = int(round(value)) if isinstance(value, float) else int(value)
+                lowByte = val_int & 0xFF
+                highByte = (val_int >> 8) & 0xFF
+                buffer_AI[0] = highByte
+                buffer_AI[1] = lowByte
+                self.client.eb_write(start=startByte, size=2, data=buffer_AI)
+                return val_int
             return -1
-        
-    def GetAO(self,startByte: int):
-        """
-        Read an analog output (AO) value as a 16-bit SIGNED INTEGER (-32768–32767) from the PLC output process image (A/Q area).
+        return -1
 
-        byte: selects which output byte in the PLC is used, as defined by the GUI
+    def GetAO(self, startByte: int) -> int:
+        """
+        Read an analog output (AO) value as a 16-bit SIGNED INTEGER from the PLC output process image.
+
+        Parameters:
+        startByte (int): Byte index in the PLC output area (A/Q)
+
+        Returns:
+        int: Signed 16-bit value (-32768–32767), -1 on error
         """
         if self.isConnected():
             if startByte >= 0:
                 data = self.client.ab_read(start=startByte, size=2)
                 return s7util.get_int(data, 0)
             return -1
+        return -1
 
-    def resetSendInputs(self, startByte: int, endByte: int):
+    def resetSendInputs(self, startByte: int, endByte: int) -> bool:
         """
-        Resets all send input data and to the PLC (DI, AI)
+        Reset all input data sent to the PLC (DI, AI).
+
+        Parameters:
+        startByte (int): Start byte index to reset
+        endByte (int): End byte index to reset
+
+        Returns:
+        bool: True if successful, False otherwise
         """
         if self.isConnected():
             if startByte >= 0 and endByte > startByte:
                 bufferEmpty = bytearray(2)
-                self.client.eb_write(start=startByte, size=(endByte - startByte +1), data=bufferEmpty)
+                self.client.eb_write(start=startByte, size=(endByte - startByte + 1), data=bufferEmpty)
                 return True
-            else:
-                return False
-    
+            return False
+        return False
