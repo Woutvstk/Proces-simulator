@@ -5,4 +5,4 @@ pymodbus==v3.11.3
 pyModbusTCP==v0.3.0
 pillow==v11.3.0
 python-snap7==v2.0.2
-pythonnet==3.0.3
+pythonnet==v3.0.5
