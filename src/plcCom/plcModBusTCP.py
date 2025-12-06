@@ -14,7 +14,7 @@ class plcModBusTCP:
         except Exception as e:
             print("Error in __init__:", e)
 
-    def connect(self) -> bool:
+    def connect(self,instance_name: str | None = None) -> bool:
         try:
             self.client = ModbusTcpClient(self.ip, port=self.port)
             if self.client.connect():

@@ -9,6 +9,8 @@ class updateDataClass:
         return round((old-oldMin)*(newMax-newMin)/(oldMax-oldMin)+newMin,2)
     
     def updateData(self,plc,config: configurationClass, status: statusClass):
+            if not plc.isConnected(): #prevents writing to non existing adresses
+                return
             if (config.plcGuiControl == "plc"):
                 if (plc.GetDO(config.DQValveIn["byte"],config.DQValveIn["bit"])):  # if DQ valveIn = 1, ignore analog setpoint
                     status.valveInOpenFraction = float(1)

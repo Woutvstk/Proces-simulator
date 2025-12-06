@@ -18,7 +18,7 @@ class configurationClass:
         # written by: gui, import
         self.plcProtocol: str = "PLC S7-1500/1200/400/300"  # options: "Gui","ModbusTCP","PLC S7-1500/1200/400/300","PLC S7-300/400", "logo!","PLCSim")
         self.plcIpAdress: str = "192.168.0.1"
-        self.plcPort: int = 502 # ModBusTCP default port
+        self.plcPort: int = 102 # ModBusTCP default port
         self.plcRack: int = 0
         self.plcSlot: int = 1
         self.tsapLogo: int = 0x0300

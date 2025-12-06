@@ -21,7 +21,7 @@ class plcS7:
         self.tcpport = tcpport
         self.client = snap7.client.Client()
 
-    def connect(self) -> bool:
+    def connect(self,instance_name: str | None = None) -> bool:
         """
         Connect to the PLC.
 
@@ -38,7 +38,7 @@ class plcS7:
                 return False
         except Exception as e:
             # Try different slots in case of an S7-400/300
-            for i in range(0, 5):
+            for i in range(0, 2):
                 try:
                     self.client.connect(self.ip, self.rack, i, self.tcpport)
                     print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {i})")
@@ -48,12 +48,16 @@ class plcS7:
             print("Connection error:", e)
             return False
 
-    def disconnect(self):
+    def disconnect(self) -> bool:
         """
         Disconnect from the PLC if the connection is active.
         """
-        if self.client.get_connected():
-            self.client.disconnect()
+        try:
+            if self.client.get_connected():
+                self.client.disconnect()
+            return True
+        except:
+            return False
 
     def isConnected(self) -> bool:
         """
@@ -82,7 +86,8 @@ class plcS7:
         if self.isConnected():
             if byte >= 0 and 0 <= bit <= 7:
                 try:
-                    buffer_DI = bytearray(2)
+                    current_data = self.client.eb_read(start=byte, size=1)  
+                    buffer_DI = bytearray(current_data)  
                     if value:
                         buffer_DI[0] |= (1 << bit)
                     else:

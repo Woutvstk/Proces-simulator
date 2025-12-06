@@ -29,7 +29,7 @@ class logoS7:
         except Exception as e:
             print(f"__init__ error: {e}")
 
-    def connect(self) -> bool:
+    def connect(self,instance_name: str | None = None) -> bool:
         """
         Connect to the LOGO PLC.
 

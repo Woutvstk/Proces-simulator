@@ -1,133 +1,264 @@
 import snap7
 import snap7.util as s7util
 import time
+import logging
 
-# ---------------debug prog voor werking S7--------------------
-#run deze code om de werking van de S7 communicatie te testen los van de rest van de simulator
+#Code succesfully tested with S7-1500/1200(G1-G2)/400/300/ET200 CPU in standard and advanced license(for the S7-1500)
 
-ip = "192.168.0.1"
-rack = 0
-slot = 1
+# Optional: Suppress the verbose Snap7 logging during connection attempts
+logging.getLogger('snap7.client').setLevel(logging.WARNING)
 
-client = snap7.client.Client()
-try:
-    client.connect(ip, rack, slot, 102)
-    if client.get_connected():
-        print(" Verbonden met PLC")
-    else:
-        print(" Geen verbinding")
-except Exception as e:
-    print("Fout:", e)
+# This global variable will hold the active Snap7 client object once connected.
+WORKING_CLIENT = None 
 
-buffer_AI = bytearray(32)
-buffer_DI = bytearray(2)
+# Initializing global buffers for Read/Write operations.
+# Note: These buffers must be large enough to cover the highest I/O address used.
+# 40 bytes is chosen here to cover I/O addresses up to byte 39 (e.g., IW20 and IW32).
+buffer_DI = bytearray(40)
+buffer_DO = bytearray(40) 
+buffer_AI = bytearray(40) 
+buffer_AO = bytearray(40)
 
-def SetDI(byte: int, bit: int, value: int):    
+# --- PLC CLIENT CLASS ---
+class PlcClient:
+    """Class for managing the Snap7 connection and fundamental PLC communication."""
+
+    def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102):
+        """
+        Initialize the PLC client parameters.
+        """
+        # --- ATTENTION: HARDCODED IP AND PORT FOR PLCSIM ---
+        # The variables passed to __init__ are overridden below for a fixed setup.
+        self.ip = "127.0.0.1" # HARDCODED IP. CHANGE THIS for real PLC (e.g., "192.168.0.1") or use "127.0.0.1" for NetToPLCSim.
+        self.rack = rack
+        self.slot = slot
+        self.tcpport = 1024 # HARDCODED PORT. Change to 102 for a real PLC, or keep 1024/1025/... for PLCSimS7.
+        self.client = snap7.client.Client()
+
+    def connect(self) -> bool:
+        """
+        Connects to the PLC. Tries alternative slots (0, 1, 2) if the initial attempt fails.
+        """
+        print(f"Attempting to connect to {self.ip}:{self.tcpport} (Rack {self.rack}, Slot {self.slot})...")
+        initial_slot = self.slot
+        
+        # --- Initial Connection Attempt ---
+        try:
+            self.client.connect(self.ip, self.rack, self.slot, self.tcpport)
+            if self.client.get_connected():
+                print(f"✅ Successfully connected to S7 PLC at {self.ip} (Rack {self.rack}, Slot {self.slot})")
+                return True
+        except Exception as e:
+            # --- Retry Logic for different S7 PLC Slots ---
+            # Try alternate slots (0, 1, or 2) common for S7-300/400/1200 configurations.
+            for i in [0, 1, 2]:
+                if i != initial_slot:
+                    try:
+                        self.client.connect(self.ip, self.rack, i, self.tcpport)
+                        if self.client.get_connected():
+                            print(f"✅ Connected to S7 PLC at {self.ip} (Rack {self.rack}, alternative Slot {i})")
+                            self.slot = i # Update instance slot to the successful one
+                            return True
+                    except Exception:
+                        continue # Keep trying other slots
+            
+            # If all attempts failed
+            print(f"❌ Connection failed after all attempts. Error: {e}")
+            return False
+
+    def disconnect(self) -> bool:
+        """
+        Disconnects from the PLC if the connection is currently active.
+        """
+        try:
+            if self.client.get_connected():
+                self.client.disconnect()
+            return True
+        except:
+            return False
+
+    def isConnected(self) -> bool:
+        """
+        Checks if the live connection to the PLC is still active.
+        """
+        if not self.client.get_connected():
+            print("Connection lost to the PLC!")
+            return False
+        return True
+
+
+# --- HELPER FUNCTIONS (RELY ON GLOBAL WORKING_CLIENT) ---
+
+def get_connected_plc_client(ip: str, rack: int, slot: int) -> snap7.client.Client | None:
     """
-    Set a digital input (DI) bit in the PLC input process image (E/I area).
-
-    byte: selects which input byte in the PLC is used, as defined by the GUI  
-    bit: bit position (0–7) within the selected byte  
-    value: True/False or 1/0 to set or clear the bit
+    Instantiates and connects a PlcClient, returning the raw snap7.client object.
     """
-    if byte >= 0:
-        if 7 >= bit >= 0:
-            if value:  # if the value is > 0
-                buffer_DI[0] |= (1 << bit)  # shift binary 1 by bit index, e.g. (1 << 3) = 00001000
-            else:
-                buffer_DI[0] &= ~(1 << bit)  # invert bit mask, e.g. ~(1 << 3) = 11110111
-            client.eb_write(start=byte, size=1, data=buffer_DI)
+    plc_instance = PlcClient(ip=ip, rack=rack, slot=slot)
+    if plc_instance.connect():
+        # Return the underlying snap7 client object for direct use in I/O functions
+        return plc_instance.client
+    return None
+
+
+def SetDI(byte: int, bit: int, value: int):
+    """Writes a Digital Input (I-zone/EB) bit to the PLC simulator."""
+    # We write to the Input (I) zone, which is the EB (Peripheral Inputs) zone in Snap7.
+    if WORKING_CLIENT and WORKING_CLIENT.get_connected() and 0 <= byte < len(buffer_DI) and 0 <= bit <= 7:
+        
+        # 1. Update the local buffer for the specific bit
+        if value:
+            buffer_DI[byte] |= (1 << bit)
+        else:
+            buffer_DI[byte] &= ~(1 << bit)
+            
+        try:
+            # 2. Write the entire modified byte back to the PLC.
+            # Snap7 doesn't have a direct eb_write_bit, so we write the whole byte.
+            data_to_write = buffer_DI[byte:byte+1]
+            WORKING_CLIENT.eb_write(start=byte, size=1, data=data_to_write)
             return int(bool(value))
+        except Exception as e:
+            # print(f"SetDI error: {e}")
+            return -1 # Write failed
     return -1
 
 
 def GetDO(byte: int, bit: int):
-    """
-    Read a digital output (DO) bit from the PLC output process image (A/Q area).
-
-    byte: selects which output byte in the PLC is used, as defined by the GUI  
-    bit: bit position (0–7) within the selected byte
-    """
-    if byte >= 0:
-        if 7 >= bit >= 0:
-            data = client.ab_read(byte, 1)
+    """Reads a Digital Output (Q-zone/AB) bit from the PLC."""
+    # We read from the Output (Q) zone, which is the AB (Peripheral Outputs) zone in Snap7.
+    if WORKING_CLIENT and WORKING_CLIENT.get_connected() and byte >= 0 and 0 <= bit <= 7:
+        try:
+            # Read the byte containing the desired bit
+            data = WORKING_CLIENT.ab_read(byte, 1)
+            # Use s7util to extract the bit value
             return int(s7util.get_bool(data, 0, bit))
+        except Exception as e:
+            # print(f"GetDO error: {e}")
+            return -1
     return -1
 
 
 def SetAI(byte: int, value: int):
-    """
-    Set an analog input (AI) value as a 16-bit UNSIGNED INTEGER (0–65535) in the PLC input process image (E/I area).
-
-    byte: selects which input byte in the PLC is used, as defined by the GUI  
-    value: 0–65535 (word)
-    """
-    if byte >= 0:
-        if 0 <= value <= 65535:
-            lowByte = value & 0xFF  # 0xFF = mask for one byte (0b11111111)
-            highByte = (value >> 8) & 0xFF
-            buffer_AI[0] = highByte
-            buffer_AI[1] = lowByte
-            client.eb_write(start=byte, size=2, data=buffer_AI)
-            return int(value)
+    """Writes an Analog Input (I-zone/EB) as a 16-bit INT."""
+    # Check if client is connected and address is valid
+    if WORKING_CLIENT and WORKING_CLIENT.get_connected() and byte >= 0:
+        if -32768 <= value <= 32767: # Check for 16-bit INT range
+            data = bytearray(2)
+            s7util.set_int(data, 0, value)
+            try:
+                # Write 2 bytes (the INT) to the Peripheral Inputs
+                WORKING_CLIENT.eb_write(start=byte, size=2, data=data)
+                return value
+            except Exception as e:
+                # print(f"SetAI error: {e}")
+                return -1
+        print(f"Value {value} out of range for 16-bit INT.")
         return -1
     return -1
 
 
 def GetAO(byte: int):
-    """
-    Read an analog output (AO) value as a 16-bit SIGNED INTEGER (-32768–32767) from the PLC output process image (A/Q area).
-
-    byte: selects which output byte in the PLC is used, as defined by the GUI
-    """
-    if byte >= 0:
-        data = client.ab_read(start=byte, size=2)
-        return s7util.get_int(data, 0)
+    """Reads an Analog Output (Q-zone/AB) as a 16-bit INT."""
+    if WORKING_CLIENT and WORKING_CLIENT.get_connected() and byte >= 0:
+        try:
+            # Read 2 bytes (INT) from the Peripheral Outputs
+            data = WORKING_CLIENT.ab_read(start=byte, size=2)
+            return s7util.get_int(data, 0)
+        except Exception as e:
+            # print(f"GetAO error: {e}")
+            return -1
     return -1
 
 def print_status():
-    # Digitale ingangen
-    di_vals = []
-    for byte in range(len(buffer_DI)):
-        data = client.eb_read(start=byte, size=1)
-        for bit in range(8):
-            di_vals.append(f"{byte}.{bit}:{(data[0] >> bit) & 1}")
+    """Prints the status of a selection of I/O addresses."""
+    if not (WORKING_CLIENT and WORKING_CLIENT.get_connected()):
+        print("No connected client available to read status.")
+        return
+
+    # --- DIGITAL I/O READS ---
+    try:
+        # Read two bytes to cover I0.0 through I1.7
+        data_di = WORKING_CLIENT.eb_read(start=0, size=2)
+        di_vals = [f"I{byte}.{bit}:{int(s7util.get_bool(data_di, byte, bit))}" for byte in range(2) for bit in range(8)]
+    except Exception as e: 
+        di_vals = [f"DI READ ERROR: {e}"]
     
-    # Digitale uitgangen
-    do_vals = []
-    for byte in range(len(buffer_DI)):
-        for bit in range(8):
-            do_vals.append(f"{byte}.{bit}:{GetDO(byte, bit)}")
+    try:
+        # Read two bytes to cover Q0.0 through Q1.7
+        data_do = WORKING_CLIENT.ab_read(start=0, size=2)
+        do_vals = [f"Q{byte}.{bit}:{int(s7util.get_bool(data_do, byte, bit))}" for byte in range(2) for bit in range(8)]
+    except Exception as e: 
+        do_vals = [f"DO READ ERROR: {e}"]
+
+    # --- ANALOG I/O READS ---
+    try:
+        # Read 8 bytes to cover IW2, IW4, IW6, IW8 (4x INT = 8 bytes)
+        data_ai = WORKING_CLIENT.eb_read(start=2, size=8)
+        ai_vals = [f"IW{2 + i*2}:{s7util.get_int(data_ai, i*2)}" for i in range(4)]
+    except Exception as e: 
+        ai_vals = [f"AI READ ERROR: {e}"]
     
-    # Analoge ingangen (lees 2 bytes per AI)
-    ai_vals = []
-    for byte in range(2, len(buffer_AI)+2, 2):
-        data = client.eb_read(start=byte, size=2)
-        val = (data[0] << 8) | data[1]
-        ai_vals.append(f"{byte}:{val}")
+    try:
+        # Read 8 bytes to cover QW2, QW4, QW6, QW8
+        data_ao = WORKING_CLIENT.ab_read(start=2, size=8)
+        ao_vals = [f"QW{2 + i*2}:{s7util.get_int(data_ao, i*2)}" for i in range(4)]
+    except Exception as e: 
+        ao_vals = [f"AO READ ERROR: {e}"]
     
-    # Analoge uitgangen
-    ao_vals = []
-    for byte in range(2, 34, 2):
-        ao_vals.append(f"{byte}:{GetAO(byte)}")
-    
-    print(f"DI: {' '.join(di_vals)}")
-    print(f"DO: {' '.join(do_vals)}")
-    print(f"AI: {' '.join(ai_vals)}")
-    print(f"AO: {' '.join(ao_vals)}")
+    # --- OUTPUT STATUS ---
+    print(f"DI: {' | '.join(di_vals)}")
+    print(f"DO: {' | '.join(do_vals)}")
+    print(f"AI: {' | '.join(ai_vals)}")
+    print(f"AO: {' | '.join(ao_vals)}")
     print('-'*80)
 
-while True:
-    SetDI(0,0,1)
-    SetDI(1,4,1)  
-    SetDI(0,5,1) 
-    SetDI(1,5,1)
+# -------------------------------------------------------------------
+# --- MAIN PROGRAM EXECUTION ---
 
-    SetAI(2,0)
-    SetAI(4,255)
-    SetAI(6,-25000)
-    SetAI(20,69)
-    SetAI(32,69)
-    print_status()
+if __name__ == "__main__":
+    
+    # --- CONFIGURE CONNECTION PARAMETERS ---
+    # Note: These parameters are currently overridden by the hardcoded values in PlcClient.__init__
+    IP_ADRES = "192.168.2.30"
+    RACK = 0
+    SLOT = 1 # Default for S7-1500, use 0 for S7-1200
 
-    time.sleep(1)
+    # 1. Establish the connection once and assign the raw client to the global variable
+    WORKING_CLIENT = get_connected_plc_client(ip=IP_ADRES, rack=RACK, slot=SLOT)
+
+    if WORKING_CLIENT:
+        try:
+            print("\nStarting continuous I/O cycle...")
+            while True:
+                # --- Digital I/O Writes (Simulating sensor inputs to the PLC's I-zone) ---
+                SetDI(0,0,1) # I0.0 = 1 (Simulate a pushbutton press)
+                SetDI(1,4,1) # I1.4 = 1
+                SetDI(0,5,1) # I0.5 = 1 
+                SetDI(1,5,1) # I1.5 = 1
+
+                # --- Analog I/O Writes (Simulating analog sensor values) ---
+                SetAI(2, 0)      # IW2 = 0
+                SetAI(4, 255)    # IW4 = 255
+                SetAI(6, -25000) # IW6 = -25000
+                
+                # Note: These addresses (IW20, IW32) might be outside the I/O image range 
+                # of a standard PLCSIM setup, which will likely cause a Snap7 error
+                # handled by returning -1 in the SetAI function.
+                SetAI(20, 69) # IW20 = 69
+                SetAI(32, 69) # IW32 = 69
+                
+                print_status()
+
+                time.sleep(1)
+
+        except KeyboardInterrupt:
+            print("\nProgram stopped by user (Ctrl+C).")
+        except Exception as e:
+            print(f"\nA fatal communication error occurred: {e}")
+        finally:
+            # 3. Disconnect cleanly
+            if WORKING_CLIENT and WORKING_CLIENT.get_connected():
+                WORKING_CLIENT.disconnect()
+                print("Disconnected from PLC.")
+    else:
+        print("\nCould not start the I/O cycle without a working PLC connection.")

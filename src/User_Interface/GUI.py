@@ -470,7 +470,7 @@ class SettingsScherm:
         SoortControlerlabel.grid(row=0, column=0, sticky="e")
         SoortControler = tk.StringVar()
         soortControlerMenu = tk.OptionMenu(
-            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "PLC S7-1500/1200/400/300", "logo!", "PLCSim")
+            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "PLC S7-1500/1200(G1-G2)/400/300/ET200 CPU", "logo!", "PLCSim advanced S7-1500", "PLCsim S7-1500/1200(G1-G2)/400/300/ET200 CPU")
         soortControlerMenu.grid(row=0, column=1, sticky="ew")
         SoortControler.set(SaveControler)
 
