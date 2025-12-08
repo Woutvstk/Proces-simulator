@@ -22,6 +22,7 @@ mainConfig = mainConfigClass()
 validPlcConnection: bool = False
 print("Creating main gui...")
 Gui0 = mainGuiClass()
+PlcCom = plcModBusTCP(mainConfig.plcIpAdress, mainConfig.plcPort)
 
 
 """Initialize objects for tankSim"""
@@ -76,8 +77,6 @@ def tryConnectToPlc():
 
 # remember when last update was done
 timeLastUpdate = 0
-
-tryConnectToPlc()  # create initial PlcCom instance
 
 
 # main loop only runs if this file is run directly
