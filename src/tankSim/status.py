@@ -16,15 +16,15 @@ class status:
         self.heaterPowerFraction: float = 0.0
 
         # digital level sensor status
-        # written by: procesSim
+        # written by: simulation
         self.digitalLevelSensorLowTriggered: bool = False
         self.digitalLevelSensorHighTriggered: bool = False
 
         # liquid parameters
-        # written by: procesSim, import
+        # written by: simulation, import
         self.liquidVolume: float = 100.0
         # initialize liquid temp
-        # written by: procesSim, import
+        # written by: simulation, import
         self.liquidTemperature: float = 0.0
 
         # simulation status
@@ -32,11 +32,12 @@ class status:
         self.simRunning = False
 
         # flow rates
-        # written by process
+        # written by simulation
         self.flowRateIn: float = 0.0
         self.flowRateOut: float = 0.0
 
-        self.importExportVariableList = ["liquidVolume", "liquidTemperature"]
+        self.importExportVariableList = ["liquidVolume", "liquidTemperature",
+                                         "valveInOpenFraction", "valveOutOpenFraction", "heaterPowerFraction"]
 
     # Save status to a CSV file
     def saveToFile(self, exportFileName, createFile: bool = False):

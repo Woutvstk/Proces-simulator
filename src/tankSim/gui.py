@@ -124,7 +124,7 @@ class process:
             # Flow arrow
             main.canvas.create_line(150, pipe_y_top + 10, 200, pipe_y_top + 10,
                                     arrow=tk.LAST, fill="black", width=3)
-            main.canvas.create_text(120, pipe_y_top - 10, text=f"{flow_rate_in} L/min",
+            main.canvas.create_text(120, pipe_y_top - 10, text=f"{flow_rate_in} L/s",
                                     font=("Arial", 9, "bold"))
 
         # Inlet valve (triangles pointing at each other)
@@ -418,11 +418,12 @@ class process:
             main.redrawTank()
 
     def updateData(self, mainConfig: mainConfigClass, processConfig: tankSimConfigurationClass, processStatus: tankSimStatusClass) -> None:
-        global heating_power, inlet_valve, outlet_valve, water_level,  temperature
+        global heating_power, inlet_valve, outlet_valve, water_level, temperature, flow_rate_in
 
         processStatus.simRunning = self.is_running
         water_level = processStatus.liquidVolume
         temperature = processStatus.liquidTemperature
+        flow_rate_in = processStatus.flowRateIn
 
         # only write if guiControl
         if (mainConfig.plcGuiControl == "gui"):

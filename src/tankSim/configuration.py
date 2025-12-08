@@ -47,6 +47,7 @@ class configuration:
         self.tankVolume: float = 200.0
         self.valveInMaxFlow: float = 5.0
         self.valveOutMaxFlow: float = 2.0
+        self.liquidVolumeTimeDelay: float = 0.0
         self.ambientTemp: float = 21.0
         # default at 90%
         self.digitalLevelSensorHighTriggerLevel: float = 0.9 * self.tankVolume
@@ -56,6 +57,8 @@ class configuration:
         self.heaterMaxPower: float = 10000.0
         # tank heat loss
         self.tankHeatLoss: float = 150.0
+        # time in seconds between the change of the actor (heater/cooling) and the measured change
+        self.liquidTempTimeDelay: float = 0.0
         # specific heat capacity in Joeles/Kg*°C (4186 for water)
         self.liquidSpecificHeatCapacity: float = 4186.0
         # specific weight in kg per liter (water: 1)
@@ -64,7 +67,7 @@ class configuration:
 
         self.liquidBoilingTemp: float = 100.0
 
-        self.importExportVariableList = ["tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp", "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel", "heaterMaxPower", "tankHeatLoss",
+        self.importExportVariableList = ["tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "liquidVolumeTimeDelay", "ambientTemp", "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel", "heaterMaxPower", "tankHeatLoss", "liquidTempTimeDelay",
                                          "liquidSpecificHeatCapacity", "liquidBoilingTemp", "liquidSpecificWeight"]
 
     # Save config to a CSV file
