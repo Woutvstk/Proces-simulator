@@ -10,7 +10,7 @@ from PyQt5.QtCore import QTimer, QSize
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtGui import QPainter
 
-from QtDesignerLayout import Ui_MainWindow
+from guiCommon.QtDesignerLayout import *
 
 red = "#FF0000"
 orange = "#FFA500"
@@ -67,7 +67,9 @@ class VatWidget(QWidget):
 
         # SVG inladen
         try:
-            self.tree = ET.parse("SVG vat.svg")
+            svg_path = os.path.join(os.path.dirname(
+                __file__), "media", "SVGVat.svg")
+            self.tree = ET.parse(svg_path)
             self.root = self.tree.getroot()
             self.ns = {"svg": "http://www.w3.org/2000/svg"}
         except Exception as e:
@@ -470,22 +472,6 @@ class MainWindow(QMainWindow):
             self.ui.stackedWidget.setCurrentIndex(1)
         elif text == "Transportband":
             self.ui.stackedWidget.setCurrentIndex(2)
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    style_path = os.path.join(base_path, "style.qss")
-
-    if os.path.exists(style_path):
-        with open(style_path, "r") as f:
-            app.setStyleSheet(f.read())
-    else:
-        print("style.qss niet gevonden")
-
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
 
 
 # pyuic5 -x QtDesignerLayout.ui -o QtDesignerLayout.py

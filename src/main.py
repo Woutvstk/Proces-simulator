@@ -5,8 +5,21 @@ from plcCom.plcModBusTCP import plcModBusTCP
 from plcCom.plcS7 import plcS7
 from plcCom.logoS7 import logoS7
 from plcCom.PLCSimAPI import plcSimAPI
-from mainGui.mainGui import mainGui as mainGuiClass
 from configuration import configuration as mainConfigClass
+from guiCommon.QtDesignerLayout import *
+from guiCommon.Resource_rc import *
+from mainGui.mainGui import *
+import sys
+import os
+import xml.etree.ElementTree as ET
+
+from PyQt5.QtWidgets import (
+    QMainWindow, QApplication, QPushButton, QMenu, QAction,
+    QWidget, QVBoxLayout
+)
+from PyQt5.QtCore import QTimer, QSize
+from PyQt5.QtSvg import QSvgRenderer
+from PyQt5.QtGui import QPainter
 
 
 # tankSim specific imports
@@ -21,7 +34,19 @@ Gui0 = None
 mainConfig = mainConfigClass()
 validPlcConnection: bool = False
 print("Creating main gui...")
-Gui0 = mainGuiClass()
+app = QApplication(sys.argv)
+base_path = os.path.dirname(os.path.abspath(__file__))
+style_path = os.path.join(base_path, "guiCommon/style.qss")
+
+if os.path.exists(style_path):
+    with open(style_path, "r") as f:
+        app.setStyleSheet(f.read())
+else:
+    print("style.qss niet gevonden")
+
+window = MainWindow()
+window.show()
+sys.exit(app.exec())
 
 
 """Initialize objects for tankSim"""
