@@ -6,3 +6,6 @@ pyModbusTCP==v0.3.0
 pillow==v11.3.0
 python-snap7==v2.0.2
 pythonnet==v3.0.5
+psutil==7.1.3
+pywin32==306
+wmi

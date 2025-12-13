@@ -1,0 +1,9 @@
+{
+  "offsets": {
+    "BoolInput": 0,
+    "BoolOutput": 0,
+    "DWORDInput": 2,
+    "DWORDOutput": 2
+  },
+  "signals": []
+}

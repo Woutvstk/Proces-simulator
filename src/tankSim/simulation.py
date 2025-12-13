@@ -1,6 +1,5 @@
 import time
-import copy
-from tankSim.configuration import configuration as configurationClass
+from tankSim.configurationTS import configuration as configurationClass
 from tankSim.status import status as statusClass
 
 
@@ -91,6 +90,7 @@ class simulation:
                 self._lastRun = time.time()
                 # remember sim was runnning during previous update
                 self._lastSimRunningState = status.simRunning
+                print("Simulation FIRST RUN - initializing timer")
                 return
 
             """
@@ -117,6 +117,16 @@ class simulation:
             # calculate flowrates (delayed)
             status.flowRateIn = config.valveInMaxFlow * self.delayedValveInOpenFraction
             status.flowRateOut = config.valveOutMaxFlow * self.delayedValveOutOpenFraction
+
+            # Debug every 10 cycles
+            if not hasattr(self, '_debug_counter'):
+                self._debug_counter = 0
+            self._debug_counter += 1
+
+            if self._debug_counter % 10 == 0:
+                print(
+                    f" doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
+
             # calculate new liquidVolume
             status.liquidVolume = min(
                 status.liquidVolume + status.flowRateIn * self._timeSinceLastRun, config.tankVolume)

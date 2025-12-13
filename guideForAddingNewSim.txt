@@ -1,0 +1,749 @@
+Complete Handleiding: Nieuwe Simulatie Toevoegen
+Deze handleiding legt uit hoe je een nieuwe simulatie toevoegt aan het systeem, van A tot Z.
+
+Inhoudsopgave
+Overzicht van de Architectuur
+Stap 1: XML Signalen Definiëren
+Stap 2: Configuration Class Maken
+Stap 3: Status Class Maken
+Stap 4: Simulation Class Maken
+Stap 5: IO Handler Maken
+Stap 6: GUI Widget Maken (optioneel)
+Stap 7: Integratie in Main.py
+Stap 8: GUI Toevoegen aan MainWindow
+Complete Voorbeeld: Mixer Simulatie
+Overzicht van de Architectuur {#architectuur}
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          main.py                                 │
+│  - Main loop                                                     │
+│  - PLC verbinding                                                │
+│  - Roept simulation.doSimulation() aan                          │
+│  - Roept ioHandler.updateIO() aan                               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+┌──────────────┐   ┌──────────────────┐   ┌──────────────┐
+│ GUI Widget   │   │  ioHandler.py    │   │simulation.py │
+│  (VatWidget) │   │  - updateIO()    │   │- doSimulation│
+└──────────────┘   │  - resetOutputs()│   │- Fysica      │
+                   └──────────────────┘   └──────────────┘
+                            │                     │
+                            └──────────┬──────────┘
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    │                                      │
+                    ▼                                      ▼
+         ┌──────────────────┐               ┌──────────────────┐
+         │ configuration.py │               │   status.py      │
+         │ - IO adressen    │               │ - Huidige staat  │
+         │ - Parameters     │               │ - Sensor waardes │
+         └──────────────────┘               └──────────────────┘
+                    ▲
+                    │
+         ┌──────────────────┐
+         │ io_treeList.xml  │
+         │ - Signal definit.│
+         └──────────────────┘
+
+Stap 1: XML Signalen Definiëren {#stap-1-xml}
+Locatie: guiCommon/io_treeList.xml
+Voeg een nieuwe sectie toe voor je simulatie:
+
+xml
+<?xml version="1.0"?>
+<Simulation>
+    <!-- Bestaande TankSim -->
+    <TankSim>
+        <!-- ... -->
+    </TankSim>
+    
+    <!-- NIEUWE SIMULATIE: MixerSim -->
+    <MixerSim>
+        <Inputs>
+            <Digital>
+                <!-- PLC Inputs = Simulator Outputs (sensoren) -->
+                <Signal description="Mixer motor running sensor" 
+                        type="bool" range="0-1" io_prefix="I" status="FALSE">
+                    MotorRunning
+                </Signal>
+                <Signal description="Tank full sensor" 
+                        type="bool" range="0-1" io_prefix="I" status="FALSE">
+                    TankFull
+                </Signal>
+            </Digital>
+            <Analog>
+                <!-- Analoge sensoren -->
+                <Signal description="Mixer speed measurement (RPM)" 
+                        type="int" range="0-27648" io_prefix="I" status="0">
+                    SpeedSensor
+                </Signal>
+                <Signal description="Mixture temperature" 
+                        type="int" range="0-27648" io_prefix="I" status="0">
+                    TempSensor
+                </Signal>
+            </Analog>
+        </Inputs>
+        <Outputs>
+            <Digital>
+                <!-- PLC Outputs = Simulator Inputs (actuatoren) -->
+                <Signal description="Start motor (ON/OFF)" 
+                        type="bool" range="0-1" io_prefix="Q" status="FALSE">
+                    MotorStart
+                </Signal>
+                <Signal description="Inlet valve" 
+                        type="bool" range="0-1" io_prefix="Q" status="FALSE">
+                    InletValve
+                </Signal>
+            </Digital>
+            <Analog>
+                <!-- Analoge actuatoren -->
+                <Signal description="Motor speed setpoint (0-100%)" 
+                        type="int" range="0-27648" io_prefix="Q" status="0">
+                    MotorSpeedSetpoint
+                </Signal>
+            </Analog>
+        </Outputs>
+    </MixerSim>
+</Simulation>
+Belangrijk:
+
+Inputs = Sensoren (simulator → PLC) → io_prefix="I"
+Outputs = Actuatoren (PLC → simulator) → io_prefix="Q"
+Digital = type="bool", Analog = type="int"
+
+
+Stap 2: Configuration Class Maken {#stap-2-configuration}
+Locatie: mixerSim/configurationMS.py (nieuw bestand)
+python
+import json
+from pathlib import Path
+
+
+class configuration:
+    """Configuration voor MixerSim"""
+
+    def __init__(self):
+        """IO settings - Worden overschreven door load_io_config()"""
+        
+        # =================================================================
+        # PLC OUTPUTS (van PLC perspectief = simulator inputs / actuatoren)
+        # =================================================================
+        # DIGITAL OUTPUTS
+        self.DQMotorStart = {"byte": 0, "bit": 0}
+        self.DQInletValve = {"byte": 0, "bit": 1}
+        
+        # ANALOG OUTPUTS
+        self.AQMotorSpeedSetpoint = {"byte": 2}
+        
+        # =================================================================
+        # PLC INPUTS (van PLC perspectief = simulator outputs / sensoren)
+        # =================================================================
+        # DIGITAL INPUTS
+        self.DIMotorRunning = {"byte": 0, "bit": 0}
+        self.DITankFull = {"byte": 0, "bit": 1}
+        
+        # ANALOG INPUTS
+        self.AISpeedSensor = {"byte": 2}
+        self.AITempSensor = {"byte": 4}
+        
+        # =================================================================
+        # Signal Mapping (XML naam → attribuut naam)
+        # =================================================================
+        self.io_signal_mapping = {
+            # OUTPUTS (van simulator perspectief = inputs)
+            "MotorStart": "DQMotorStart",
+            "InletValve": "DQInletValve",
+            "MotorSpeedSetpoint": "AQMotorSpeedSetpoint",
+            
+            # INPUTS (van simulator perspectief = outputs)
+            "MotorRunning": "DIMotorRunning",
+            "TankFull": "DITankFull",
+            "SpeedSensor": "AISpeedSensor",
+            "TempSensor": "AITempSensor",
+        }
+        
+        # Reverse mapping voor status display
+        self.reverse_io_mapping = {v: k for k, v in self.io_signal_mapping.items()}
+        
+        # Bereken byte range
+        self.lowestByte, self.highestByte = self.get_byte_range()
+        
+        # =================================================================
+        # Simulation Parameters
+        # =================================================================
+        self.simulationInterval = 0.1  # seconds
+        
+        # Process parameters
+        self.tankCapacity = 100.0  # liters
+        self.maxMotorSpeed = 1500.0  # RPM
+        self.inletFlowRate = 10.0  # liters/second
+        self.motorAcceleration = 100.0  # RPM/second
+        self.heatingRate = 5.0  # degrees/second
+        self.ambientTemp = 20.0  # degrees Celsius
+        
+        # Export list voor save/load
+        self.importExportVariableList = [
+            "tankCapacity", "maxMotorSpeed", "inletFlowRate", 
+            "motorAcceleration", "heatingRate", "ambientTemp"
+        ]
+    
+    def get_byte_range(self):
+        """Return lowest en highest byte gebruikt in IO"""
+        bytes_used = []
+        
+        for _, value in self.__dict__.items():
+            if isinstance(value, dict) and "byte" in value:
+                bytes_used.append(value["byte"])
+        
+        if bytes_used:
+            return min(bytes_used), max(bytes_used)
+        else:
+            return 0, 10
+    
+    def update_io_range(self):
+        """Update byte range na IO wijzigingen"""
+        self.lowestByte, self.highestByte = self.get_byte_range()
+    
+    def load_io_config_from_file(self, config_file_path: Path):
+        """Laad IO configuratie uit JSON bestand"""
+        try:
+            with open(config_file_path, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+            
+            if 'signals' not in config_data:
+                print("Warning: No signals found in IO configuration")
+                return
+            
+            for signal in config_data['signals']:
+                signal_name = signal.get('name', '')
+                address = signal.get('address', '')
+                
+                if signal_name in self.io_signal_mapping:
+                    attr_name = self.io_signal_mapping[signal_name]
+                    
+                    # Parse address
+                    if '.' in address:
+                        # Digital: I0.0 of Q0.1
+                        parts = address.split('.')
+                        byte_part = parts[0][1:]  # Skip I/Q/V prefix
+                        bit_part = parts[1]
+                        
+                        try:
+                            byte_val = int(byte_part)
+                            bit_val = int(bit_part)
+                            setattr(self, attr_name, {"byte": byte_val, "bit": bit_val})
+                        except ValueError:
+                            print(f"Cannot parse address: {address}")
+                    
+                    elif 'W' in address:
+                        # Analog: IW2 of QW4
+                        byte_part = address.split('W')[1]
+                        try:
+                            byte_val = int(byte_part)
+                            setattr(self, attr_name, {"byte": byte_val})
+                        except ValueError:
+                            print(f"Cannot parse address: {address}")
+            
+            self.update_io_range()
+            print(f"MixerSim IO config loaded, byte range: {self.lowestByte}-{self.highestByte}")
+            
+        except FileNotFoundError:
+            print(f"IO config not found: {config_file_path}")
+        except json.JSONDecodeError:
+            print(f"Invalid JSON: {config_file_path}")
+        except Exception as e:
+            print(f"Error loading IO config: {e}")
+
+Stap 3: Status Class Maken {#stap-3-status}
+Locatie: mixerSim/status.py (nieuw bestand)
+python
+import csv
+
+
+class status:
+    """Status class voor MixerSim - houdt huidige staat bij"""
+    
+    def __init__(self):
+        # =====================================================================
+        # ACTUATOR STATUS (geschreven door: PLC, GUI, of import)
+        # =====================================================================
+        self.motorStartCommand = False  # Motor start command
+        self.inletValveOpen = False  # Inlet valve status
+        self.motorSpeedSetpoint = 0.0  # Motor speed setpoint (0-1)
+        
+        # =====================================================================
+        # SENSOR STATUS (geschreven door: simulation)
+        # =====================================================================
+        self.motorRunning = False  # Motor running sensor
+        self.tankFull = False  # Tank full sensor
+        self.motorSpeed = 0.0  # Current motor speed (RPM)
+        self.tankLevel = 0.0  # Current tank level (liters)
+        self.mixtureTemp = 20.0  # Current temperature (°C)
+        
+        # =====================================================================
+        # SIMULATION CONTROL
+        # =====================================================================
+        self.simRunning = False
+        
+        # Export list voor save/load
+        self.importExportVariableList = [
+            "tankLevel", "mixtureTemp", "motorSpeed"
+        ]
+    
+    def saveToFile(self, exportFileName, createFile: bool = False):
+        """Save status to CSV file"""
+        print(f"Exporting MixerSim status to: {exportFileName}")
+        openMode = "w" if createFile else "a"
+        
+        with open(exportFileName, openMode, newline="") as file:
+            writer = csv.writer(file)
+            if createFile:
+                writer.writerow(["variable", "value"])
+            
+            for variable in self.importExportVariableList:
+                writer.writerow([variable, getattr(self, variable)])
+    
+    def loadFromFile(self, importFileName: str):
+        """Load status from CSV file"""
+        with open(importFileName, "r") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                for variable in self.importExportVariableList:
+                    if row["variable"] == variable:
+                        value_type = type(getattr(self, variable))
+                        setattr(self, variable, value_type(row["value"]))
+        
+        print(f"MixerSim status loaded from: {importFileName}")
+
+Stap 4: Simulation Class Maken {#stap-4-simulation}
+Locatie: mixerSim/simulation.py (nieuw bestand)
+python
+import time
+from mixerSim.configurationMS import configuration as configurationClass
+from mixerSim.status import status as statusClass
+
+
+class simulation:
+    """Mixer simulation - berekent fysica van het proces"""
+    
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self._lastRun = time.time()
+        self._lastSimRunningState = False
+    
+    def doSimulation(self, config: configurationClass, status: statusClass) -> None:
+        """Main simulation loop - update alle waardes"""
+        
+        if not status.simRunning:
+            self._lastSimRunningState = False
+            return
+        
+        # First run initialisatie
+        if not self._lastSimRunningState:
+            self._lastRun = time.time()
+            self._lastSimRunningState = True
+            print("MixerSim FIRST RUN - initializing")
+            return
+        
+        # Bereken tijdstap
+        timeSinceLastRun = time.time() - self._lastRun
+        self._lastRun = time.time()
+        dt = timeSinceLastRun
+        
+        # =====================================================================
+        # MOTOR SIMULATION
+        # =====================================================================
+        if status.motorStartCommand:
+            # Motor versnelt naar setpoint
+            target_speed = status.motorSpeedSetpoint * config.maxMotorSpeed
+            
+            if status.motorSpeed < target_speed:
+                status.motorSpeed += config.motorAcceleration * dt
+                status.motorSpeed = min(status.motorSpeed, target_speed)
+            elif status.motorSpeed > target_speed:
+                status.motorSpeed -= config.motorAcceleration * dt
+                status.motorSpeed = max(status.motorSpeed, target_speed)
+            
+            # Motor running sensor (TRUE als motor > 10% van max)
+            status.motorRunning = (status.motorSpeed > config.maxMotorSpeed * 0.1)
+        else:
+            # Motor stopt
+            status.motorSpeed = max(0, status.motorSpeed - config.motorAcceleration * dt)
+            status.motorRunning = False
+        
+        # =====================================================================
+        # TANK LEVEL SIMULATION
+        # =====================================================================
+        if status.inletValveOpen:
+            # Vloeistof stroomt binnen
+            status.tankLevel += config.inletFlowRate * dt
+            status.tankLevel = min(status.tankLevel, config.tankCapacity)
+        
+        # Tank full sensor (TRUE als > 90% vol)
+        status.tankFull = (status.tankLevel > config.tankCapacity * 0.9)
+        
+        # =====================================================================
+        # TEMPERATURE SIMULATION
+        # =====================================================================
+        if status.motorRunning:
+            # Motor verwarmt de vloeistof door wrijving
+            heating_factor = status.motorSpeed / config.maxMotorSpeed
+            status.mixtureTemp += config.heatingRate * heating_factor * dt
+            status.mixtureTemp = min(status.mixtureTemp, 100.0)  # Max 100°C
+        else:
+            # Afkoelen naar omgevingstemperatuur
+            if status.mixtureTemp > config.ambientTemp:
+                status.mixtureTemp -= 1.0 * dt
+                status.mixtureTemp = max(status.mixtureTemp, config.ambientTemp)
+
+Stap 5: IO Handler Maken {#stap-5-iohandler}
+Locatie: mixerSim/ioHandler.py (nieuw bestand)
+python
+from configuration import configuration as mainConfigClass
+from mixerSim.configurationMS import configuration as configurationClass
+from mixerSim.status import status as statusClass
+from plcCom.logoS7 import logoS7
+
+
+class ioHandler:
+    """IO Handler voor MixerSim - bidirectionele communicatie met PLC"""
+    
+    def __init__(self):
+        self.debug_counter = 0
+        self.last_forced_values = {}
+        self.outputs_reset = False
+    
+    def mapValue(self, oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
+        """Map een waarde van oud bereik naar nieuw bereik"""
+        return round((old - oldMin) * (newMax - newMin) / (oldMax - oldMin) + newMin, 2)
+    
+    def updateIO(self, plc: logoS7, mainConfig: mainConfigClass, 
+                 config: configurationClass, status: statusClass, 
+                 forced_values: dict = None):
+        """
+        Bidirectionele IO met force support:
+        - Lees PLC outputs (actuatoren) en schrijf naar status
+        - Schrijf status sensors naar PLC inputs
+        - Force waardes hebben prioriteit
+        """
+        if forced_values is None:
+            forced_values = {}
+        
+        # Reset flag when connection restored
+        if mainConfig.plcGuiControl == "plc":
+            self.outputs_reset = False
+        
+        # Debug logging
+        self.debug_counter += 1
+        debug_this_cycle = (self.debug_counter % 50 == 0)
+        
+        # Track force changes
+        if forced_values != self.last_forced_values:
+            if forced_values:
+                print(f"FORCE ACTIVE (MixerSim): {forced_values}")
+            else:
+                print("Force cleared (MixerSim)")
+            self.last_forced_values = forced_values.copy()
+        
+        # =====================================================================
+        # LEES PLC OUTPUTS (actuatoren) met force override
+        # =====================================================================
+        
+        # Motor Start
+        if "DQMotorStart" in forced_values:
+            status.motorStartCommand = bool(forced_values["DQMotorStart"])
+        elif mainConfig.plcGuiControl == "plc":
+            status.motorStartCommand = plc.GetDO(
+                config.DQMotorStart["byte"], config.DQMotorStart["bit"])
+        
+        # Inlet Valve
+        if "DQInletValve" in forced_values:
+            status.inletValveOpen = bool(forced_values["DQInletValve"])
+        elif mainConfig.plcGuiControl == "plc":
+            status.inletValveOpen = plc.GetDO(
+                config.DQInletValve["byte"], config.DQInletValve["bit"])
+        
+        # Motor Speed Setpoint
+        if "AQMotorSpeedSetpoint" in forced_values:
+            status.motorSpeedSetpoint = self.mapValue(
+                0, plc.analogMax, 0, 1, forced_values["AQMotorSpeedSetpoint"])
+        elif mainConfig.plcGuiControl == "plc":
+            status.motorSpeedSetpoint = self.mapValue(
+                0, plc.analogMax, 0, 1, plc.GetAO(config.AQMotorSpeedSetpoint["byte"]))
+        
+        # =====================================================================
+        # SCHRIJF geforceerde outputs terug naar PLC
+        # =====================================================================
+        
+        if "DQMotorStart" in forced_values:
+            plc.SetDO(config.DQMotorStart["byte"], config.DQMotorStart["bit"], 
+                     bool(forced_values["DQMotorStart"]))
+        
+        if "DQInletValve" in forced_values:
+            plc.SetDO(config.DQInletValve["byte"], config.DQInletValve["bit"],
+                     bool(forced_values["DQInletValve"]))
+        
+        if "AQMotorSpeedSetpoint" in forced_values:
+            plc.SetAO(config.AQMotorSpeedSetpoint["byte"], 
+                     int(forced_values["AQMotorSpeedSetpoint"]))
+        
+        # =====================================================================
+        # SCHRIJF status sensors naar PLC INPUTS (altijd) met force support
+        # =====================================================================
+        
+        # Motor Running Sensor
+        if "DIMotorRunning" in forced_values:
+            value = bool(forced_values["DIMotorRunning"])
+        else:
+            value = status.motorRunning
+        plc.SetDI(config.DIMotorRunning["byte"], config.DIMotorRunning["bit"], value)
+        
+        # Tank Full Sensor
+        if "DITankFull" in forced_values:
+            value = bool(forced_values["DITankFull"])
+        else:
+            value = status.tankFull
+        plc.SetDI(config.DITankFull["byte"], config.DITankFull["bit"], value)
+        
+        # Speed Sensor
+        if "AISpeedSensor" in forced_values:
+            value = int(forced_values["AISpeedSensor"])
+        else:
+            value = int(self.mapValue(0, config.maxMotorSpeed, 0, plc.analogMax, 
+                                     status.motorSpeed))
+        plc.SetAI(config.AISpeedSensor["byte"], value)
+        
+        # Temperature Sensor
+        if "AITempSensor" in forced_values:
+            value = int(forced_values["AITempSensor"])
+        else:
+            value = int(self.mapValue(0, 100, 0, plc.analogMax, status.mixtureTemp))
+        plc.SetAI(config.AITempSensor["byte"], value)
+    
+    def resetOutputs(self, mainConfig: mainConfigClass, 
+                    config: configurationClass, status: statusClass):
+        """Reset alle actuatoren wanneer PLC verbinding verloren is"""
+        if mainConfig.plcGuiControl == "plc":
+            status.motorStartCommand = False
+            status.inletValveOpen = False
+            status.motorSpeedSetpoint = 0.0
+            
+            if not self.outputs_reset:
+                print("MixerSim outputs reset (no PLC connection)")
+                self.outputs_reset = True
+
+Stap 6: GUI Widget Maken (optioneel) {#stap-6-gui}
+Locatie: mixerSim/gui.py (nieuw bestand)
+python
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt5.QtCore import Qt
+
+
+class MixerWidget(QWidget):
+    """Visual representation van de mixer simulatie"""
+    
+    def __init__(self):
+        super().__init__()
+        
+        layout = QVBoxLayout(self)
+        
+        # Titel
+        self.title = QLabel("Mixer Simulator")
+        self.title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.title)
+        
+        # Status labels
+        self.motor_label = QLabel("Motor: OFF")
+        self.tank_label = QLabel("Tank Level: 0 L")
+        self.temp_label = QLabel("Temperature: 20°C")
+        
+        layout.addWidget(self.motor_label)
+        layout.addWidget(self.tank_label)
+        layout.addWidget(self.temp_label)
+    
+    def update_display(self, status):
+        """Update display met huidige status"""
+        # Motor status
+        if status.motorRunning:
+            self.motor_label.setText(f"Motor: ON ({status.motorSpeed:.0f} RPM)")
+            self.motor_label.setStyleSheet("color: green;")
+        else:
+            self.motor_label.setText("Motor: OFF")
+            self.motor_label.setStyleSheet("color: red;")
+        
+        # Tank level
+        self.tank_label.setText(f"Tank Level: {status.tankLevel:.1f} L")
+        
+        # Temperature
+        self.temp_label.setText(f"Temperature: {status.mixtureTemp:.1f}°C")
+Stap 7: Integratie in Main.py {#stap-7-main}
+Locatie: main.py
+Voeg deze imports toe:
+
+python
+# MixerSim specific imports
+from mixerSim.simulation import simulation as mixerSimClass 
+from mixerSim.status import status as mixerSimStatusClass
+from mixerSim.configurationMS import configuration as mixerSimConfigurationClass 
+from mixerSim.ioHandler import ioHandler as mixerSimIoHandlerClass
+Initialiseer de mixer simulatie:
+
+python
+# Initialize mixerSim
+print("\nInitializing MixerSim process...")
+mixerSimConfig = mixerSimConfigurationClass()
+mixerSimStatus = mixerSimStatusClass()
+mixerSimIO = mixerSimIoHandlerClass()
+mixerSim = mixerSimClass("mixerSimulation0")
+
+# Load IO configuration
+mixer_io_config_path = project_root / "mixerSim" / "io_configuration.json"
+if mixer_io_config_path.exists():
+    mixerSimConfig.load_io_config_from_file(mixer_io_config_path)
+    print(f"MixerSim IO configuration loaded")
+Voeg selector toe om tussen simulaties te switchen:
+
+python
+# Selecteer actieve simulatie (bijvoorbeeld via GUI)
+activeSimulation = "tank"  # of "mixer"
+
+if activeSimulation == "tank":
+    currentProcessConfig = tankSimConfig
+    currentProcessStatus = tankSimStatus
+    currentProcessIoHandler = tankSimIO
+    currentProcessSim = tankSim
+elif activeSimulation == "mixer":
+    currentProcessConfig = mixerSimConfig
+    currentProcessStatus = mixerSimStatus
+    currentProcessIoHandler = mixerSimIO
+    currentProcessSim = mixerSim
+
+Stap 8: GUI Toevoegen aan MainWindow {#stap-8-mainwindow}
+In mainGui.py:
+python
+# Import mixer widget
+from mixerSim.gui import MixerWidget
+
+# In MainWindow.__init__():
+def __init__(self):
+    # ... existing code ...
+    
+    # Add mixer widget to page
+    self.mixer_widget = MixerWidget()
+    # Add to appropriate container in your UI
+Update de XML tree loader:
+In ioConfigPage.py, load_io_tree() methode:
+
+python
+def load_io_tree(self):
+    """Laad IO signalen van XML bestand"""
+    # ... existing code ...
+    
+    # Add MixerSim
+    mixersim = root.find('MixerSim')
+    if mixersim is not None:
+        self._load_mixersim_signals(mixersim)
+
+def _load_mixersim_signals(self, mixersim):
+    """Laad MixerSim signalen"""
+    mixersim_item = QTreeWidgetItem(self.treeWidget_IO, ["MixerSim"])
+    
+    inputs_root = mixersim.find('Inputs')
+    if inputs_root is not None:
+        inputs_item = QTreeWidgetItem(mixersim_item, ["Inputs"])
+        self._load_signal_category(inputs_root, inputs_item)
+    
+    outputs_root = mixersim.find('Outputs')
+    if outputs_root is not None:
+        outputs_item = QTreeWidgetItem(mixersim_item, ["Outputs"])
+        self._load_signal_category(outputs_root, outputs_item)
+
+Complete Voorbeeld: Bestandsstructuur {#voorbeeld}
+project_root/
+│
+├── main.py
+├── configuration.py
+│
+├── tankSim/
+│   ├── __init__.py
+│   ├── configurationTS.py
+│   ├── status.py
+│   ├── simulation.py
+│   ├── ioHandler.py
+│   ├── gui.py
+│   └── io_configuration.json
+│
+├── mixerSim/                    ← NIEUW
+│   ├── __init__.py              ← NIEUW (leeg bestand)
+│   ├── configurationMS.py       ← NIEUW (Stap 2)
+│   ├── status.py                ← NIEUW (Stap 3)
+│   ├── simulation.py            ← NIEUW (Stap 4)
+│   ├── ioHandler.py             ← NIEUW (Stap 5)
+│   ├── gui.py                   ← NIEUW (Stap 6)
+│   └── io_configuration.json     (auto-generated)
+│
+├── guiCommon/
+│   ├── io_treeList.xml         ← UPDATE (Stap 1)
+│   └── ...
+│
+└── mainGui/
+    ├── mainGui.py              ← UPDATE (Stap 8)
+    ├── ioConfigPage.py         ← UPDATE (Stap 8)
+    └── ...
+
+
+ Stap 1: XML signalen toegevoegd aan io_treeList.xml
+ Stap 2: configuration.py gemaakt met IO mapping
+ Stap 3: status.py gemaakt met state variables
+ Stap 4: simulation.py gemaakt met fysica
+ Stap 5: ioHandler.py gemaakt met PLC communicatie
+ Stap 6: gui.py gemaakt (optioneel)
+ Stap 7: Imports toegevoegd aan main.py
+ Stap 7: Initialisatie toegevoegd aan main.py
+ Stap 8: XML loader geupdate in ioConfigPage.py
+ Stap 8: GUI widget toegevoegd aan mainGui.py
+ Test: Drag & drop signalen vanuit tree
+ Test: Connectie met PLC
+ Test: Force functionaliteit
+
+
+Veel voorkomende fouten
+Fout 1: Signal naam komt niet overeen
+python
+# FOUT:
+self.io_signal_mapping = {
+    "MotorStart": "DQMotorStart",  # XML: "MotorStart"
+}
+# Drag & drop werkt niet!
+
+# CORRECT:
+# Zorg dat XML <Signal> tekst exact matcht met key in mapping
+Fout 2: IO prefix verkeerd
+python
+# FOUT:
+<Signal io_prefix="Q">MotorRunning</Signal>  # Dit is een SENSOR (input)!
+
+# CORRECT:
+<Signal io_prefix="I">MotorRunning</Signal>  # Sensoren = PLC inputs
+Fout 3: Byte overlap
+python
+# FOUT:
+# TankSim gebruikt byte 0-6
+# MixerSim gebruikt byte 0-4  ← OVERLAP!
+
+# CORRECT:
+# TankSim: byte 0-6
+# MixerSim: byte 10-16  ← Geen overlap
+Volgende Stappen
+Nu je weet hoe je een simulatie toevoegt, kun je:
+
+Experimenteren met verschillende fysica modellen
+Meerdere simulaties tegelijk runnen
+Complexe interconnecties maken tussen simulaties
+Custom GUI widgets maken met SVG graphics
+Advanced features toevoegen (alarmen, trends, data logging)
+
+

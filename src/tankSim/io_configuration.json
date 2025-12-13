@@ -1,0 +1,110 @@
+{
+  "offsets": {
+    "BoolInput": 0,
+    "BoolOutput": 0,
+    "DWORDInput": 2,
+    "DWORDOutput": 2
+  },
+  "signals": [
+    {
+      "name": "LevelSensorHigh",
+      "type": "bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "I0.0",
+      "status": "FALSE",
+      "description": "Tank upper level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "LevelSensorLow",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "I0.1",
+      "status": "FALSE",
+      "description": "Tank lower level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "LevelSensor",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "IW2",
+      "status": "13824",
+      "description": "Tank level measurement",
+      "range": "0-27648"
+    },
+    {
+      "name": "TemperatureSensor",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "IW4",
+      "status": "4608",
+      "description": "Temperature sensor",
+      "range": "0-27648"
+    },
+    {
+      "name": "ValveIn",
+      "type": "bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "Q0.0",
+      "status": "FALSE",
+      "description": "Upper valve digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "ValveOut",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "Q0.1",
+      "status": "FALSE",
+      "description": "Lower valve digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "Heater",
+      "type": "bool",
+      "byte": "0",
+      "bit": "2",
+      "address": "Q0.2",
+      "status": "FALSE",
+      "description": "Heater digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "ValveInFraction",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "QW2",
+      "status": "0",
+      "description": "Upper valve analog position (0-100%)",
+      "range": "0-27648"
+    },
+    {
+      "name": "ValveOutFraction",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "QW4",
+      "status": "0",
+      "description": "Lower valve analog position (0-100%)",
+      "range": "0-27648"
+    },
+    {
+      "name": "HeaterFraction",
+      "type": "int",
+      "byte": "6",
+      "bit": "",
+      "address": "QW6",
+      "status": "0",
+      "description": "Heater analog power (0-100%)",
+      "range": "0-27648"
+    }
+  ]
+}

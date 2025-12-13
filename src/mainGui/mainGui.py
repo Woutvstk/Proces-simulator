@@ -1,268 +1,452 @@
-from tkinter import filedialog
-import tkinter as tk
-import pathlib
+# mainGui.py - Main GUI entry point and navigation
+# Handles:
+# - Resource compilation
+# - UI loading
+# - Basic window initialization
+# - Navigation between pages
+# - PLC connection handling
+# - Main update timers
+
+import sys
 import os
-from PIL import Image, ImageTk
-import math
+import subprocess
+from pathlib import Path
 
-# import class definition of mainConfig
-from configuration import configuration as mainConfigClass
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5 import uic
 
+# Import split modules
+from mainGui.processSettingsPage import ProcessSettingsMixin
+from mainGui.ioConfigPage import IOConfigMixin
 
-# kept for text color, autocomplete, ... TODO: change to base class
-from tankSim.status import status as tankSimStatusClass
-from tankSim.configuration import configuration as tankSimConfigurationClass
+from tankSim.gui import VatWidget
+from conveyor.gui import TransportbandWidget
+from configuration import configuration
 
+# =============================================================================
+# Resource and UI compilation (dynamic)
+# =============================================================================
+current_dir = Path(__file__).parent
+gui_common_dir = current_dir.parent / "guiCommon"
 
-# tankSim specific imports
-from tankSim.gui import process as tankSimProcessScreenClass
-from tankSim.gui import settings as tankSimSettingsScreenClass
+qrc_file = gui_common_dir / "Resource.qrc"
+rc_py_file = gui_common_dir / "Resource_rc.py"
 
-navColor = '#383838'
+if qrc_file.exists():
+    try:
+        subprocess.run(
+            ["pyrcc5", str(qrc_file), "-o", str(rc_py_file)], 
+            check=True
+        )
+        # Removed unnecessary print
+        
+        if str(gui_common_dir) not in sys.path:
+            sys.path.insert(0, str(gui_common_dir))
+        
+        try:
+            import Resource_rc  # type: ignore[import-not-found]
+            # Removed unnecessary print
+        except ImportError as e:
+            # Removed unnecessary print
+            pass
+        
+    except subprocess.CalledProcessError as e:
+        # Removed unnecessary print
+        pass
+    except Exception as e:
+        # Removed unnecessary print
+        pass
+else:
+    # Removed unnecessary print
+    pass
 
-defaultMainConfig: mainConfigClass = mainConfigClass()
+# Load UI
+ui_file = gui_common_dir / "mainWindowPIDRegelaarSim.ui"
 
-
-# flag to notify the rest of the program that the gui has been closed
-exitProgram = False
-TryConnectPending = False
-importCommand: bool = False
-exportCommand: bool = False
-
-
-ip_adress = defaultMainConfig.plcIpAdress
-SaveControler = "PLC S7-1500/1200/400/300"
-
-# TODO change to base class
-currenScreen: tankSimProcessScreenClass = None
-
-
-def getAbsolutePath(relativePath: str) -> str:
-    current_dir = pathlib.Path(__file__).parent.resolve()
-    return os.path.join(current_dir, relativePath)
-
-
-class MainScherm:
-    def __init__(main, root):
-        conColor = '#383838'
-        main.root = root
-        main.root.title("PID Regelaar Tank")
-        main.root.geometry("1200x700")
-        main.root.configure(bg="white")
-
-        main.conFrame = tk.Frame(main.root, bg=conColor, height=45)
-        main.conFrame.place(relwidth=1.0, x=50, y=4)
-
-        connectButton = tk.Button(main.conFrame, text="Connect",
-                                  bg=conColor, activebackground=conColor, fg="white", command=main.setTryConnect)
-        connectButton.place(x=830, y=10)
-
-        main.AdresLabel = tk.Label(main.conFrame, text="IP Adress:",
-                                   bg=conColor, fg="White", font=("Arial", 10))
-        main.AdresLabel.place(x=900, y=10)
-        main.Adres = tk.Entry(main.conFrame, bg=conColor,
-                              fg="White", font=("Arial", 10))
-        main.Adres.place(x=970, y=12.5)
-        main.Adres.insert(0, ip_adress)
-
-        main.MainFrame = tk.Frame(main.root, bg="white")
-        main.MainFrame.place(relwidth=1.0, relheight=1.0, x=50, y=50)
-
-    def setTryConnect(self):
-        global TryConnectPending, ip_adress
-        ip_adress = self.Adres.get()
-        TryConnectPending = True
+if ui_file.exists():
+    Ui_MainWindow, QtBaseClass = uic.loadUiType(str(ui_file))
+    # Removed unnecessary print
+else:
+    raise FileNotFoundError(f"Cannot find {ui_file}! Searched in: {ui_file}")
 
 
-class NavigationFrame:
-    def __init__(nav, root, MainFrame):
-        global currenScreen
-        navColor = '#383838'
-        nav = tk.Frame(root, bg=navColor)
-        nav.pack(side="left", fill=tk.Y, padx=3, pady=4)
-        nav.pack_propagate(flag=False)
-        nav.configure(width=45)
+# =============================================================================
+# MainWindow class - Combines all functionality via mixins
+# =============================================================================
+class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin):
+    """
+    Main application window
+    Uses mixins for process settings and I/O config functionality
+    """
+    
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setupUi(self)
+        
+        # Removed unnecessary print
+        
+        # Start with collapsed menu
+        self.fullMenuWidget.setVisible(False)
+        self.iconOnlyWidget.setVisible(True)
+        self.pushButton_menu.setChecked(False)
+        
+        # Connect exit buttons
+        self.pushButton_Exit.clicked.connect(self.close)
+        self.pushButton_exit2.clicked.connect(self.close)
 
-        def navMenuAnimatie():
-            current_width = nav.winfo_width()
-            if current_width < 200:
-                current_width += 10
-                nav.config(width=current_width)
-                root.after(ms=8, func=navMenuAnimatie)
+        # Store reference to main configuration
+        self.mainConfig = None  # Will be set from main.py
+        self.tanksim_config = None
+        self.tanksim_status = None
+        
+        # Initialize connection variables
+        self.validPlcConnection = False
+        self.plc = None
 
-        def navMenuAnimatieClose():
-            current_width = nav.winfo_width()
-            if current_width != 45:
-                current_width -= 10
-                nav.config(width=current_width)
-                root.after(ms=8, func=navMenuAnimatieClose)
+        # IP throttling
+        self.ip_change_timer = QTimer()
+        self.ip_change_timer.setSingleShot(True)
+        self.ip_change_timer.timeout.connect(self._apply_ip_change)
+        self.pending_ip = None
+        
+        # Main update timer
+        self.timer = QTimer()
+        self.timer.setInterval(100)  # 10x per second
+        self.timer.timeout.connect(self.update_all_values)
+        self.timer.start()
+        
+        # Setup connection status icon
+        try:
+            self.update_connection_status_icon()
+        except AttributeError:
+            # Removed unnecessary print
+            pass
+        
+        # Connect button
+        try:
+            self.pushButton_connect.toggled.connect(self.on_connect_toggled)
+            self.pushButton_connect.setCheckable(True)
+        except AttributeError:
+            # Removed unnecessary print
+            pass
 
-        def navMenuOpen():
-            navMenuAnimatie()
-            toggleNav.config(text="Close", command=navMenuClose)
-            HomeText = tk.Label(nav, text="Home", bg=navColor, fg="white")
-            HomeText.place(x=45, y=140)
-            HomeText.bind("<Button-1>", lambda e: welkePagina(home_indicator,
-                          tankSimProcessScreenClass, MainFrame))
+        try:
+            self.lineEdit_IPAddress.textChanged.connect(self.on_ip_changed)
+        except AttributeError:
+            # Removed unnecessary print
+            pass
+        
+        # Initialize I/O Config Page (from IOConfigMixin)
+        self.init_io_config_page()
+        
+        # Initialize Process Settings Page (from ProcessSettingsMixin)
+        self.init_process_settings_page()
 
-            SettingsText = tk.Label(
-                nav, text="Settings", bg=navColor, fg="white")
-            SettingsText.place(x=45, y=200)
-            SettingsText.bind("<Button-1>", lambda e: welkePagina(
-                settings_indicator, tankSimSettingsScreenClass, MainFrame))
+        # Initialize network port combobox
+        self._init_network_port_combobox()
 
-            mainSettingsText = tk.Label(
-                nav, text="mainSettings", bg=navColor, fg="white")
-            mainSettingsText.place(x=45, y=260)
-            mainSettingsText.bind("<Button-1>", lambda e: welkePagina(
-                mainSettings_indicator, tankSimSettingsScreenClass, MainFrame))
+        # Connect navigation buttons
+        self.connect_navigation_buttons()
+        
+        # Connect simulation selection buttons
+        self.connect_simulation_buttons()
 
-        def navMenuClose():
-            navMenuAnimatieClose()
-            toggleNav.config(text="nav", command=navMenuOpen)
+        # Initialize GUI mode
+        QTimer.singleShot(100, self._initialize_gui_mode)
 
-        toggleNav = tk.Button(nav, text="Nav", bg=navColor,
-                              bd=0, activebackground=navColor, command=navMenuOpen)
-        toggleNav.place(x=4, y=10, width=40, height=40)
+        
 
-        home = tk.Button(nav, text="Home", bg=navColor,
-                         bd=0, activebackground=navColor, command=lambda: welkePagina(home_indicator, tankSimProcessScreenClass, MainFrame))
-        home.place(x=4, y=130, width=40, height=40)
-        home_indicator = tk.Label(nav, bg=navColor)
-        home_indicator.place(x=3, y=130, width=3, height=40)
-
-        settings = tk.Button(nav, text="Settings",
-                             bg=navColor, bd=0, activebackground=navColor, command=lambda: welkePagina(settings_indicator, tankSimSettingsScreenClass, MainFrame))
-        settings.place(x=4, y=190, width=40, height=40)
-        settings_indicator = tk.Label(nav, bg=navColor)
-        settings_indicator.place(x=3, y=190, width=3, height=40)
-
-        mainSettings = tk.Button(nav, text="mainSettings", bg=navColor,
-                                 bd=0, activebackground=navColor, command=lambda: welkePagina(mainSettings_indicator, mainSettingsScreenClass, MainFrame))
-        mainSettings.place(x=4, y=250, width=40, height=40)
-        mainSettings_indicator = tk.Label(nav, bg=navColor)
-        mainSettings_indicator.place(x=3, y=250, width=3, height=40)
-
-        def welkePagina(indicator_lb, page, MainFrame):
-            global currenScreen
-            home_indicator.config(bg=navColor)
-            settings_indicator.config(bg=navColor)
-            mainSettings_indicator.config(bg=navColor)
-            indicator_lb.config(bg="white")
-            for frame in MainFrame.winfo_children():
-                frame.destroy()
-            currenScreen = page(MainFrame)
-            navMenuClose()
-
-
-class mainSettingsScreenClass:
-
-    def __init__(main, MainFrame):
-
-        def ApplySettings():
-            global SaveControler
-            SaveControler = SoortControler.get()
-
-        SettingsFrame = tk.Frame(MainFrame, bg="white")
-        SettingsFrame.place(relwidth=1.0, relheight=1.0, x=50)
-
-        SoortControlerlabel = tk.Label(
-            SettingsFrame, text="Soort Controle:", bg="white", fg="black", font=("Arial", 10))
-        SoortControlerlabel.grid(row=0, column=0, sticky="e")
-        SoortControler = tk.StringVar()
-        soortControlerMenu = tk.OptionMenu(
-            SettingsFrame, SoortControler, "Gui", "ModBusTCP", "PLC S7-1500/1200/400/300", "logo!", "PLCSim")
-        soortControlerMenu.grid(row=0, column=1, sticky="ew")
-        SoortControler.set(SaveControler)
-
-        SaveButton = tk.Button(
-            SettingsFrame, text="Apply Settings", bg="white", activebackground="white", command=ApplySettings)
-        SaveButton.grid(row=12, column=3, pady=(10, 0))
-
-        ExportButton = tk.Button(
-            SettingsFrame, text="Export config", bg="white", activebackground="white", command=main.ExportConfig)
-        ExportButton.grid(row=12, column=4, padx=(30, 0), pady=(10, 0))
-
-        LoadButton = tk.Button(
-            SettingsFrame, text="Load config", bg="white", activebackground="white", command=main.ImportConfig)
-        LoadButton.grid(row=12, column=5, padx=(10, 0), pady=(10, 0))
-
-    def updateData(self, mainConfig: mainConfigClass, processConfig: tankSimConfigurationClass, processStatus: tankSimStatusClass):
-        global SaveControler, importCommand, exportCommand
-
-        # define csv fileType for filedialog functions
-        csvFileType = [
-            ('Comma-separated values', '*.csv'), ('All Files', '*.*'),]
-
-        # overwrite config and status after other changes done by gui
-        if (importCommand):
-            file = filedialog.askopenfilename(
-                filetypes=csvFileType, defaultextension=csvFileType)
-            # only try to import when there was a file selected
-            if (file):
-                mainConfig.loadFromFile(file)
-            importCommand = False  # reset import command flag
-
-        # write data to status and config
-        if (SaveControler == "Gui"):
-            mainConfig.plcGuiControl = "gui"
+    def _initialize_gui_mode(self):
+        """Initialize GUI mode after mainConfig is available"""
+        if hasattr(self, 'mainConfig') and self.mainConfig:
+            self.mainConfig.plcGuiControl = "gui"
+            self.mainConfig.plcProtocol = "GUI"
         else:
-            mainConfig.plcGuiControl = "plc"
-            mainConfig.plcProtocol = SaveControler
+            QTimer.singleShot(100, self._initialize_gui_mode)
 
-        # export mainConfig after all changes are done
-        if (exportCommand):
-            file = filedialog.asksaveasfilename(
-                filetypes=csvFileType, defaultextension=csvFileType)
-            # only try to export when the was a file selected
-            if (file):
-                # create file, add header, add config variables
-                mainConfig.saveToFile(file, True)
-            exportCommand = False
+    def connect_navigation_buttons(self):
+        """Connect all navigation buttons"""
+        self.pushButton_settingsPage.toggled.connect(self.go_to_settings)
+        self.pushButton_settingsPage2.toggled.connect(self.go_to_settings)
+        
+        self.pushButton_IOPage.toggled.connect(self.go_to_io)
+        self.pushButton_IOPage2.toggled.connect(self.go_to_io)
+        
+        self.pushButton_simPage.toggled.connect(self.go_to_sim)
+        self.pushButton_simPage2.toggled.connect(self.go_to_sim)
+    
+    def connect_simulation_buttons(self):
+        """Connect simulation selection buttons"""
+        self.pushButton_1Vat.setAutoExclusive(True)
+        self.pushButton_2Vatten.setAutoExclusive(True)
+        self.pushButton_transportband.setAutoExclusive(True)
 
-    def ExportConfig(self):
-        global exportCommand
-        exportCommand = True
+        self.pushButton_1Vat.toggled.connect(lambda checked: checked and self.select_simulation_simple(0))
+        self.pushButton_2Vatten.toggled.connect(lambda checked: checked and self.select_simulation_simple(1))
+        self.pushButton_transportband.toggled.connect(lambda checked: checked and self.select_simulation_simple(2))
+    
+    def go_to_settings(self, checked):
+        """Navigate to settings page"""
+        if checked:
+            self.MainScreen.setCurrentIndex(3)
+    
+    def go_to_io(self, checked):
+        """Navigate to I/O page"""
+        if checked:
+            self.MainScreen.setCurrentIndex(4)
+    
+    def go_to_sim(self, checked):
+        """Navigate to simulation page"""
+        if checked:
+            self.MainScreen.setCurrentIndex(0)
+            if not self.fullMenuWidget.isVisible():
+                self.pushButton_menu.setChecked(True)
+    
+    def select_simulation_simple(self, sim_index):
+        """Select simulation via index"""
+        self.MainScreen.setCurrentIndex(sim_index)
+    
+    def update_all_values(self):
+        """
+        Main update loop - calls sub-updates
+        This function is called 10 times per second
+        """
+        # Update process settings (from ProcessSettingsMixin)
+        self.update_process_values()
+        
+        # Update I/O status display (from IOConfigMixin)
+        self.update_io_status_display()
+    
+    def update_connection_status_icon(self):
+        """Update connection status icon"""
+        try:
+            self.Label_connectStatus.setText("")
 
-    def ImportConfig(self):
-        global importCommand
-        importCommand = True
+            current_dir = Path(__file__).parent
+            
+            if self.validPlcConnection:
+                icon_path = current_dir / "media" / "icon" / "status_ok.svg"
+            else:
+                icon_path = current_dir / "media" / "icon" / "status_nok.svg"
+            
+            if icon_path.exists():
+                from PyQt5.QtGui import QPixmap
+                pixmap = QPixmap(str(icon_path))
+                self.Label_connectStatus.setPixmap(
+                    pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        except Exception as e:
+            # Removed unnecessary print
+            pass
+            
+    def on_connect_toggled(self, checked):
+        """Handle connect button press - trigger connection attempt"""
+        if not self.mainConfig:
+            # Removed unnecessary print
+            return
+        
+        if checked:
+            # Removed unnecessary print
+            self.mainConfig.tryConnect = True
+        else:
+            pass # Disconnect is handled by main loop or _apply_ip_change/on_controller_changed
+
+    def on_ip_changed(self, text):
+        """Update IP address with throttling"""
+        if not self.mainConfig:
+            return
+        
+        self.mainConfig.plcIpAdress = text
+        
+        self.pending_ip = text
+        self.ip_change_timer.stop()
+        self.ip_change_timer.start(500)
+
+    def _apply_ip_change(self):
+        """Execute disconnect after throttle delay"""
+        if not self.pending_ip:
+            return
+        
+        if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
+            try:
+                if self.plc.isConnected():
+                    self.plc.disconnect()
+                    # Removed unnecessary print
+            except Exception as e:
+                # Removed unnecessary print
+                pass
+            
+            self.validPlcConnection = False
+            self.plc = None
+            
+            try:
+                self.pushButton_connect.blockSignals(True)
+                self.pushButton_connect.setChecked(False)
+                self.pushButton_connect.blockSignals(False)
+            except AttributeError:
+                pass
+            
+            self.update_connection_status_icon()
+        
+        self.pending_ip = None
+
+    def _init_network_port_combobox(self):
+        """Initialize network port combobox with network adapter names"""
+        try:
+            import socket
+            
+            # Clear existing items
+            self.comboBox_networkPort.clear()
+            
+            # Add default "Auto" option
+            self.comboBox_networkPort.addItem("Auto (System Default)", "auto")
+            
+            adapters_found = False
+            
+            # METHOD 1: Try using WMI (Windows only - MOST DETAILED)
+            # Shows: "Realtek USB FE Family Controller (192.168.1.100)"
+            try:
+                import wmi
+                
+                c = wmi.WMI()
+                for interface in c.Win32_NetworkAdapterConfiguration(IPEnabled=True):
+                    if interface.IPAddress:
+                        ipv4_addr = None
+                        # Get first IPv4 address
+                        for ip in interface.IPAddress:
+                            if '.' in ip and not ip.startswith('127.'):
+                                ipv4_addr = ip
+                                break
+                        
+                        if ipv4_addr:
+                            adapter_name = interface.Description
+                            display_name = f"{adapter_name} ({ipv4_addr})"
+                            # Store the interface description as identifier
+                            self.comboBox_networkPort.addItem(display_name, adapter_name)
+                            adapters_found = True
+                            # Removed unnecessary print
+                
+                if adapters_found:
+                    # Removed unnecessary print
+                    pass
+                
+            except ImportError:
+                # Removed unnecessary print
+                pass
+            except Exception as e:
+                # Removed unnecessary print
+                pass
+            
+            # METHOD 2: Try using psutil (cross-platform)
+            # Shows: "Ethernet (192.168.1.100)"
+            if not adapters_found:
+                try:
+                    import psutil
+                    
+                    # Get all network interfaces with their stats
+                    net_if_addrs = psutil.net_if_addrs()
+                    net_if_stats = psutil.net_if_stats()
+                    
+                    for interface_name, addresses in net_if_addrs.items():
+                        # Skip interfaces that are down
+                        if interface_name in net_if_stats:
+                            if not net_if_stats[interface_name].isup:
+                                continue
+                        
+                        # Find IPv4 address (for display info only)
+                        ipv4_addr = None
+                        for addr in addresses:
+                            if addr.family == socket.AF_INET:  # IPv4
+                                ipv4_addr = addr.address
+                                break
+                        
+                        # Add adapter (show IP for info, but store interface name)
+                        if ipv4_addr and ipv4_addr != '127.0.0.1':
+                            display_name = f"{interface_name} ({ipv4_addr})"
+                            self.comboBox_networkPort.addItem(display_name, interface_name)
+                            adapters_found = True
+                            # Removed unnecessary print
+                    
+                    if adapters_found:
+                        # Removed unnecessary print
+                        pass
+                
+                except ImportError:
+                    # Removed unnecessary print
+                    pass
+                except Exception as e:
+                    # Removed unnecessary print
+                    pass
+            
+            # METHOD 3: Fallback - basic socket method
+            if not adapters_found:
+                # Removed unnecessary print
+                try:
+                    # Get local IP for display
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.connect(("8.8.8.8", 80))
+                    local_ip = s.getsockname()[0]
+                    s.close()
+                    
+                    self.comboBox_networkPort.addItem(f"Primary Adapter ({local_ip})", "primary")
+                    adapters_found = True
+                    # Removed unnecessary print
+                except Exception as e:
+                    # Removed unnecessary print
+                    pass
+            
+            # Connect signal (NO auto-fill of IP address)
+            self.comboBox_networkPort.currentIndexChanged.connect(self._on_network_port_changed)
+            
+            # Removed unnecessary print
+            
+        except AttributeError:
+            # Removed unnecessary print
+            pass
+        except Exception as e:
+            # Removed unnecessary print
+            pass
+
+    def _on_network_port_changed(self, index):
+        """Called when network port selection changes - only logs selection"""
+        try:
+            selected_adapter = self.comboBox_networkPort.currentData()
+            adapter_name = self.comboBox_networkPort.currentText()
+            
+            # Just log the selection, DO NOT change IP address field
+            # Removed unnecessary print
+            
+            # Store the selected adapter in config if needed
+            if hasattr(self, 'mainConfig') and self.mainConfig:
+                if not hasattr(self.mainConfig, 'selectedNetworkAdapter'):
+                    self.mainConfig.selectedNetworkAdapter = selected_adapter
+                else:
+                    self.mainConfig.selectedNetworkAdapter = selected_adapter
+        
+        except Exception as e:
+            # Removed unnecessary print
+            pass
 
 
-class mainGui:
+# =============================================================================
+# Main Application Entry Point
+# =============================================================================
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
 
-    def __init__(self) -> None:
-        global currenScreen
+    current_dir = Path(__file__).parent
+    gui_common_dir = current_dir.parent / "guiCommon"
+    style_file = gui_common_dir / "style.qss"
 
-        self.root = tk.Tk()
-        # when window is closed, stop the rest of the program
-        self.root.protocol("WM_DELETE_WINDOW", self.onExit)
-        self.Main = MainScherm(self.root)
-        self.nav = NavigationFrame(self.root, self.Main.MainFrame)
-        self.Tank = tankSimProcessScreenClass(self.Main.MainFrame)
-        currenScreen = self.Tank
-
-    def updateGui(self) -> None:
-        self.root.update_idletasks()
-        self.root.update()
-
-    def updateDataMain(self, mainConfig: mainConfigClass) -> None:
-        global exitProgram, TryConnectPending, ip_adress
-
-        mainConfig.doExit = exitProgram
-
-        if (TryConnectPending):
-            mainConfig.plcIpAdress = ip_adress
-            mainConfig.tryConnect = True  # set flag
-            TryConnectPending = False  # clear flag
-
-    # TODO: change process config and status to base class
-
-    def updateData(self, mainConfig: mainConfigClass, processConfig: tankSimConfigurationClass, processStatus: tankSimStatusClass) -> None:
-        global currenScreen
-        currenScreen.updateData(
-            mainConfig, processConfig, processStatus)
-
-    def onExit(self) -> None:
-        global exitProgram
-        exitProgram = True
+    if os.path.exists(style_file):
+        try:
+            with open(style_file, "r") as f:
+                app.setStyleSheet(f.read())
+        except Exception as e:
+            # Removed unnecessary print
+            pass
+    
+    window = MainWindow()
+    window.show()
+    
+    sys.exit(app.exec_())
