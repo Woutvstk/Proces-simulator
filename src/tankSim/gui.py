@@ -20,19 +20,18 @@ tempVat = 0
     
 class SvgDisplay(QWidget):
     """Widget that only renders the SVG."""
-    # Scales the SVG proportionally within the widget
+    
     def __init__(self, renderer):
         super().__init__()
         self.renderer = renderer
         self.setMinimumSize(300, 350)  
-        self.setMaximumSize(1200, 1400) #(maintains ratio 300:350)
+        self.setMaximumSize(1200, 1400)
 
     def sizeHint(self):
         return QSize(300, 350)
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        # Calculate aspect ratio
         svg_size = self.renderer.defaultSize()
         if svg_size.width() > 0 and svg_size.height() > 0:
             widget_rect = self.rect()
@@ -40,17 +39,14 @@ class SvgDisplay(QWidget):
             widget_ratio = widget_rect.width() / widget_rect.height()
             
             if widget_ratio > svg_ratio:
-                # Widget is wider, fit on height
                 new_width = int(widget_rect.height() * svg_ratio)
                 x_offset = (widget_rect.width() - new_width) // 2
                 target_rect = widget_rect.adjusted(x_offset, 0, -x_offset, 0)
             else:
-                # Widget is taller, fit on width
                 new_height = int(widget_rect.width() / svg_ratio)
                 y_offset = (widget_rect.height() - new_height) // 2
                 target_rect = widget_rect.adjusted(0, y_offset, 0, -y_offset)
             
-            # Convert QRect to QRectF
             target_rectf = QRectF(target_rect)
             self.renderer.render(painter, target_rectf)
         else:
@@ -62,7 +58,7 @@ class VatWidget(QWidget):
         
         layout = QVBoxLayout(self)
         
-        # DEFAULTS: ensure all used attributes exist
+        # Default attribute values
         self.toekomendDebiet = 0
         self.tempWeerstand = 20.0
         self.regelbareKleppen = False
@@ -72,16 +68,14 @@ class VatWidget(QWidget):
         self.KlepStandBoven = 0
         self.KlepStandBeneden = 0
         self.kleurWater = blue
-        self.controler = "GUI"  # Default to GUI for control visibility
+        self.controler = "GUI"
         
-        # Extra defaults for GUI elements
         self.waterInVat = None
         self.originalY = 0.0
         self.originalHoogte = 0.0
         self.maxHoogteGUI = 80
         self.ondersteY = 0.0
         
-       # Load SVG
         try:
             svg_path = Path(__file__).parent.parent / "guiCommon" / "media" / "SVGVat.svg"
             self.tree = ET.parse(svg_path)
@@ -90,38 +84,28 @@ class VatWidget(QWidget):
         except Exception as e:
             raise RuntimeError("Cannot load 'SVGVat.svg': " + str(e))
         
-        # Renderer
         self.renderer = QSvgRenderer()
         self.svg_widget = SvgDisplay(self.renderer)
         layout.addWidget(self.svg_widget)
         
-        # Initial render
         self.rebuild()
     
     def set_controller_mode(self, mode):
-        """
-        Set controller mode and update visibility of controls
-        mode: "GUI", "LOGO", "PLC", etc.
-        """
+        """Set controller mode and update visibility of controls"""
         self.controler = mode
         self.update_controls_visibility()
     
     def update_controls_visibility(self):
         """Update visibility of GUI controls based on controller mode"""
         is_gui_mode = (self.controler == "GUI")
-        
-        # Determine visibility status
         visibility = "shown" if is_gui_mode else "hidden"
         
-        # Hide/show controllable valves
         if self.regelbareKleppen:
             self.visibility_group("regelbareKleppen", visibility)
         
-        # Hide/show controllable heater
         if self.regelbareWeerstand:
             self.visibility_group("regelbareweerstand", visibility)
         
-        # Update the SVG
         self.update_svg()
         self.svg_widget.update()
     
@@ -129,10 +113,8 @@ class VatWidget(QWidget):
         """Complete rebuild of the SVG based on current values"""
         global currentHoogteVat, maxHoogteVat
         
-        # Color water
         self.set_group_color("waterTotaal", self.kleurWater)
         
-        # Safe ratio calculation for temperature percentage
         if self.tempWeerstand == 0:
             tempVatProcent = 0.0
         else:
@@ -140,7 +122,6 @@ class VatWidget(QWidget):
         
         tempVatProcent = max(0.0, min(100.0, tempVatProcent))
         
-        # Temperature heater color based on percentage
         match tempVatProcent:
             case x if 20 < x <= 40:
                 self.set_group_color("warmteweerstand", green)
@@ -155,7 +136,6 @@ class VatWidget(QWidget):
             case _:
                 self.set_group_color("warmteweerstand", "#808080")
         
-        # Visibility of items (always visible, regardless of controller mode)
         if self.niveauschakelaar:
             self.visibility_group("niveauschakelaar", "shown")
         else:
@@ -166,7 +146,6 @@ class VatWidget(QWidget):
         else:
             self.visibility_group("analogeWaardeTemp", "hidden")
         
-        # GUI CONTROLS - only visible in GUI mode
         is_gui_mode = (self.controler == "GUI")
         
         if self.regelbareKleppen:
@@ -187,7 +166,6 @@ class VatWidget(QWidget):
             visibility = "shown" if is_gui_mode else "hidden"
             self.visibility_group("regelbareweerstand", visibility)
         
-        # Upper valve
         if self.KlepStandBoven == 0:
             self.klep_breete("waterval", 0)
             self.set_group_color("KlepBoven", "#FFFFFF")
@@ -195,7 +173,6 @@ class VatWidget(QWidget):
             self.klep_breete("waterval", self.KlepStandBoven)
             self.set_group_color("KlepBoven", self.kleurWater)
         
-        # Lower valve
         if self.KlepStandBeneden == 0:
             self.klep_breete("waterBeneden", 0)
             self.set_group_color("KlepBeneden", "#FFFFFF")
@@ -203,20 +180,17 @@ class VatWidget(QWidget):
             self.klep_breete("waterBeneden", self.KlepStandBeneden)
             self.set_group_color("KlepBeneden", self.kleurWater)
         
-        # Tank temperature color
         if tempVat == self.tempWeerstand:
             self.set_group_color("temperatuurVat", green)
         else:
             self.set_group_color("temperatuurVat", red)
         
-        # Texts
         self.set_svg_text("klepstandBoven", str(self.KlepStandBoven) + "%")
         self.set_svg_text("KlepstandBeneden", str(self.KlepStandBeneden) + "%")
         self.set_svg_text("debiet", str(self.toekomendDebiet) + "l/s")
         self.set_svg_text("temperatuurWarmteweerstand", str(self.tempWeerstand) + "°C")
         self.set_svg_text("temperatuurVatWaarde", str(tempVat) + "°C")
         
-        # Water element
         self.waterInVat = self.root.find(f".//svg:*[@id='waterInVat']", self.ns)
         
         if self.waterInVat is not None:
@@ -263,8 +237,6 @@ class VatWidget(QWidget):
         item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
         if item is not None:
             item.set("y", str(hoogte))
-        else:
-            print(f"Warning: '{itemId}' not found")
     
     def set_group_color(self, groupId, kleur):
         """Set the color of an SVG group"""
@@ -272,16 +244,12 @@ class VatWidget(QWidget):
         if group is not None:
             for element in group:
                 element.set("fill", kleur)
-        else:
-            print(f"Warning: group '{groupId}' not found")
     
     def visibility_group(self, groupId, visibility):
         """Set the visibility of a group"""
         group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
         if group is not None:
             group.set("visibility", visibility)
-        else:
-            print(f"Warning: group '{groupId}' not found")
     
     def klep_breete(self, itemId, KlepStand):
         """Adjust the width of a valve based on its position"""
@@ -291,8 +259,6 @@ class VatWidget(QWidget):
             new_x = 105.745 - (KlepStand * 0.065) / 2
             item.set("width", str(new_width))
             item.set("x", str(new_x))
-        else:
-            print(f"Warning: item '{itemId}' not found")
     
     def set_svg_text(self, itemId, value):
         """Set the text of an SVG text element"""
@@ -303,6 +269,3 @@ class VatWidget(QWidget):
                 tspan.text = value
             else:
                 item.text = value
-        else:
-            print(f"Warning: item '{itemId}' not found")
-

@@ -255,6 +255,66 @@ class plcSimAPI:
         except Exception as e:
             print(f"Error in GetAO: {e}")
             return -1
+        
+    def SetDO(self, byte: int, bit: int, value: int) -> int:
+        """
+        Set a digital output (DO) bit in the PLC output area (Q/A).
+
+        Parameters:
+        byte (int): Byte index (start byte).
+        bit (int): Bit position (0–7).
+        value (int): 1 (True) or 0 (False) to set the bit.
+
+        Returns:
+        int: The value set (1/0), or -1 on error.
+        """
+        try:
+            if self.isConnected():
+                if byte >= 0 and 0 <= bit < 8:
+                    self.simulation_instance.OutputArea.WriteBit(byte, bit, bool(value))
+                    return int(bool(value))
+                return -1
+            return -1
+        except Exception as e:
+            print(f"Error in SetDO: {e}")
+            return -1
+
+    def SetAO(self, byte: int, value: int) -> int:
+        """
+        Set an analog output (AO) value as a 16-bit word in the PLC output area (Q/A).
+        The value is converted to a byte array (Big Endian) before writing.
+
+        Parameters:
+        byte (int): Start byte index.
+        value (int | float): Analog value (typically -32768–32767).
+
+        Returns:
+        int: The integer value set, or -1 on error.
+        """
+        try:
+            if self.isConnected():
+                if byte >= 0:
+                    # Round and cast to integer
+                    val_int = int(round(value)) if isinstance(value, float) else int(value)
+                    
+                    # Handle negative values (two's complement)
+                    if val_int < 0:
+                        val_int = val_int & 0xFFFF
+                    
+                    # Manually convert integer to S7 Big Endian bytearray
+                    buffer_AO = bytearray(2)
+                    lowByte = val_int & 0xFF
+                    highByte = (val_int >> 8) & 0xFF
+                    buffer_AO[0] = highByte  # S7 uses high byte first
+                    buffer_AO[1] = lowByte
+                    
+                    self.simulation_instance.OutputArea.WriteBytes(byte, 2, buffer_AO)
+                    return val_int
+                return -1
+            return -1
+        except Exception as e:
+            print(f"Error in SetAO: {e}")
+            return -1
 
     def resetSendInputs(self, startByte: int, endByte: int) -> bool:
         """
@@ -278,4 +338,29 @@ class plcSimAPI:
             return False
         except Exception as e:
             print(f"Error in resetSendInputs: {e}")
+            return False
+        
+    def resetSendOutputs(self, startByte: int, endByte: int) -> bool:
+        """
+        Reset a range of output bytes (DO/AO) by writing zero to the entire range.
+
+        Parameters:
+        startByte (int): Start byte index to reset.
+        endByte (int): End byte index to reset (inclusive).
+
+        Returns:
+        bool: True if successful, False otherwise.
+        """
+        try:
+            if self.isConnected():
+                if startByte >= 0 and endByte >= startByte:
+                    size = endByte - startByte + 1
+                    empty_buffer = bytearray(size)
+                    self.simulation_instance.OutputArea.WriteBytes(startByte, size, empty_buffer)
+                    print(f"Output area reset: bytes {startByte}-{endByte}")
+                    return True
+                return False
+            return False
+        except Exception as e:
+            print(f"Error in resetSendOutputs: {e}")
             return False

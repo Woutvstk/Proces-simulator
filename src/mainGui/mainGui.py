@@ -330,6 +330,83 @@ class DroppableTableWidget(QTableWidget):
             event.accept()
         else:
             super().keyPressEvent(event)
+
+
+    def mouseDoubleClickEvent(self, event):
+        """Dubbelklik op status kolom om force menu te tonen"""
+        item = self.itemAt(event.pos())
+        
+        if not item or item.column() != 5:  # Alleen status kolom (kolom 5)
+            super().mouseDoubleClickEvent(event)
+            return
+        
+        if not self.force_enabled:
+            super().mouseDoubleClickEvent(event)
+            return
+        
+        row = item.row()
+        
+        # Check if row has a signal
+        name_item = self.item(row, 0)
+        type_item = self.item(row, 1)
+        if not name_item or not name_item.text() or not type_item:
+            super().mouseDoubleClickEvent(event)
+            return
+        
+        signal_name = name_item.text()
+        data_type = type_item.text()
+        
+        # Toon force menu
+        self.show_force_menu(row, signal_name, data_type, event.globalPos())
+        event.accept()
+
+    def show_force_menu(self, row, signal_name, data_type, position):
+        """Toon force menu op gegeven positie"""
+        menu = QMenu(self)
+        
+        # Style voor zwarte tekst
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: white;
+                color: black;
+                border: 1px solid #cccccc;
+            }
+            QMenu::item {
+                color: black;
+                padding: 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QMenu::item:hover {
+                background-color: #e5f1fb;
+                color: black;
+            }
+        """)
+        
+        if row in self.forced_rows:
+            # Already forced - show remove force option
+            remove_action = QAction(f"🔓 Remove Force from '{signal_name}'", self)
+            remove_action.triggered.connect(lambda: self.remove_force(row))
+            menu.addAction(remove_action)
+        else:
+            # Not forced - show force options
+            if data_type == 'bool':
+                force_true = QAction(f"🔒 Force '{signal_name}' = TRUE", self)
+                force_true.triggered.connect(lambda: self.apply_force(row, True))
+                menu.addAction(force_true)
+                
+                force_false = QAction(f"🔒 Force '{signal_name}' = FALSE", self)
+                force_false.triggered.connect(lambda: self.apply_force(row, False))
+                menu.addAction(force_false)
+            else:
+                # Analog value - show dialog
+                force_value = QAction(f"🔒 Force '{signal_name}' to value...", self)
+                force_value.triggered.connect(lambda: self.apply_force_analog(row, signal_name))
+                menu.addAction(force_value)
+        
+        menu.exec_(position)
     
     def manual_sort(self, column, order):
         """Sort rows manually"""
@@ -577,9 +654,8 @@ class DroppableTableWidget(QTableWidget):
                         item.setBackground(Qt.white)
 
     def contextMenuEvent(self, event):
-        """Right-click menu for forcing values"""
-        if not self.force_enabled:
-            return
+        """Disable rechterklik - gebruik dubbelklik in plaats daarvan"""
+        pass
         
         item = self.itemAt(event.pos())
         if not item:
@@ -635,17 +711,60 @@ class DroppableTableWidget(QTableWidget):
 
     def apply_force_analog(self, row, signal_name):
         """Apply force to an analog signal with dialog"""
-        from PyQt5.QtWidgets import QInputDialog
+        from PyQt5.QtWidgets import QInputDialog    
+        # Haal max waarde op (27648 of analogMax van PLC)
+        max_value = 27648  # Default
+        if self.io_screen and hasattr(self.io_screen, 'main_window'):
+            main_window = self.io_screen.main_window
+            if (hasattr(main_window, 'validPlcConnection') and 
+                main_window.validPlcConnection and 
+                hasattr(main_window, 'plc') and 
+                main_window.plc):
+                max_value = main_window.plc.analogMax
+        
+        # Haal huidige waarde op indien beschikbaar
+        current_value = 0
+        status_item = self.item(row, 5)
+        if status_item and status_item.text():
+            try:
+                text = status_item.text().replace("🔒 ", "")
+                current_value = int(text)
+            except ValueError:
+                current_value = 0
         
         value, ok = QInputDialog.getInt(
             self,
             "Force Analog Value",
-            f"Enter value for '{signal_name}':",
-            0, -32768, 32767, 1
+            f"Enter value for '{signal_name}':\n(Range: 0 - {max_value})",
+            current_value,  # Default = huidige waarde
+            0,              # Minimum
+            max_value,      # Maximum
+            1               # Step
         )
         
         if ok:
             self.apply_force(row, value)
+            print(f"🔒 Forced '{signal_name}' to {value}")
+
+    def get_signal_info(self, row):
+        """Haal signaal informatie op voor een rij"""
+        name_item = self.item(row, 0)
+        type_item = self.item(row, 1)
+        addr_item = self.item(row, 4)
+        
+        if not name_item or not type_item:
+            return None
+        
+        return {
+            'name': name_item.text(),
+            'type': type_item.text(),
+            'address': addr_item.text() if addr_item else "NO ADDR",
+            'is_input': addr_item.text().startswith('I') if addr_item else False,
+            'is_output': addr_item.text().startswith('Q') if addr_item else False,
+            'is_digital': '.' in addr_item.text() if addr_item else False,
+            'is_analog': 'W' in addr_item.text() if addr_item else False
+        }
+
 
     def remove_force(self, row):
         """Remove force from a signal"""
@@ -671,7 +790,7 @@ class DroppableTableWidget(QTableWidget):
         return row in self.forced_rows
 
     def update_status_column(self, row, value):
-        """Update the status column (column 5) with current value"""
+        """Update de status column met visuele feedback voor connectie"""
         status_item = self.item(row, 5)
         type_item = self.item(row, 1)
         
@@ -690,20 +809,28 @@ class DroppableTableWidget(QTableWidget):
         
         # Add force indicator if forced
         if self.is_row_forced(row):
-            display_text = f"🔒 {display_text}"
+            display_text = f"F{display_text}"
         
         if status_item:
             status_item.setText(display_text)
-            # Highlight forced cells with light yellow
+            
+            # Kleurcode voor status
             if self.is_row_forced(row):
+                # Geforceerd = geel
                 status_item.setBackground(Qt.yellow)
             else:
-                status_item.setBackground(Qt.white)
+                # Normaal = lichtgroen (actief)
+                from PyQt5.QtGui import QColor
+                status_item.setBackground(QColor(200, 255, 200))  # Lichtgroen
         else:
             new_item = ReadOnlyTableWidgetItem(display_text)
             if self.is_row_forced(row):
                 new_item.setBackground(Qt.yellow)
+            else:
+                from PyQt5.QtGui import QColor
+                new_item.setBackground(QColor(200, 255, 200))  # Lichtgroen
             self.setItem(row, 5, new_item)
+
 
 # =============================================================================
 # IOScreen class for IO configuration
@@ -711,7 +838,7 @@ class DroppableTableWidget(QTableWidget):
 class IOScreen:
     def __init__(self, main_window):
         """IOScreen class that writes to the MainWindow"""
-        self.main_window = main_window
+        self.main_window = main_window  # ✅ Link naar main window voor toegang tot PLC
         
         # Byte offset dictionary
         self.byte_offsets = {
@@ -822,14 +949,12 @@ class IOScreen:
             print(f"Error validating address in row {row}: {e}")
     
     def save_configuration(self):
-        """Sla de huidige IO configuratie op in JSON """
-
+        """Sla de huidige IO configuratie op in JSON"""
         root_dir = Path(__file__).resolve().parent
-
         tank_dir = root_dir.parent 
-        tank_dir.mkdir(exist_ok=True)  # maakt map als ze nog niet bestaat
+        tank_dir.mkdir(exist_ok=True)
 
-        self.config_file = tank_dir /"tankSim"/ "io_configuration.json"
+        self.config_file = tank_dir / "tankSim" / "io_configuration.json"
         table = self.main_window.tableWidget_IO
             
         config_data = {
@@ -857,8 +982,9 @@ class IOScreen:
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, indent=2, ensure_ascii=False)
+            print(f"✅ IO configuratie opgeslagen: {self.config_file}")
         except Exception as e:
-            print(f"Fout bij opslaan JSON: {e}")
+            print(f"❌ Fout bij opslaan JSON: {e}")
             return
     
     def readdress_all_signals(self):
@@ -883,12 +1009,14 @@ class IOScreen:
                         'io_prefix': io_prefix
                     })
         
+        # Clear old addresses
         for signal in signals_to_readdress:
             row = signal['row']
             table.setItem(row, 2, EditableTableWidgetItem(""))
             table.setItem(row, 3, EditableTableWidgetItem(""))
             table.setItem(row, 4, ReadOnlyTableWidgetItem(""))
         
+        # Assign new addresses
         for signal in signals_to_readdress:
             row = signal['row']
             data_type = signal['type']
@@ -907,7 +1035,7 @@ class IOScreen:
             table._save_row_data(row)
         
         table.blockSignals(False)
-        print(f"{len(signals_to_readdress)} signalen opnieuw geadresseerd")
+        print(f"✅ {len(signals_to_readdress)} signalen opnieuw geadresseerd")
         
         self.save_configuration()
 
@@ -920,9 +1048,8 @@ class IOScreen:
             'DWORDOutput': 2
         }
         
-        print("Offsets gereset naar defaults")
+        print("✅ Offsets gereset naar defaults")
         self.readdress_all_signals()
-
 
 # =============================================================================
 # MainWindow klasse
@@ -1327,17 +1454,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     
     def update_io_status_display(self):
-        """Update status kolom met huidige IO waarden - indien PLC actief"""
+        """Update status kolom met huidige IO waarden - ALTIJD"""
         try:
-            if not hasattr(self, 'plc') or not hasattr(self, 'tanksim_config'):
-                return
-            
-            # Check if PLC is connected
-            if not hasattr(self, 'validPlcConnection') or not self.validPlcConnection:
+            if not hasattr(self, 'tanksim_config') or not hasattr(self, 'tanksim_status'):
                 return
             
             table = self.tableWidget_IO
             config = self.tanksim_config
+            status = self.tanksim_status
+            
+            has_plc = (hasattr(self, 'validPlcConnection') and 
+                    self.validPlcConnection and 
+                    hasattr(self, 'plc') and 
+                    self.plc)
             
             # Loop door alle rijen
             for row in range(table.rowCount()):
@@ -1360,36 +1489,83 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if attr_value is None:
                     continue
                 
-                # Get forced value or read from PLC
+                # Get value: forced > PLC > status object
+                value = None
+                
                 if is_forced:
+                    # Geforceerde waarde heeft prioriteit - gebruik altijd deze
                     value = table.get_forced_value(row)
-                else:
+                elif has_plc:
+                    # Lees van PLC als verbonden (en niet geforceerd)
                     try:
                         if "bit" in attr_value:  # Digital signal
                             byte_addr = attr_value["byte"]
                             bit_addr = attr_value["bit"]
                             
-                            if attr_name.startswith("DQ"):  # PLC Output
+                            if attr_name.startswith("DQ"):  # PLC Output (simulator input)
                                 value = self.plc.GetDO(byte_addr, bit_addr)
-                            else:  # DI - PLC Input
+                            else:  # DI - PLC Input (simulator output)
                                 value = self.plc.GetDI(byte_addr, bit_addr)
-                            
                         else:  # Analog signal
                             byte_addr = attr_value["byte"]
                             
-                            if attr_name.startswith("AQ"):  # PLC Analog Output
+                            if attr_name.startswith("AQ"):  # PLC Analog Output (simulator input)
                                 value = self.plc.GetAO(byte_addr)
-                            else:  # AI - PLC Analog Input
+                            else:  # AI - PLC Analog Input (simulator output)
                                 value = self.plc.GetAI(byte_addr)
-                        
                     except Exception as e:
-                        continue  # PLC read error
+                        pass  # PLC read error - fall through to status
                 
-                # Update status column with value and highlight if forced
+                # Als geen PLC of read failed, gebruik status object waardes
+                if value is None:
+                    # Map naar status object attributes
+                    
+                    # === OUTPUTS (PLC schrijft, simulator leest) ===
+                    if attr_name == "DQValveIn":
+                        value = (status.valveInOpenFraction > 0)
+                    elif attr_name == "AQValveInFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.valveInOpenFraction * max_val)
+                        
+                    elif attr_name == "DQValveOut":
+                        value = (status.valveOutOpenFraction > 0)
+                    elif attr_name == "AQValveOutFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.valveOutOpenFraction * max_val)
+                        
+                    elif attr_name == "DQHeater":
+                        value = (status.heaterPowerFraction > 0)
+                    elif attr_name == "AQHeaterFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.heaterPowerFraction * max_val)
+                    
+                    # === INPUTS (simulator schrijft, PLC leest) ===
+                    elif attr_name == "DILevelSensorHigh":
+                        value = status.digitalLevelSensorHighTriggered
+                        
+                    elif attr_name == "DILevelSensorLow":
+                        value = status.digitalLevelSensorLowTriggered
+                        
+                    elif attr_name == "AILevelSensor":
+                        # Scale liquidVolume (0-200mm) naar PLC range (0-27648 of 0-analogMax)
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int((status.liquidVolume / config.tankVolume) * max_val)
+                        
+                    elif attr_name == "AITemperatureSensor":
+                        # Scale temperature (-50 tot 250°C) naar PLC range (0-27648 of 0-analogMax)
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(((status.liquidTemperature + 50) / 300) * max_val)
+                    else:
+                        continue
+                
+                # Update status column
                 table.update_status_column(row, value)
                 
         except Exception as e:
-            pass  # Silent fail
+            import traceback
+            print(f"❌ Error in update_io_status_display: {e}")
+            traceback.print_exc()
+                    
     
     def on_kleur_changed(self):
         """Callback wanneer kleur dropdown wijzigt"""
@@ -1428,95 +1604,103 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.MainScreen.setCurrentIndex(sim_index)
     
     def load_io_tree(self):
-        """Laad IO signalen van XML bestand"""
-        current_dir = Path(__file__).parent  # mainGui folder
+        """Laad IO signalen van XML bestand met TankSim/ConveyorSim parent items"""
+        current_dir = Path(__file__).parent
         xml_file = current_dir.parent / "guiCommon" / "io_treeList.xml"
         
         try:
-            tree = ET.parse(str(xml_file))  # Converteer Path naar string
+            tree = ET.parse(str(xml_file))
             root = tree.getroot()
             
+            # === TANKSIM ===
             tanksim = root.find('TankSim')
-            if tanksim is None:
-                print("TankSim niet gevonden in XML")
-                return
+            if tanksim is not None:
+                tanksim_item = QTreeWidgetItem(self.treeWidget_IO, ["TankSim"])
+                
+                # INPUTS
+                inputs_root = tanksim.find('Inputs')
+                if inputs_root is not None:
+                    inputs_item = QTreeWidgetItem(tanksim_item, ["Inputs"])
+                    
+                    digital = inputs_root.find('Digital')
+                    if digital is not None:
+                        digital_item = QTreeWidgetItem(inputs_item, ["Digital"])
+                        for signal in digital.findall('Signal'):
+                            signal_name = signal.text.strip() if signal.text else "Unknown"
+                            QTreeWidgetItem(digital_item, [signal_name])
+                            
+                            signal_info = {
+                                'type': signal.get('type', 'bool'),
+                                'io_prefix': signal.get('io_prefix', 'I'),
+                                'status': signal.get('status', ''),
+                                'description': signal.get('description', ''),
+                                'range': signal.get('range', '')
+                            }
+                            self.treeWidget_IO.signal_data[signal_name] = signal_info
+                    
+                    analog = inputs_root.find('Analog')
+                    if analog is not None:
+                        analog_item = QTreeWidgetItem(inputs_item, ["Analog"])
+                        for signal in analog.findall('Signal'):
+                            signal_name = signal.text.strip() if signal.text else "Unknown"
+                            QTreeWidgetItem(analog_item, [signal_name])
+                            
+                            signal_info = {
+                                'type': signal.get('type', 'int'),
+                                'io_prefix': signal.get('io_prefix', 'I'),
+                                'status': signal.get('status', ''),
+                                'description': signal.get('description', ''),
+                                'range': signal.get('range', '')
+                            }
+                            self.treeWidget_IO.signal_data[signal_name] = signal_info
+                
+                # OUTPUTS
+                outputs_root = tanksim.find('Outputs')
+                if outputs_root is not None:
+                    outputs_item = QTreeWidgetItem(tanksim_item, ["Outputs"])
+                    
+                    digital = outputs_root.find('Digital')
+                    if digital is not None:
+                        digital_item = QTreeWidgetItem(outputs_item, ["Digital"])
+                        for signal in digital.findall('Signal'):
+                            signal_name = signal.text.strip() if signal.text else "Unknown"
+                            QTreeWidgetItem(digital_item, [signal_name])
+                            
+                            signal_info = {
+                                'type': signal.get('type', 'bool'),
+                                'io_prefix': signal.get('io_prefix', 'Q'),
+                                'status': signal.get('status', ''),
+                                'description': signal.get('description', ''),
+                                'range': signal.get('range', '')
+                            }
+                            self.treeWidget_IO.signal_data[signal_name] = signal_info
+                    
+                    analog = outputs_root.find('Analog')
+                    if analog is not None:
+                        analog_item = QTreeWidgetItem(outputs_item, ["Analog"])
+                        for signal in analog.findall('Signal'):
+                            signal_name = signal.text.strip() if signal.text else "Unknown"
+                            QTreeWidgetItem(analog_item, [signal_name])
+                            
+                            signal_info = {
+                                'type': signal.get('type', 'int'),
+                                'io_prefix': signal.get('io_prefix', 'Q'),
+                                'status': signal.get('status', ''),
+                                'description': signal.get('description', ''),
+                                'range': signal.get('range', '')
+                            }
+                            self.treeWidget_IO.signal_data[signal_name] = signal_info
             
-            # INPUTS
-            inputs_root = tanksim.find('Inputs')
-            if inputs_root is not None:
-                inputs_item = QTreeWidgetItem(self.treeWidget_IO, ["Inputs"])
-                
-                digital = inputs_root.find('Digital')
-                if digital is not None:
-                    digital_item = QTreeWidgetItem(inputs_item, ["Digital"])
-                    for signal in digital.findall('Signal'):
-                        signal_name = signal.text.strip() if signal.text else "Unknown"
-                        QTreeWidgetItem(digital_item, [signal_name])
-                        
-                        signal_info = {
-                            'type': signal.get('type', 'bool'),
-                            'io_prefix': signal.get('io_prefix', 'I'),
-                            'status': signal.get('status', ''),
-                            'description': signal.get('description', ''),
-                            'range': signal.get('range', '')
-                        }
-                        self.treeWidget_IO.signal_data[signal_name] = signal_info
-                
-                analog = inputs_root.find('Analog')
-                if analog is not None:
-                    analog_item = QTreeWidgetItem(inputs_item, ["Analog"])
-                    for signal in analog.findall('Signal'):
-                        signal_name = signal.text.strip() if signal.text else "Unknown"
-                        QTreeWidgetItem(analog_item, [signal_name])
-                        
-                        signal_info = {
-                            'type': signal.get('type', 'int'),
-                            'io_prefix': signal.get('io_prefix', 'I'),
-                            'status': signal.get('status', ''),
-                            'description': signal.get('description', ''),
-                            'range': signal.get('range', '')
-                        }
-                        self.treeWidget_IO.signal_data[signal_name] = signal_info
-            
-            # OUTPUTS
-            outputs_root = tanksim.find('Outputs')
-            if outputs_root is not None:
-                outputs_item = QTreeWidgetItem(self.treeWidget_IO, ["Outputs"])
-                
-                digital = outputs_root.find('Digital')
-                if digital is not None:
-                    digital_item = QTreeWidgetItem(outputs_item, ["Digital"])
-                    for signal in digital.findall('Signal'):
-                        signal_name = signal.text.strip() if signal.text else "Unknown"
-                        QTreeWidgetItem(digital_item, [signal_name])
-                        
-                        signal_info = {
-                            'type': signal.get('type', 'bool'),
-                            'io_prefix': signal.get('io_prefix', 'Q'),
-                            'status': signal.get('status', ''),
-                            'description': signal.get('description', ''),
-                            'range': signal.get('range', '')
-                        }
-                        self.treeWidget_IO.signal_data[signal_name] = signal_info
-                
-                analog = outputs_root.find('Analog')
-                if analog is not None:
-                    analog_item = QTreeWidgetItem(outputs_item, ["Analog"])
-                    for signal in analog.findall('Signal'):
-                        signal_name = signal.text.strip() if signal.text else "Unknown"
-                        QTreeWidgetItem(analog_item, [signal_name])
-                        
-                        signal_info = {
-                            'type': signal.get('type', 'int'),
-                            'io_prefix': signal.get('io_prefix', 'Q'),
-                            'status': signal.get('status', ''),
-                            'description': signal.get('description', ''),
-                            'range': signal.get('range', '')
-                        }
-                        self.treeWidget_IO.signal_data[signal_name] = signal_info
+            # === CONVEYORSIM ===
+            conveyorsim = root.find('ConveyorSim')
+            if conveyorsim is not None:
+                conveyorsim_item = QTreeWidgetItem(self.treeWidget_IO, ["ConveyorSim"])
+                note = conveyorsim.find('Note')
+                if note is not None and note.text:
+                    QTreeWidgetItem(conveyorsim_item, [note.text.strip()])
             
             self.treeWidget_IO.expandAll()
-
+            print("✅ IO Tree geladen met TankSim/ConveyorSim structure")
             
         except Exception as e:
             print(f"Fout bij laden XML: {e}")
@@ -1727,7 +1911,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print(f"Fout bij laden: {e}")
 
     def reload_io_config(self):
-        """Herlaad IO configuratie vanuit JSON tijdens runtime"""
+        """Herlaad IO configuratie met uitgebreide debug output"""
         try:
             if not hasattr(self, 'tanksim_config') or self.tanksim_config is None:
                 QMessageBox.warning(self, "Error", "TankSim configuratie niet beschikbaar.")
@@ -1759,6 +1943,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if reply == QMessageBox.No:
                 return
             
+            # Debug VOOR reload
+            print("\n" + "🔍 VOOR RELOAD ".center(60, "="))
+            self.debug_io_configuration()
+            
             # Disconnect PLC als verbonden
             if hasattr(self, 'validPlcConnection') and self.validPlcConnection:
                 if hasattr(self, 'plc') and self.plc:
@@ -1772,7 +1960,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.plc = None
                 self.update_connection_status_icon()
                 
-                # Untoggle connect button
                 try:
                     self.pushButton_connect.blockSignals(True)
                     self.pushButton_connect.setChecked(False)
@@ -1782,26 +1969,56 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             # Herlaad configuratie
             old_byte_range = (self.tanksim_config.lowestByte, self.tanksim_config.highestByte)
+            
+            # Laad config
+            print(f"\n📂 Laden van: {io_config_path}")
             self.tanksim_config.load_io_config_from_file(io_config_path)
+            
+            # Laad ook offsets uit JSON
+            try:
+                with open(io_config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+                
+                if 'offsets' in config_data:
+                    self.io_screen.byte_offsets = config_data['offsets'].copy()
+                    print(f"✅ Offsets geladen: {self.io_screen.byte_offsets}")
+                    
+                    # Update offset UI fields
+                    try:
+                        self.QLineEdit_BoolInput.setText(str(config_data['offsets'].get('BoolInput', 0)))
+                        self.QLineEdit_BoolOutput.setText(str(config_data['offsets'].get('BoolOutput', 0)))
+                        self.QLineEdit_DWORDInput.setText(str(config_data['offsets'].get('DWORDInput', 2)))
+                        self.QLineEdit_DWORDOutput.setText(str(config_data['offsets'].get('DWORDOutput', 2)))
+                    except AttributeError:
+                        pass
+            except Exception as e:
+                print(f"⚠️ Kon offsets niet laden: {e}")
+            
             new_byte_range = (self.tanksim_config.lowestByte, self.tanksim_config.highestByte)
             
             # Update GUI tabel met nieuwe adressen
             self._update_table_from_config()
+            
+            # Debug NA reload
+            print("\n" + "🔍 NA RELOAD ".center(60, "="))
+            self.debug_io_configuration()
             
             # Toon resultaat
             QMessageBox.information(
                 self,
                 "Success",
                 f"IO configuratie herladen!\n\n"
-                f"Herverbind met PLC indien nodig."
+                f"Oude byte range: {old_byte_range[0]}-{old_byte_range[1]}\n"
+                f"Nieuwe byte range: {new_byte_range[0]}-{new_byte_range[1]}\n\n"
+                f"Check console voor details."
             )
-         
+            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Fout bij herladen configuratie:\n{str(e)}")
             print(f"❌ Reload error: {e}")
             import traceback
             traceback.print_exc()
-
+        
     def _update_table_from_config(self):
         """Update de GUI tabel met adressen uit de config"""
         try:
@@ -1809,6 +2026,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             config = self.tanksim_config
             
             table.blockSignals(True)
+            
+            updated_count = 0
             
             # Loop door alle rijen in de tabel
             for row in range(table.rowCount()):
@@ -1864,9 +2083,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
                 
                 table._save_row_data(row)
+                updated_count += 1
             
             table.blockSignals(False)
-            print(f"Tabel geüpdatet met {table.rowCount()} rijen")
+            print(f"✅ Tabel geüpdatet: {updated_count} signalen")
             
         except Exception as e:
             print(f"❌ Fout bij updaten tabel: {e}")
@@ -1880,6 +2100,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if checked:
             print("Force mode ENABLED - Right-click signals to force values")
         else:
+            self.clear_all_forces()
             print("Force mode DISABLED")
             
     def update_connection_status_icon(self):
@@ -2049,6 +2270,261 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     background-color: #00CC00;
                 }
             """)
+
+    def update_io_status_display(self):
+        """Update status kolom met huidige IO waarden - ALTIJD"""
+        try:
+            if not hasattr(self, 'tanksim_config') or not hasattr(self, 'tanksim_status'):
+                return
+            
+            table = self.tableWidget_IO
+            config = self.tanksim_config
+            status = self.tanksim_status
+            
+            has_plc = (hasattr(self, 'validPlcConnection') and 
+                    self.validPlcConnection and 
+                    hasattr(self, 'plc') and 
+                    self.plc)
+            
+            # Loop door alle rijen
+            for row in range(table.rowCount()):
+                name_item = table.item(row, 0)
+                if not name_item or not name_item.text():
+                    continue
+                
+                signal_name = name_item.text()
+                
+                # Check if forced
+                is_forced = table.is_row_forced(row)
+                
+                # Check if this signal is mapped in config
+                if signal_name not in config.io_signal_mapping:
+                    continue
+                
+                attr_name = config.io_signal_mapping[signal_name]
+                attr_value = getattr(config, attr_name, None)
+                
+                if attr_value is None:
+                    continue
+                
+                # Get value: forced > PLC > status object
+                value = None
+                
+                if is_forced:
+                    # Geforceerde waarde heeft prioriteit - gebruik altijd deze
+                    value = table.get_forced_value(row)
+                elif has_plc:
+                    # Lees van PLC als verbonden (en niet geforceerd)
+                    try:
+                        if "bit" in attr_value:  # Digital signal
+                            byte_addr = attr_value["byte"]
+                            bit_addr = attr_value["bit"]
+                            
+                            if attr_name.startswith("DQ"):  # PLC Output (simulator input)
+                                value = self.plc.GetDO(byte_addr, bit_addr)
+                            else:  # DI - PLC Input (simulator output)
+                                value = self.plc.GetDI(byte_addr, bit_addr)
+                        else:  # Analog signal
+                            byte_addr = attr_value["byte"]
+                            
+                            if attr_name.startswith("AQ"):  # PLC Analog Output (simulator input)
+                                value = self.plc.GetAO(byte_addr)
+                            else:  # AI - PLC Analog Input (simulator output)
+                                value = self.plc.GetAI(byte_addr)
+                    except Exception as e:
+                        pass  # PLC read error - fall through to status
+                
+                # Als geen PLC of read failed, gebruik status object waardes
+                if value is None:
+                    # Map naar status object attributes
+                    
+                    # === OUTPUTS (PLC schrijft, simulator leest) ===
+                    if attr_name == "DQValveIn":
+                        value = (status.valveInOpenFraction > 0)
+                    elif attr_name == "AQValveInFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.valveInOpenFraction * max_val)
+                        
+                    elif attr_name == "DQValveOut":
+                        value = (status.valveOutOpenFraction > 0)
+                    elif attr_name == "AQValveOutFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.valveOutOpenFraction * max_val)
+                        
+                    elif attr_name == "DQHeater":
+                        value = (status.heaterPowerFraction > 0)
+                    elif attr_name == "AQHeaterFraction":
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(status.heaterPowerFraction * max_val)
+                    
+                    # === INPUTS (simulator schrijft, PLC leest) ===
+                    elif attr_name == "DILevelSensorHigh":
+                        value = status.digitalLevelSensorHighTriggered
+                        
+                    elif attr_name == "DILevelSensorLow":
+                        value = status.digitalLevelSensorLowTriggered
+                        
+                    elif attr_name == "AILevelSensor":
+                        # Scale liquidVolume (0-200mm) naar PLC range (0-27648 of 0-analogMax)
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int((status.liquidVolume / config.tankVolume) * max_val)
+                        
+                    elif attr_name == "AITemperatureSensor":
+                        # Scale temperature (-50 tot 250°C) naar PLC range (0-27648 of 0-analogMax)
+                        max_val = self.plc.analogMax if has_plc else 27648
+                        value = int(((status.liquidTemperature + 50) / 300) * max_val)
+                    else:
+                        continue
+                
+                # Update status column
+                table.update_status_column(row, value)
+                
+        except Exception as e:
+            import traceback
+            print(f"❌ Error in update_io_status_display: {e}")
+            traceback.print_exc()
+    
+    def debug_io_configuration(self):
+        """Debug functie om IO configuratie te controleren"""
+        print("\n" + "="*60)
+        print("🔍 DEBUG: IO CONFIGURATION")
+        print("="*60)
+        
+        if not hasattr(self, 'tanksim_config'):
+            print("❌ tanksim_config niet beschikbaar")
+            return
+        
+        config = self.tanksim_config
+        table = self.tableWidget_IO
+        
+        print("\n📋 CONFIG BYTE RANGE:")
+        print(f"   Lowest: {config.lowestByte}")
+        print(f"   Highest: {config.highestByte}")
+        
+        print("\n📋 OFFSETS:")
+        print(f"   BoolInput: {self.io_screen.byte_offsets.get('BoolInput', 'NOT SET')}")
+        print(f"   BoolOutput: {self.io_screen.byte_offsets.get('BoolOutput', 'NOT SET')}")
+        print(f"   DWORDInput: {self.io_screen.byte_offsets.get('DWORDInput', 'NOT SET')}")
+        print(f"   DWORDOutput: {self.io_screen.byte_offsets.get('DWORDOutput', 'NOT SET')}")
+        
+        print("\n📋 SIGNAL MAPPING (eerste 10):")
+        count = 0
+        for signal_name, attr_name in config.io_signal_mapping.items():
+            if count >= 10:
+                break
+            attr_value = getattr(config, attr_name, None)
+            print(f"   {signal_name:25s} -> {attr_name:25s}: {attr_value}")
+            count += 1
+        
+        print("\n📋 TABLE CONTENTS (eerste 10 rijen met data):")
+        row_count = 0
+        for row in range(table.rowCount()):
+            name_item = table.item(row, 0)
+            if name_item and name_item.text():
+                addr_item = table.item(row, 4)
+                type_item = table.item(row, 1)
+                status_item = table.item(row, 5)
+                
+                address = addr_item.text() if addr_item else "NO ADDR"
+                sig_type = type_item.text() if type_item else "NO TYPE"
+                status = status_item.text() if status_item else "NO STATUS"
+                
+                # Check if forced
+                is_forced = table.is_row_forced(row)
+                force_indicator = "🔒" if is_forced else "  "
+                
+                print(f"   {force_indicator} Row {row:2d}: {name_item.text():25s} | {sig_type:4s} | {address:8s} | Status: {status}")
+                row_count += 1
+                if row_count >= 10:
+                    break
+        
+        print("\n📋 PLC CONNECTION:")
+        if hasattr(self, 'validPlcConnection'):
+            print(f"   Connected: {self.validPlcConnection}")
+            if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
+                print(f"   analogMax: {self.plc.analogMax}")
+                print(f"   Protocol: {self.mainConfig.plcProtocol if hasattr(self, 'mainConfig') else 'UNKNOWN'}")
+        else:
+            print("   No PLC info available")
+        
+        print("\n📋 FORCED VALUES:")
+        forced_values = self.get_forced_io_values()
+        if forced_values:
+            for attr_name, value in forced_values.items():
+                print(f"   🔒 {attr_name}: {value}")
+        else:
+            print("   (none)")
+        
+        print("="*60 + "\n")
+
+    
+    def get_forced_io_values(self):
+        """
+        Verzamel alle geforceerde IO waardes uit de tabel
+        Returns: dict met {attr_name: forced_value} voor geforceerde signalen
+        """
+        forced_values = {}
+        
+        if not hasattr(self, 'tableWidget_IO'):
+            return forced_values
+        
+        table = self.tableWidget_IO
+        
+        if not hasattr(self, 'tanksim_config'):
+            return forced_values
+        
+        config = self.tanksim_config
+        
+        # Loop door alle geforceerde rijen
+        for row, force_data in table.forced_rows.items():
+            # Haal signaal info op
+            name_item = table.item(row, 0)
+            type_item = table.item(row, 1)
+            addr_item = table.item(row, 4)
+            
+            if not name_item or not type_item or not addr_item:
+                continue
+            
+            signal_name = name_item.text()
+            data_type = type_item.text()
+            address = addr_item.text()
+            forced_value = force_data["value"]
+            
+            # Map signal name naar config attribuut naam
+            if signal_name not in config.io_signal_mapping:
+                continue
+            
+            attr_name = config.io_signal_mapping[signal_name]
+            
+            # Bepaal of dit een digital of analog signaal is
+            is_digital = '.' in address  # Digital heeft bit address (bijv. Q0.1)
+            is_analog = 'W' in address   # Analog heeft word address (bijv. QW2)
+            
+            # Voeg toe aan forced_values dict
+            if is_digital:
+                # Digital signaal - gebruik DQ/DI attribuut
+                forced_values[attr_name] = bool(forced_value)
+            elif is_analog:
+                # Analog signaal - gebruik AQ/AI attribuut
+                forced_values[attr_name] = int(forced_value)
+        
+        return forced_values
+    
+    def clear_all_forces(self):
+        """Clear alle geforceerde waardes uit de IO tabel"""
+        if hasattr(self, 'tableWidget_IO'):
+            table = self.tableWidget_IO
+            table.forced_rows.clear()
+            
+            # Reset alle backgrounds
+            for row in range(table.rowCount()):
+                for col in range(table.columnCount()):
+                    item = table.item(row, col)
+                    if item:
+                        item.setBackground(Qt.white)
+            
+            print(" All forces cleared")
+
 
 # =============================================================================
 # Main Application Entry Point

@@ -89,10 +89,11 @@ def tryConnectToPlc():
     """Initializes or attempts to connect/reconnect to the configured PLC"""
     # Use global variables
     global mainConfig, validPlcConnection, PlcCom
+    window.clear_all_forces()
     
     # Don't connect in GUI mode
     if mainConfig.plcGuiControl == "gui":
-        print("\n⚠️ Cannot connect: In GUI control mode")
+        print("\nCannot connect: In GUI control mode")
         validPlcConnection = False
         window.validPlcConnection = False
         window.plc = None
@@ -111,47 +112,44 @@ def tryConnectToPlc():
     print(f"   IP: {mainConfig.plcIpAdress}")
     
     """Initialize plc communication object based on protocol"""
-    try:
-        if mainConfig.plcProtocol == "PLC S7-1500/1200/400/300/ET 200SP":
-            PlcCom = plcS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
-        elif mainConfig.plcProtocol == "logo!":
-            PlcCom = logoS7(mainConfig.plcIpAdress, mainConfig.tsapLogo, mainConfig.tsapServer)
-        elif mainConfig.plcProtocol == "PLCSim S7-1500 advanced":
-            PlcCom = plcSimAPI()
-        elif mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
-            PlcCom = plcSimS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
-        else:
-            print(f"⚠️ Invalid protocol: {mainConfig.plcProtocol}")
-            validPlcConnection = False
-            window.validPlcConnection = False
-            window.plc = None
-            window.update_connection_status_icon()
-            return
-    except Exception as e:
-        print("Error: no valid plcProtocol exception:", e)
+    if mainConfig.plcProtocol == "PLC S7-1500/1200/400/300/ET 200SP":
+        PlcCom = plcS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
+    elif mainConfig.plcProtocol == "logo!":
+        PlcCom = logoS7(mainConfig.plcIpAdress, mainConfig.tsapLogo, mainConfig.tsapServer)
+    elif mainConfig.plcProtocol == "PLCSim S7-1500 advanced":
+        PlcCom = plcSimAPI()
+    elif mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
+        PlcCom = plcSimS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
+    else:
+        print(f"Invalid protocol: {mainConfig.plcProtocol}")
         validPlcConnection = False
         window.validPlcConnection = False
         window.plc = None
         window.update_connection_status_icon()
         return
 
+
     '''connect/reconnect logic'''
-    if PlcCom.isConnected():
+    if PlcCom.connect():  # run connect, returns True/False
         validPlcConnection = True
-        print("✅ PLC already connected")
+        # Use byte ranges from current process config 
+        
+        # Reset INPUTS (sensoren van simulator naar PLC)
+        PlcCom.resetSendInputs(
+            currentProcessConfig.lowestByte,
+            currentProcessConfig.highestByte
+        )
+        
+        # Reset OUTPUTS (actuatoren van PLC naar simulator) - belangrijk voor force!
+        PlcCom.resetSendOutputs(
+            currentProcessConfig.lowestByte,
+            currentProcessConfig.highestByte
+        )
+        
+        print(f"📊 Byte range: {currentProcessConfig.lowestByte} - {currentProcessConfig.highestByte}")
     else:
-        if PlcCom.connect():  # run connect, returns True/False
-            validPlcConnection = True
-            # Use byte ranges from current process config (as in new code)
-            PlcCom.resetSendInputs(
-                currentProcessConfig.lowestByte,
-                currentProcessConfig.highestByte
-            )
-            print(f"✅ PLC connected")
-            print(f"   Byte range: {currentProcessConfig.lowestByte} - {currentProcessConfig.highestByte}")
-        else:
-            validPlcConnection = False
-            print("❌ PLC connection failed")
+        validPlcConnection = False
+        print("❌ PLC connection failed")
     
     # Update GUI
     window.validPlcConnection = validPlcConnection
@@ -179,7 +177,7 @@ if __name__ == "__main__":
             print(f"   Protocol: {mainConfig.plcProtocol}")
             tryConnectToPlc()
             
-            # Update GUI connection status - NIEUW
+            # Update GUI connection status
             window.validPlcConnection = validPlcConnection
             window.plc = PlcCom if validPlcConnection else None
             window.update_connection_status_icon()
@@ -194,24 +192,13 @@ if __name__ == "__main__":
             """
             # only try to contact plc if there is a connection
             if validPlcConnection:
-                # Force callback functions
-                def force_callback(signal_name, io_type):
-                    """Check if signal is forced in GUI"""
-                    table = window.tableWidget_IO
-                    for row in range(table.rowCount()):
-                        name_item = table.item(row, 0)
-                        if name_item and name_item.text() == signal_name:
-                            if table.is_row_forced(row):
-                                return table.get_forced_value(row)
-                    return None
+                # Haal geforceerde waardes op van GUI
+                forced_values = window.get_forced_io_values()
                 
-                def status_callback(signal_name, value, io_type):
-                    """Update status display in GUI"""
-                    # This is now handled by update_io_status_display timer
-                    pass
-                
+                # Update IO met force support
                 currentProcessIoHandler.updateIO(
-                    PlcCom, mainConfig, currentProcessConfig, currentProcessStatus)
+                    PlcCom, mainConfig, currentProcessConfig, currentProcessStatus,
+                    forced_values=forced_values)
             else:
                 # if control is plc but no plc connection, pretend plc outputs are all 0
                 currentProcessIoHandler.resetOutputs(
@@ -227,4 +214,3 @@ if __name__ == "__main__":
         if mainConfig.doExit:
             print("\nExiting TankSim...")
             sys.exit(0)
-            

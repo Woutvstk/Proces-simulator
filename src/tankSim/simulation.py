@@ -30,7 +30,7 @@ class simulation:
                 self._lastRun = time.time()
                 # remember sim was runnning during previous update
                 self._lastSimRunningState = status.simRunning
-                print("🚀 Simulation FIRST RUN - initializing timer")
+                print("Simulation FIRST RUN - initializing timer")
                 return
 
             """
@@ -46,7 +46,7 @@ class simulation:
             self._debug_counter += 1
             
             if self._debug_counter % 10 == 0:
-                print(f"💧 doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
+                print(f" doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
             
             # calculate new liquidVolume
             status.liquidVolume = min(

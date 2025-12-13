@@ -3,23 +3,19 @@ from pathlib import Path
 
 
 class configuration:
-    """
-    Constructor: create configuration object with default parameters
-    """
+    """Constructor: create configuration object with default parameters"""
 
     def __init__(self):
-        """
-        IO settings - These will be overwritten by load_io_config()
-        """
+        """IO settings - These will be overwritten by load_io_config()"""
         # PLC OUTPUTS (from PLC perspective = simulator inputs)
         # DIGITAL
-        self.DQValveIn = {"byte": 0, "bit": 0}   # False = Closed
-        self.DQValveOut = {"byte": 0, "bit": 1}  # False = Closed
-        self.DQHeater = {"byte": 0, "bit": 2}    # False = Off
+        self.DQValveIn = {"byte": 0, "bit": 0}
+        self.DQValveOut = {"byte": 0, "bit": 1}
+        self.DQHeater = {"byte": 0, "bit": 2}
         # ANALOG
-        self.AQValveInFraction = {"byte": 2}     # 0 = Closed, MAX = full open
-        self.AQValveOutFraction = {"byte": 4}    # 0 = Closed, MAX = full open
-        self.AQHeaterFraction = {"byte": 6}      # 0 = Off, MAX = full power
+        self.AQValveInFraction = {"byte": 2}
+        self.AQValveOutFraction = {"byte": 4}
+        self.AQHeaterFraction = {"byte": 6}
 
         # PLC INPUTS (from PLC perspective = simulator outputs)
         # DIGITAL
@@ -31,15 +27,12 @@ class configuration:
 
         # Mapping of signal names from io_config.json to configuration attributes
         self.io_signal_mapping = {
-            # === INPUTS FOR SIMULATOR (= PLC OUTPUTS) ===
-            # Digital outputs
+            # INPUTS FOR SIMULATOR (= PLC OUTPUTS)
             "ValveIn": "DQValveIn",
             "UpperValve": "DQValveIn",
             "ValveOut": "DQValveOut",
             "LowerValve": "DQValveOut",
             "Heater": "DQHeater",
-            
-            # Analog outputs (controllable valves/heater)
             "ValveInFraction": "AQValveInFraction",
             "UpperValveFraction": "AQValveInFraction",
             "ValveOutFraction": "AQValveOutFraction",
@@ -47,14 +40,11 @@ class configuration:
             "HeaterFraction": "AQHeaterFraction",
             "HeaterPower": "AQHeaterFraction",
             
-            # === OUTPUTS FROM SIMULATOR (= PLC INPUTS) ===
-            # Digital inputs
+            # OUTPUTS FROM SIMULATOR (= PLC INPUTS)
             "LevelSensorHigh": "DILevelSensorHigh",
             "TanklevelSensorHigh": "DILevelSensorHigh",
             "LevelSensorLow": "DILevelSensorLow",
             "TanklevelSensorLow": "DILevelSensorLow",
-            
-            # Analog inputs
             "LevelSensor": "AILevelSensor",
             "TankLevel": "AILevelSensor",
             "TemperatureSensor": "AITemperatureSensor",
@@ -66,14 +56,10 @@ class configuration:
     
         self.lowestByte, self.highestByte = self.get_byte_range()
 
-        """
-        Simulation settings
-        """
+        """Simulation settings"""
         self.simulationInterval = 0.2  # in seconds
         
-        """
-        Process settings
-        """
+        """Process settings"""
         self.tankVolume: float = 200.0
         self.valveInMaxFlow: float = 5.0
         self.valveOutMaxFlow: float = 2.0
@@ -94,9 +80,7 @@ class configuration:
         ]
 
     def get_byte_range(self):
-        """
-        Return the lowest and highest byte used in all IO definitions.
-        """
+        """Return the lowest and highest byte used in all IO definitions."""
         bytes_used = []
 
         for _, value in self.__dict__.items():
@@ -108,12 +92,10 @@ class configuration:
             highestByte = max(bytes_used)
             return lowestByte, highestByte
         else:
-            return 0, 10  # Default range
+            return 0, 10
 
     def update_io_range(self):
-        """
-        Call this when IO data changes (e.g. GUI edits addresses).
-        """
+        """Call this when IO data changes (e.g. GUI edits addresses)."""
         self.lowestByte, self.highestByte = self.get_byte_range()
 
     def load_io_config_from_file(self, config_file_path: Path):
@@ -130,52 +112,46 @@ class configuration:
                 config_data = json.load(f)
             
             if 'signals' not in config_data:
-                print("⚠️ Geen signals gevonden in IO configuratie")
+                print("Warning: No signals found in IO configuration")
                 return
             
-            # Update attributes based on loaded signals
             for signal in config_data['signals']:
                 signal_name = signal.get('name', '')
                 signal_type = signal.get('type', '')
                 address = signal.get('address', '')
                 
-                # Check if this signal is in our mapping
                 if signal_name in self.io_signal_mapping:
                     attr_name = self.io_signal_mapping[signal_name]
                     
-                    # Parse address
-                    if '.' in address:  # Digital signal (e.g., "I0.1" or "Q0.2")
+                    if '.' in address:
                         parts = address.split('.')
-                        byte_part = parts[0][1:]  # Remove I/Q prefix
+                        byte_part = parts[0][1:]
                         bit_part = parts[1]
                         
                         try:
                             byte_val = int(byte_part)
                             bit_val = int(bit_part)
                             setattr(self, attr_name, {"byte": byte_val, "bit": bit_val})
-                            print(f"{signal_name} -> {attr_name}: byte={byte_val}, bit={bit_val}")
                         except ValueError:
-                            print(f"Kan adres niet parsen: {address}")
+                            print(f"Cannot parse address: {address}")
                     
-                    elif 'W' in address:  # Analog signal (e.g., "IW2" or "QW4")
+                    elif 'W' in address:
                         byte_part = address.split('W')[1]
                         try:
                             byte_val = int(byte_part)
                             setattr(self, attr_name, {"byte": byte_val})
-                            print(f"{signal_name} -> {attr_name}: byte={byte_val}")
                         except ValueError:
-                            print(f"Kan adres niet parsen: {address}")
+                            print(f"Cannot parse address: {address}")
             
-            # Update byte range after loading
             self.update_io_range()
-            print(f"IO configuratie geladen, byte range: {self.lowestByte} - {self.highestByte}")
+            print(f"IO configuration loaded, byte range: {self.lowestByte} - {self.highestByte}")
             
         except FileNotFoundError:
-            print(f"IO configuratie bestand niet gevonden: {config_file_path}")
+            print(f"IO configuration file not found: {config_file_path}")
         except json.JSONDecodeError:
-            print(f"Ongeldige JSON in: {config_file_path}")
+            print(f"Invalid JSON in: {config_file_path}")
         except Exception as e:
-            print(f"Fout bij laden IO configuratie: {e}")
+            print(f"Error loading IO configuration: {e}")
     
     def get_signal_name_for_attribute(self, attr_name: str) -> str:
         """

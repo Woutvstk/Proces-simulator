@@ -3,37 +3,32 @@
     <TankSim>
         <Inputs>
             <Digital>
-                <!-- Digitale inputs (boolean) - gebruiken I prefix -->
-                <Signal description="Sensor upper valve fully open" type="bool" range="0-1" io_prefix="I" status="FALSE">UpperValveOpen</Signal>
-                <Signal description="Upper valve is fully closed" type="bool" range="0-1" io_prefix="I" status="FALSE">UpperValveClosed</Signal>
-                <Signal description="Lower valve is fully open" type="bool" range="0-1" io_prefix="I" status="FALSE">LowerValveOpen</Signal>
-                <Signal description="Lower valve is fully closed" type="bool" range="0-1" io_prefix="I" status="FALSE">LowerValveClosed</Signal>
-                <Signal description="Tank upper level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">TanklevelSensorHigh</Signal>
-                <Signal description="Tank lower level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">TankLevelSensorLow</Signal>
+                <!-- Digitale inputs (boolean) - PLC Inputs = Simulator Outputs -->
+                <Signal description="Tank upper level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">LevelSensorHigh</Signal>
+                <Signal description="Tank lower level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">LevelSensorLow</Signal>
             </Digital>
             <Analog>
-                <!-- Analoge inputs (word/int) - gebruiken I prefix, nemen 2 bytes -->
-                <Signal description="Tank level measurement" type="int" range="0-27648" io_prefix="I" status="0">TankLevel</Signal>
-                <Signal description="Flow rate sensor" type="int" range="0-27648" io_prefix="I" status="0">FlowRate</Signal>
-                <Signal description="Temperature sensor" type="int" range="0-27648" io_prefix="I" status="0">Temperature</Signal>
+                <!-- Analoge inputs (word/int) - PLC Inputs = Simulator Outputs -->
+                <Signal description="Tank level measurement" type="int" range="0-27648" io_prefix="I" status="0">LevelSensor</Signal>
+                <Signal description="Temperature sensor" type="int" range="0-27648" io_prefix="I" status="0">TemperatureSensor</Signal>
             </Analog>
         </Inputs>
         <Outputs>
             <Digital>
-                <!-- Digitale outputs (boolean) - gebruiken Q prefix -->
-                <Signal description="Enables the heater element" type="bool" range="0-1" io_prefix="Q" status="oFALSE">Heater</Signal>
-                <Signal description="Upper valve control" type="bool" range="0-1" io_prefix="Q" status="FALSE">UpperValveControl</Signal>
-                <Signal description="Lower valve control" type="bool" range="0-1" io_prefix="Q" status="FALSE">LowerValveControl</Signal>
+                <!-- Digitale outputs (boolean) - PLC Outputs = Simulator Inputs -->
+                <Signal description="Upper valve digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">ValveIn</Signal>
+                <Signal description="Lower valve digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">ValveOut</Signal>
+                <Signal description="Heater digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">Heater</Signal>
             </Digital>
             <Analog>               
-                <!-- Analoge outputs (word/int) - gebruiken Q prefix, nemen 2 bytes -->
-                <Signal description="Pump speed output" type="int" range="0-27648" io_prefix="Q" status="0">PumpSpeed</Signal>
-                <Signal description="Valve position output" type="int" range="0-27648" io_prefix="Q" status="0">ValvePosition</Signal>
-                <Signal description="Heater element output" type="int" range="0-27648" io_prefix="Q" status="0">AnalogHeater</Signal>
+                <!-- Analoge outputs (word/int) - PLC Outputs = Simulator Inputs -->
+                <Signal description="Upper valve analog position (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">ValveInFraction</Signal>
+                <Signal description="Lower valve analog position (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">ValveOutFraction</Signal>
+                <Signal description="Heater analog power (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">HeaterFraction</Signal>
             </Analog>
         </Outputs>
     </TankSim>
     <ConveyorSim>
-        <Note>SOON</Note>
+        <Note>Coming soon - Conveyor belt simulation</Note>
     </ConveyorSim>
 </Simulation>
