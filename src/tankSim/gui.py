@@ -13,11 +13,10 @@ blue = "#1100FF"
 green = "#00FF00"
 
 # Global variables
-maxHoogteVat = 2000
+maxHoogteVat = 200
 weerstand = True
-tempVat = 100
-currentHoogteVat = 2000
-
+currentHoogteVat = 0
+tempVat = 0
     
 class SvgDisplay(QWidget):
     """Widget that only renders the SVG."""

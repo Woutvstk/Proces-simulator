@@ -1,0 +1,86 @@
+1. Centraal Datamodel
+De architectuur draait om de status-klasse (status.py). Dit object fungeert als shared state voor de gehele applicatie.
+Alle procesvariabelen (zoals liquidVolume, valveInOpenFraction) worden hierin opgeslagen.
+De GUI, simulatie en IO-handler communiceren niet direct met elkaar, maar lezen en schrijven uitsluitend naar dit centrale status-object.
+
+2. IO Configuratie & Addressing
+De adressering wordt beheerd in configurationTS.py.
+Mapping: De klasse bevat dictionaries (bijv. self.DQValveIn = {"byte": 0, "bit": 0}) die de interne signaalnamen koppelen aan PLC-geheugenadressen.
+JSON Import: Bij het opstarten wordt io_configuration.json ingelezen via load_io_config_from_file. Dit overschrijft de hardcoded adressen met de waarden uit de JSON, waardoor herconfiguratie mogelijk is zonder code-wijzigingen.
+
+3. IO Handler (PLC Interface)
+De ioHandler.py verzorgt de synchronisatie tussen de PLC en het status-object. Deze wordt cyclisch aangeroepen in de main loop.
+Actuatoren (PLC Out → Sim In): De handler leest de PLC-outputs (Digital/Analog Outputs). Op basis van het geconfigureerde adres in configurationTS wordt de status-variabele geüpdatet (bijv. status.valveInOpenFraction wordt 1.0 als de PLC-bit hoog is).
+Sensoren (Sim Out → PLC In): De handler leest de berekende proceswaarden uit het status-object, schaalt deze naar de juiste integer-waarde (bijv. 0-27648) en schrijft deze naar de PLC-inputs (Digital/Analog Inputs).
+
+4. Simulatie Core
+De fysica wordt berekend in simulation.py, onafhankelijk van de IO.
+De doSimulation-functie berekent de delta-tijd (_timeSinceLastRun) tussen de huidige en vorige cyclus.
+Op basis van de actuatortoestanden in het status-object en de delta-tijd worden de nieuwe proceswaarden (volume, temperatuur) berekend en direct teruggeschreven naar het status-object.
+
+5. GUI Update Cyclus
+De GUI (mainGui.py) is losgekoppeld van de PLC-cyclus en draait op een eigen QTimer (100ms interval).
+De timer roept update_values aan, die de actuele waarden uit het status-object pollt.
+Deze waarden worden doorgegeven aan de VatWidget in gui.py, die vervolgens de SVG-elementen manipuleert (bijvoorbeeld de height en y attributen van de rechthoek die het water voorstelt).
+
+
+
+================================================================================
+UITGEBREIDE WORKFLOW VOOR HET TOEVOEGEN VAN NIEUWE FUNCTIES (Vb. MIXER)
+================================================================================
+
+Volg deze stappen strikt om een nieuw IO-punt toe te voegen.
+
+STAP 1: DEFINITIE GUI-LIJST (io_treeList.xml)
+-------------------------------------------
+* Doel: De logische naam voor de GUI-boomstructuur vastleggen.
+* Actie: Voeg het nieuwe signaal toe onder de juiste Input/Output categorie.
+* Code Vb:
+    <Outputs>
+        <Digital>
+            <Signal description="Activeert de roerder in het vat" type="bool" range="0-1" io_prefix="Q" status="FALSE">MixerControl</Signal>
+        </Digital>
+    </Outputs>
+
+STAP 2: STATUS VARIABELE (status.py)
+------------------------------------
+* Doel: Het centrale geheugen aanmaken voor de toestand.
+* Actie: Voeg de variabele toe in de __init__ methode.
+* Code Vb:
+    self.mixerOn: bool = False
+
+STAP 3: CONFIGURATIE EN ADRES (configurationTS.py & io_configuration.json)
+--------------------------------------------------------------------------
+* Doel: De link leggen tussen logische naam en fysiek adres.
+* Actie A (configurationTS.py): Voeg het interne attribuut met default adres toe in __init__.
+    self.DQMixer = {"byte": 0, "bit": 3}
+* Actie B (configurationTS.py): Koppel de logische naam aan het interne attribuut in 'io_signal_mapping'.
+    "MixerControl": "DQMixer"
+
+STAP 4: IO HANDLER LOGICA (ioHandler.py)
+----------------------------------------
+* Doel: Lezen van de PLC-output om de status te updaten.
+* Actie: Implementeer de leeslogica in 'updateIO' (onder LEES PLC OUTPUTS).
+* Code Vb:
+    if (plc.GetDO(config.DQMixer["byte"], config.DQMixer["bit"])):
+        status.mixerOn = True
+    else:
+        status.mixerOn = False
+
+STAP 5: SIMULATIE EFFECT (simulation.py)
+----------------------------------------
+* Doel: Definiëren van het effect op het proces (fysica).
+* Actie: Gebruik de statusvariabele om de berekeningen in 'doSimulation' aan te passen (bv. de warmteoverdracht versnellen).
+* Code Vb:
+    if status.mixerOn:
+        heat_loss_factor = 1.5 
+    # Pas de temperatuurverliesberekening aan met heat_loss_factor
+
+STAP 6: GRAFISCHE INTERFACE (gui.py, mainGui.py)
+-------------------------------------------------
+* Doel: De toestand van de mixer zichtbaar maken.
+* Actie A (gui.py): Maak of pas een methode in 'VatWidget' aan (bv. 'update_mixer_display') om de SVG-elementen te manipuleren (bv. een element 'zichtbaar' zetten of laten roteren). Gebruik hiervoor methoden zoals 'self.visibility_group' of 'self.set_svg_attribute'.
+* Actie B (mainGui.py): Lees in 'update_values' de nieuwe status en roep de methode van de widget aan.
+* Code Vb:
+    mixer_on_status = tanksim_status.mixerOn
+    self.vatWidget.update_mixer_display(mixer_on_status)

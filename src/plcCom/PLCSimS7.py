@@ -10,6 +10,7 @@ import sys # Required for PyInstaller compatibility
 #Code succesfully tested with S7-1500/1200(G1-G2)/400/300/ET200 CPU in standard and advanced license(for the S7-1500)
 
 class plcSimS7:
+    analogMax = 32767  # Max value for signed 16-bit integer
     """
     Class for communication with a Siemens S7 PLC using Snap7,
     integrated with NetToPLCSim server management for simulation environments.
@@ -299,12 +300,33 @@ class plcSimS7:
                 self.client.disconnect()
                 print("Disconnected from PLC")
             
+            # Always try to stop server
             self._stop_server()
+            
+            # Extra cleanup: kill any remaining NetToPLCSim processes
+            try:
+                import subprocess
+                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'], 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.DEVNULL,
+                             timeout=2)
+            except:
+                pass
+            
             return True
         except Exception as e:
             print(f"Error disconnecting: {e}")
+            # Still try cleanup
+            try:
+                import subprocess
+                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'], 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.DEVNULL,
+                             timeout=2)
+            except:
+                pass
             return False
-
+        
     def isConnected(self) -> bool:
         """
         Check if the connection to the PLC is alive.

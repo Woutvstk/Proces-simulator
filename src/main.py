@@ -77,6 +77,7 @@ window = MainWindow()
 # Give MainWindow access to configurations
 window.mainConfig = mainConfig
 window.tanksim_config = tankSimConfig
+window.tanksim_status = tankSimStatus
 
 window.show()
 
@@ -88,6 +89,22 @@ def tryConnectToPlc():
     """Initializes or attempts to connect/reconnect to the configured PLC"""
     # Use global variables
     global mainConfig, validPlcConnection, PlcCom
+    
+    # Don't connect in GUI mode
+    if mainConfig.plcGuiControl == "gui":
+        print("\n⚠️ Cannot connect: In GUI control mode")
+        validPlcConnection = False
+        window.validPlcConnection = False
+        window.plc = None
+        window.update_connection_status_icon()
+        # Untoggle connect button
+        try:
+            window.pushButton_connect.blockSignals(True)
+            window.pushButton_connect.setChecked(False)
+            window.pushButton_connect.blockSignals(False)
+        except:
+            pass
+        return
     
     print(f"\nConnecting to PLC...")
     print(f"   Protocol: {mainConfig.plcProtocol}")
@@ -103,15 +120,25 @@ def tryConnectToPlc():
             PlcCom = plcSimAPI()
         elif mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
             PlcCom = plcSimS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
+        else:
+            print(f"⚠️ Invalid protocol: {mainConfig.plcProtocol}")
+            validPlcConnection = False
+            window.validPlcConnection = False
+            window.plc = None
+            window.update_connection_status_icon()
+            return
     except Exception as e:
         print("Error: no valid plcProtocol exception:", e)
         validPlcConnection = False
+        window.validPlcConnection = False
+        window.plc = None
+        window.update_connection_status_icon()
         return
 
     '''connect/reconnect logic'''
     if PlcCom.isConnected():
         validPlcConnection = True
-        print("PLC already connected")
+        print("✅ PLC already connected")
     else:
         if PlcCom.connect():  # run connect, returns True/False
             validPlcConnection = True
@@ -120,11 +147,16 @@ def tryConnectToPlc():
                 currentProcessConfig.lowestByte,
                 currentProcessConfig.highestByte
             )
-            print(f"PLC connected")
+            print(f"✅ PLC connected")
             print(f"   Byte range: {currentProcessConfig.lowestByte} - {currentProcessConfig.highestByte}")
         else:
             validPlcConnection = False
-            print("PLC connection failed")
+            print("❌ PLC connection failed")
+    
+    # Update GUI
+    window.validPlcConnection = validPlcConnection
+    window.plc = PlcCom if validPlcConnection else None
+    window.update_connection_status_icon()
 
 # remember when last update was done
 timeLastUpdate = 0
@@ -179,8 +211,7 @@ if __name__ == "__main__":
                     pass
                 
                 currentProcessIoHandler.updateIO(
-                    PlcCom, mainConfig, currentProcessConfig, currentProcessStatus,
-                    force_callback, status_callback)
+                    PlcCom, mainConfig, currentProcessConfig, currentProcessStatus)
             else:
                 # if control is plc but no plc connection, pretend plc outputs are all 0
                 currentProcessIoHandler.resetOutputs(

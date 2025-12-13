@@ -7,14 +7,154 @@
   },
   "signals": [
     {
+      "name": "UpperValveOpen",
+      "type": "bool",
+      "byte": "0",
+      "bit": "2",
+      "address": "I0.2",
+      "status": "FALSE",
+      "description": "Sensor upper valve fully open",
+      "range": "0-1"
+    },
+    {
       "name": "UpperValveClosed",
+      "type": "bool",
+      "byte": "0",
+      "bit": "3",
+      "address": "I0.3",
+      "status": "FALSE",
+      "description": "Upper valve is fully closed",
+      "range": "0-1"
+    },
+    {
+      "name": "LowerValveOpen",
       "type": "bool",
       "byte": "0",
       "bit": "0",
       "address": "I0.0",
       "status": "FALSE",
-      "description": "Upper valve is fully closed",
+      "description": "Lower valve is fully open",
       "range": "0-1"
+    },
+    {
+      "name": "LowerValveClosed",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "I0.1",
+      "status": "FALSE",
+      "description": "Lower valve is fully closed",
+      "range": "0-1"
+    },
+    {
+      "name": "TanklevelSensorHigh",
+      "type": "bool",
+      "byte": "0",
+      "bit": "4",
+      "address": "I0.4",
+      "status": "FALSE",
+      "description": "Tank upper level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "TankLevelSensorLow",
+      "type": "bool",
+      "byte": "0",
+      "bit": "5",
+      "address": "I0.5",
+      "status": "FALSE",
+      "description": "Tank lower level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "TankLevel",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "IW2",
+      "status": "0",
+      "description": "Tank level measurement",
+      "range": "0-27648"
+    },
+    {
+      "name": "FlowRate",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "IW4",
+      "status": "0",
+      "description": "Flow rate sensor",
+      "range": "0-27648"
+    },
+    {
+      "name": "Temperature",
+      "type": "int",
+      "byte": "6",
+      "bit": "",
+      "address": "IW6",
+      "status": "0",
+      "description": "Temperature sensor",
+      "range": "0-27648"
+    },
+    {
+      "name": "Heater",
+      "type": "bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "Q0.0",
+      "status": "FALSE",
+      "description": "Enables the heater element",
+      "range": "0-1"
+    },
+    {
+      "name": "UpperValveControl",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "Q0.1",
+      "status": "FALSE",
+      "description": "Upper valve control",
+      "range": "0-1"
+    },
+    {
+      "name": "LowerValveControl",
+      "type": "bool",
+      "byte": "0",
+      "bit": "2",
+      "address": "Q0.2",
+      "status": "FALSE",
+      "description": "Lower valve control",
+      "range": "0-1"
+    },
+    {
+      "name": "PumpSpeed",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "QW2",
+      "status": "0",
+      "description": "Pump speed output",
+      "range": "0-27648"
+    },
+    {
+      "name": "ValvePosition",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "QW4",
+      "status": "0",
+      "description": "Valve position output",
+      "range": "0-27648"
+    },
+    {
+      "name": "AnalogHeater",
+      "type": "int",
+      "byte": "6",
+      "bit": "",
+      "address": "QW6",
+      "status": "0",
+      "description": "Heater element output",
+      "range": "0-27648"
     }
   ]
 }

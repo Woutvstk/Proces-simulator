@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icon">
+    <file>icon/refresh-svgrepo-com.svg</file>
     <file>media/icon/close-window-64 blauw.ico</file>
     <file>media/icon/close-window-64.ico</file>
     <file>media/icon/simulation.ico</file>

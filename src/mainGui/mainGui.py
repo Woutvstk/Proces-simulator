@@ -344,12 +344,14 @@ class DroppableTableWidget(QTableWidget):
         def sort_key(row_dict):
             val = row_dict.get(column, "")
             if not val:
-                return (1, "")
+                return (1, "")  # Empty values last
+            
+            # ✅ FIX: Probeer numeriek te sorteren, maar zorg voor consistente types
             try:
                 num_val = float(val)
-                return (0, num_val)
+                return (0, num_val, "")  # Numeric: (priority=0, number, empty_string)
             except (ValueError, TypeError):
-                return (0, val)
+                return (0, float('inf'), val)  # String: (priority=0, infinity, string)
         
         rows_data.sort(key=sort_key, reverse=False)
         
@@ -688,7 +690,7 @@ class DroppableTableWidget(QTableWidget):
         
         # Add force indicator if forced
         if self.is_row_forced(row):
-            display_text = f"F{display_text}"
+            display_text = f"🔒 {display_text}"
         
         if status_item:
             status_item.setText(display_text)
@@ -702,7 +704,6 @@ class DroppableTableWidget(QTableWidget):
             if self.is_row_forced(row):
                 new_item.setBackground(Qt.yellow)
             self.setItem(row, 5, new_item)
-
 
 # =============================================================================
 # IOScreen class for IO configuration
@@ -943,23 +944,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Verbind exit buttons
         self.pushButton_Exit.clicked.connect(self.close)
         self.pushButton_exit2.clicked.connect(self.close)
-    
+
         self.io_screen = IOScreen(self)
 
-        # Store reference to main configuration -
+        # Store reference to main configuration
         self.mainConfig = None  # Will be set from main.py
-
         self.tanksim_config = None
-
-        self.timer = QTimer()
-        self.timer.setInterval(100)  # 10x per seconde
-        self.timer.timeout.connect(self.update_values)
-        self.timer.timeout.connect(self.update_io_status_display)  # NIEUW
-        self.timer.start()
+        self.tanksim_status = None
+        
+        # Initialize connection variables
         self.validPlcConnection = False
         self.plc = None
 
-
+        # IP throttling
+        self.ip_change_timer = QTimer()
+        self.ip_change_timer.setSingleShot(True)
+        self.ip_change_timer.timeout.connect(self._apply_ip_change)
+        self.pending_ip = None
+        
+        # Main update timer - EENMALIG
+        self.timer = QTimer()
+        self.timer.setInterval(100)  # 10x per seconde
+        self.timer.timeout.connect(self.update_values)
+        self.timer.timeout.connect(self.update_io_status_display)
+        self.timer.start()
         
         # Setup connection status icon
         try:
@@ -978,8 +986,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineEdit_IPAddress.textChanged.connect(self.on_ip_changed)
         except AttributeError:
             print("IP address field niet gevonden")
-
-      
+    
         # Vervang standard table widget met custom DroppableTableWidget
         try:
             old_table = self.tableWidget_IO
@@ -992,7 +999,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             if layout:
                 layout.replaceWidget(old_table, self.tableWidget_IO)
-                
                 old_table.deleteLater()
         except Exception as e:
             print(f"Kon DroppableTableWidget niet installeren: {e}")
@@ -1014,38 +1020,67 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.load_io_tree()
         except Exception as e:
             print(f"Kon DraggableTreeWidget niet installeren: {e}")
-        
-        # VatWidget toevoegen
+
+        try:
+            self.controlerDropDown.clear()
+            controllers = [
+                "GUI",
+                "logo!",
+                "PLC S7-1500/1200/400/300/ET 200SP",
+                "PLCSim S7-1500 advanced",
+                "PLCSim S7-1500/1200/400/300/ET 200SP"
+            ]
+            
+            for controller in controllers:
+                self.controlerDropDown.addItem(controller)
+            
+            # Set default to GUI
+            self.controlerDropDown.setCurrentText("GUI")
+            
+        except AttributeError as e:
+            print(f"Controller dropdown niet gevonden: {e}")
+                
+         # VatWidget toevoegen
         try:
             self.vat_widget = VatWidget()
             container = self.findChild(QWidget, "vatWidgetContainer")
             
             if container:
-                if not container.layout():
+                # Check of layout al bestaat (vanuit Qt Designer)
+                existing_layout = container.layout()
+                
+                if existing_layout is None:
+                    # Geen layout, maak nieuwe aan
                     container_layout = QVBoxLayout(container)
                     container_layout.setContentsMargins(0, 0, 0, 0)
-                    container.setLayout(container_layout)
+                else:
+                    # Layout bestaat al, gebruik die
+                    container_layout = existing_layout
+                    container_layout.setContentsMargins(0, 0, 0, 0)
                 
-                container.layout().addWidget(self.vat_widget)
+                container_layout.addWidget(self.vat_widget)
         except Exception as e:
-            print(f"Kon vatWidgetContainer niet installeren: {e}")
+            print(f"❌ Kon vatWidgetContainer niet installeren: {e}")
 
         try:
             self.transportband_widget = TransportbandWidget()
-            container_transportband = self.findChild(QWidget, "transportbandWidgetContainer")             
+            container_transportband = self.findChild(QWidget, "transportbandWidgetContainer") 
             if container_transportband:
-                if not container_transportband.layout():
+                # Check of layout al bestaat
+                existing_layout = container_transportband.layout()
+                if existing_layout is None:
                     container_layout = QVBoxLayout(container_transportband)
                     container_layout.setContentsMargins(0, 0, 0, 0)
-                    container_transportband.setLayout(container_layout)
-                
-                container_transportband.layout().addWidget(self.transportband_widget)
-            
+                else:
+                    container_layout = existing_layout
+                    container_layout.setContentsMargins(0, 0, 0, 0)
+                container_layout.addWidget(self.transportband_widget)
+
         except Exception as e:
-            print(f"Kon transportbandWidgetContainer niet installeren: {e}")
-          
+            print(f"❌ Kon transportbandWidgetContainer niet installeren: {e}")
+        
         try:
-            # Kleur downdrop vullen
+            # Kleur dropdown vullen
             self.kleurDropDown.clear()
             kleuren = [
                 ("Blue", "#0000FF"),
@@ -1120,6 +1155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         try:
             self.pushButton_SaveIO.clicked.connect(self.save_io_configuration)
             self.pushButton_LoadIO.clicked.connect(self.load_io_configuration)
+            self.pushButton_ReloadConfig.clicked.connect(self.reload_io_config)
         except:
             print("LoadIO/saveIO buttons niet gevonden in UI")
 
@@ -1129,11 +1165,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except AttributeError:
             print("Force button niet gevonden in UI")
         
-        # Timer voor automatische updates
-        self.timer = QTimer()
-        self.timer.setInterval(100)  # 10x per seconde
-        self.timer.timeout.connect(self.update_values)
-        self.timer.start()      
+        try:
+            self.pushButton_startSimulatie.setCheckable(True)
+            self.pushButton_startSimulatie.toggled.connect(self.toggle_simulation)
+            # Set initial state
+            self.pushButton_startSimulatie.setText("START SIMULATIE")
+            self.pushButton_startSimulatie.setStyleSheet("""
+                QPushButton {
+                    background-color: #44FF44;
+                    color: black;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #00CC00;
+                }
+            """)
+        except AttributeError:
+            print("pushButton_startSimulatie not found in UI")
+
+        initial_mode = self.controlerDropDown.currentText()
+        if initial_mode == "GUI":
+            try:
+                self.pushButton_connect.setEnabled(False)
+            except AttributeError:
+                pass
+
+        QTimer.singleShot(100, self._initialize_gui_mode)
+
+    def _initialize_gui_mode(self):
+        """Initialize GUI mode after mainConfig is available"""
+        if hasattr(self, 'mainConfig') and self.mainConfig:
+            self.mainConfig.plcGuiControl = "gui"
+            self.mainConfig.plcProtocol = "GUI"
+        else:
+            QTimer.singleShot(100, self._initialize_gui_mode)
+
+        
 
     def update_values(self):
         """Update alle waarden van UI naar vat widget - GEEN CONNECTS HIER!"""
@@ -1148,27 +1215,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.vat_widget.niveauschakelaar = self.niveauschakelaarCheckBox.isChecked()
             self.vat_widget.analogeWaardeTemp = self.analogeWaardeTempCheckBox.isChecked()
             
-            # Controller mode - 
+            # Controller mode
             controller_mode = self.controlerDropDown.currentText()
             self.vat_widget.controler = controller_mode
             
             # Kleur water
             self.vat_widget.kleurWater = self.kleurDropDown.currentData()
             
-            # UI Elements zichtbaarheid
+            # UI Elements zichtbaarheid - CHECK STATE VOOR UPDATE ✅
             is_gui_mode = (controller_mode == "GUI")
             
             try:
-                if is_gui_mode:
-                    if self.vat_widget.regelbareKleppen:
+                if is_gui_mode and self.vat_widget.regelbareKleppen:
+                    # Toon regelbare kleppen, verberg standaard
+                    if not self.regelbareKlepenGUISim.isVisible():
                         self.GUiSim.hide()
                         self.regelbareKlepenGUISim.show()
-                    else:
+                elif is_gui_mode and not self.vat_widget.regelbareKleppen:
+                    # Toon standaard, verberg regelbare
+                    if not self.GUiSim.isVisible():
                         self.regelbareKlepenGUISim.hide()
                         self.GUiSim.show()
                 else:
-                    self.GUiSim.hide()
-                    self.regelbareKlepenGUISim.hide()
+                    # PLC mode - verberg alles
+                    if self.GUiSim.isVisible() or self.regelbareKlepenGUISim.isVisible():
+                        self.GUiSim.hide()
+                        self.regelbareKlepenGUISim.hide()
             except AttributeError:
                 pass  # UI elementen bestaan mogelijk niet
             
@@ -1194,8 +1266,65 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             pass  # Silently ignore tijdens init
         
+        # === SCHRIJF NAAR STATUS OBJECT (GUI MODE) ✅ ===
+        if not hasattr(self, 'tanksim_status') or self.tanksim_status is None:
+            return  # Status nog niet beschikbaar
+        
+        if not hasattr(self, 'mainConfig') or self.mainConfig is None:
+            return  # Config nog niet beschikbaar
+        
+        if self.mainConfig.plcGuiControl == "gui":
+            # Schrijf kleppen fractie naar status
+            self.tanksim_status.valveInOpenFraction = self.vat_widget.KlepStandBoven / 100.0
+            self.tanksim_status.valveOutOpenFraction = self.vat_widget.KlepStandBeneden / 100.0
+            
+            # Heater staat
+            if self.vat_widget.regelbareWeerstand:
+                self.tanksim_status.heaterPowerFraction = 0.5  # TODO: voeg slider toe
+            else:
+                try:
+                    heater_on = self.weerstandCheckBox.isChecked()
+                    self.tanksim_status.heaterPowerFraction = 1.0 if heater_on else 0.0
+                except:
+                    self.tanksim_status.heaterPowerFraction = 0.0
+        
+        # === LEES STATUS TERUG (voor visuele feedback) ===
+        # Update GUI global vars vanuit status
+        import tankSim.gui as gui_module
+        gui_module.currentHoogteVat = self.tanksim_status.liquidVolume
+        gui_module.tempVat = self.tanksim_status.liquidTemperature
+        
         # Rebuild SVG
         self.vat_widget.rebuild()
+        
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            if hasattr(self, 'mainConfig') and self.mainConfig:
+                if self.mainConfig.plcGuiControl == "gui":
+                    # Schrijf kleppen fractie naar status
+                    self.tanksim_status.valveInOpenFraction = self.vat_widget.KlepStandBoven / 100.0
+                    self.tanksim_status.valveOutOpenFraction = self.vat_widget.KlepStandBeneden / 100.0
+                    
+                    # Heater staat
+                    if self.vat_widget.regelbareWeerstand:
+                        self.tanksim_status.heaterPowerFraction = 0.5  # TODO: voeg slider toe
+                    else:
+                        try:
+                            heater_on = self.weerstandCheckBox.isChecked()
+                            self.tanksim_status.heaterPowerFraction = 1.0 if heater_on else 0.0
+                        except:
+                            self.tanksim_status.heaterPowerFraction = 0.0
+        
+        # === LEES STATUS TERUG (voor visuele feedback) ===
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            # Update GUI global vars vanuit status
+            import tankSim.gui as gui_module
+            gui_module.currentHoogteVat = self.tanksim_status.liquidVolume
+            gui_module.tempVat = self.tanksim_status.liquidTemperature
+        
+        # Rebuild SVG (was er al)
+        self.vat_widget.rebuild()
+
+        
     
     def update_io_status_display(self):
         """Update status kolom met huidige IO waarden - indien PLC actief"""
@@ -1258,20 +1387,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 
                 # Update status column with value and highlight if forced
                 table.update_status_column(row, value)
+                
         except Exception as e:
             pass  # Silent fail
-    
-    def on_controller_changed(self):
-        """Callback wanneer controller dropdown wijzigt"""
-        new_controller = self.controlerDropDown.currentText()
-        self.vat_widget.controler = new_controller
-        
-        # Update main configuration if available
-        if self.mainConfig:
-            self.mainConfig.plcProtocol = new_controller
-        
-        print(f"Controller: {new_controller}")
-        self.vat_widget.rebuild()
     
     def on_kleur_changed(self):
         """Callback wanneer kleur dropdown wijzigt"""
@@ -1608,6 +1726,153 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(self, "Error", f"Failed to load IO configuration:\n{str(e)}")
             print(f"Fout bij laden: {e}")
 
+    def reload_io_config(self):
+        """Herlaad IO configuratie vanuit JSON tijdens runtime"""
+        try:
+            if not hasattr(self, 'tanksim_config') or self.tanksim_config is None:
+                QMessageBox.warning(self, "Error", "TankSim configuratie niet beschikbaar.")
+                return
+            
+            # Zoek JSON bestand
+            project_root = Path(__file__).resolve().parent.parent
+            io_config_path = project_root / "tankSim" / "io_configuration.json"
+            
+            if not io_config_path.exists():
+                QMessageBox.warning(
+                    self, 
+                    "File Not Found", 
+                    f"IO configuratie bestand niet gevonden:\n{io_config_path}"
+                )
+                return
+            
+            # Vraag bevestiging
+            reply = QMessageBox.question(
+                self,
+                "Confirm Reload",
+                "Dit herlaadt de IO adressen vanuit io_configuration.json.\n"
+                "Lopende PLC verbindingen kunnen verstoord worden.\n\n"
+                "Doorgaan?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            
+            if reply == QMessageBox.No:
+                return
+            
+            # Disconnect PLC als verbonden
+            if hasattr(self, 'validPlcConnection') and self.validPlcConnection:
+                if hasattr(self, 'plc') and self.plc:
+                    try:
+                        self.plc.disconnect()
+                        print("🔌 PLC disconnected voor config reload")
+                    except:
+                        pass
+                
+                self.validPlcConnection = False
+                self.plc = None
+                self.update_connection_status_icon()
+                
+                # Untoggle connect button
+                try:
+                    self.pushButton_connect.blockSignals(True)
+                    self.pushButton_connect.setChecked(False)
+                    self.pushButton_connect.blockSignals(False)
+                except:
+                    pass
+            
+            # Herlaad configuratie
+            old_byte_range = (self.tanksim_config.lowestByte, self.tanksim_config.highestByte)
+            self.tanksim_config.load_io_config_from_file(io_config_path)
+            new_byte_range = (self.tanksim_config.lowestByte, self.tanksim_config.highestByte)
+            
+            # Update GUI tabel met nieuwe adressen
+            self._update_table_from_config()
+            
+            # Toon resultaat
+            QMessageBox.information(
+                self,
+                "Success",
+                f"IO configuratie herladen!\n\n"
+                f"Herverbind met PLC indien nodig."
+            )
+         
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Fout bij herladen configuratie:\n{str(e)}")
+            print(f"❌ Reload error: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _update_table_from_config(self):
+        """Update de GUI tabel met adressen uit de config"""
+        try:
+            table = self.tableWidget_IO
+            config = self.tanksim_config
+            
+            table.blockSignals(True)
+            
+            # Loop door alle rijen in de tabel
+            for row in range(table.rowCount()):
+                name_item = table.item(row, 0)
+                if not name_item or not name_item.text():
+                    continue
+                
+                signal_name = name_item.text()
+                
+                # Check of dit signaal in de mapping zit
+                if signal_name not in config.io_signal_mapping:
+                    continue
+                
+                # Haal attribuut naam en waarde op
+                attr_name = config.io_signal_mapping[signal_name]
+                attr_value = getattr(config, attr_name, None)
+                
+                if attr_value is None:
+                    continue
+                
+                # Update byte/bit/address in tabel
+                if "bit" in attr_value:
+                    # Digital signaal
+                    byte_num = attr_value["byte"]
+                    bit_num = attr_value["bit"]
+                    
+                    # Bepaal IO prefix (I of Q)
+                    if attr_name.startswith("DQ") or attr_name.startswith("AQ"):
+                        io_prefix = "Q"
+                    else:
+                        io_prefix = "I"
+                    
+                    address = f"{io_prefix}{byte_num}.{bit_num}"
+                    
+                    table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
+                    table.setItem(row, 3, EditableTableWidgetItem(str(bit_num)))
+                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
+                    
+                else:
+                    # Analog signaal
+                    byte_num = attr_value["byte"]
+                    
+                    # Bepaal IO prefix
+                    if attr_name.startswith("DQ") or attr_name.startswith("AQ"):
+                        io_prefix = "Q"
+                    else:
+                        io_prefix = "I"
+                    
+                    address = f"{io_prefix}W{byte_num}"
+                    
+                    table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
+                    table.setItem(row, 3, EditableTableWidgetItem(""))
+                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
+                
+                table._save_row_data(row)
+            
+            table.blockSignals(False)
+            print(f"Tabel geüpdatet met {table.rowCount()} rijen")
+            
+        except Exception as e:
+            print(f"❌ Fout bij updaten tabel: {e}")
+            import traceback
+            traceback.print_exc()
+
     def toggle_force_mode(self, checked):
         """Toggle force mode on/off"""
         self.tableWidget_IO.set_force_mode(checked)
@@ -1645,10 +1910,46 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Update main configuration if available
         if hasattr(self, 'mainConfig') and self.mainConfig:
             self.mainConfig.plcProtocol = new_controller
+            
+            # Set control mode based on controller
+            if new_controller == "GUI":
+                self.mainConfig.plcGuiControl = "gui"
+                # Disable connect button in GUI mode
+                try:
+                    self.pushButton_connect.setEnabled(False)
+                    print("🔒 Connect button disabled (GUI mode)")
+                except:
+                    pass
+            else:
+                self.mainConfig.plcGuiControl = "plc"
+                # Enable connect button in PLC mode
+                try:
+                    self.pushButton_connect.setEnabled(True)
+                    print("🔓 Connect button enabled (PLC mode)")
+                except:
+                    pass
+            
+            # Disconnect PLC if switching to GUI mode
+            if new_controller == "GUI" and self.validPlcConnection:
+                if hasattr(self, 'plc') and self.plc:
+                    try:
+                        self.plc.disconnect()
+                        print("🔌 Disconnected: Switched to GUI mode")
+                    except:
+                        pass
+                self.validPlcConnection = False
+                self.plc = None
+                self.update_connection_status_icon()
+                # Untoggle connect button
+                try:
+                    self.pushButton_connect.blockSignals(True)
+                    self.pushButton_connect.setChecked(False)
+                    self.pushButton_connect.blockSignals(False)
+                except:
+                    pass
         
-        print(f"Controller: {new_controller}")
         self.vat_widget.rebuild()
-
+            
     def on_connect_toggled(self, checked):
         """Handle connect button press - trigger connection attempt"""
         if not self.mainConfig:
@@ -1663,23 +1964,91 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
 
     def on_ip_changed(self, text):
-        """Update IP address in main configuration when user types"""
-        if self.mainConfig:
-            self.mainConfig.plcIpAdress = text
+        """Update IP address met throttling - wacht 500ms voordat disconnect wordt getriggerd"""
+        if not self.mainConfig:
+            return
+        
+        # Update IP in config meteen
+        self.mainConfig.plcIpAdress = text
+        
+        # Sla pending IP op en reset timer
+        self.pending_ip = text
+        self.ip_change_timer.stop()
+        self.ip_change_timer.start(500)
+
+    def _apply_ip_change(self):
+        """Voer disconnect uit na throttle delay"""
+        if not self.pending_ip:
+            return
+        
+        # Reset connection alleen als er een actieve verbinding is
+        if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
+            try:
+                if self.plc.isConnected():
+                    self.plc.disconnect()
+                    print(f"🔌 Verbinding verbroken: IP gewijzigd naar {self.pending_ip}")
+            except Exception as e:
+                print(f"Fout bij disconnect: {e}")
             
-            # Reset connection status when IP changes
+            # Update status
             self.validPlcConnection = False
-            if hasattr(self, 'plc') and self.plc:
-                try:
-                    if self.plc.isConnected():
-                        self.plc.disconnect()
-                        print("⚠️ Verbinding verbroken door IP wijziging")
-                except:
-                    pass
             self.plc = None
+            
+            # Untoggle connect button
+            try:
+                self.pushButton_connect.blockSignals(True)
+                self.pushButton_connect.setChecked(False)
+                self.pushButton_connect.blockSignals(False)
+            except AttributeError:
+                pass
             
             # Update UI
             self.update_connection_status_icon()
+        
+        self.pending_ip = None
+
+    def start_simulation(self):
+        """Start de simulatie"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.simRunning = True
+        print("Simulation STARTED")
+
+    def stop_simulation(self):
+        """Stop de simulatie"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.simRunning = False
+        print("Simulation STOPPED")
+
+    def toggle_simulation(self, checked):
+        """Toggle simulatie aan/uit met visuele feedback"""
+        if checked:
+            self.start_simulation()
+            # Update button appearance voor STOP
+            self.pushButton_startSimulatie.setText("STOP SIMULATIE")
+            self.pushButton_startSimulatie.setStyleSheet("""
+                QPushButton {
+                    background-color: #FF4444;
+                    color: white;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #CC0000;
+                }
+            """)
+        else:
+            self.stop_simulation()
+            # Update button appearance voor START
+            self.pushButton_startSimulatie.setText("START SIMULATIE")
+            self.pushButton_startSimulatie.setStyleSheet("""
+                QPushButton {
+                    background-color: #44FF44;
+                    color: black;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #00CC00;
+                }
+            """)
 
 # =============================================================================
 # Main Application Entry Point
