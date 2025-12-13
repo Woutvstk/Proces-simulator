@@ -30,7 +30,7 @@ class logoS7:
         except Exception as e:
             print(f"__init__ error: {e}")
 
-    def connect(self,instance_name: str | None = None) -> bool:
+    def connect(self, instance_name: str | None = None) -> bool:
         """
         Connect to the LOGO PLC.
 
@@ -157,7 +157,7 @@ class logoS7:
         except Exception as e:
             print(f"GetAO() error at byte {byte}: {e}")
             return -1
-        
+
     def SetDO(self, byte: int, bit: int, value: bool) -> int:
         """
         Set a digital output (DO) bit in the LOGO V-memory output area.
@@ -221,7 +221,7 @@ class logoS7:
         except Exception as e:
             print(f"resetSendInputs() error: {e}")
             return False
-        
+
     def resetSendOutputs(self, startByte: int, endByte: int) -> bool:
         """
         Reset all V-memory outputs (DO, AO) to 0 within the specified range.

@@ -1,10 +1,11 @@
 import snap7
 import snap7.util as s7util
 
+
 class plcS7:
     """Class for communication with a Siemens S7 PLC using Snap7."""
     analogMax = 32767  # Max value for signed 16-bit integer
-    
+
     def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102):
         """
         Initialize the PLC client with IP, rack, slot, and TCP port.
@@ -21,7 +22,7 @@ class plcS7:
         self.tcpport = tcpport
         self.client = snap7.client.Client()
 
-    def connect(self,instance_name: str | None = None) -> bool:
+    def connect(self, instance_name: str | None = None) -> bool:
         """
         Connect to the PLC.
 
@@ -31,7 +32,8 @@ class plcS7:
         try:
             self.client.connect(self.ip, self.rack, self.slot, self.tcpport)
             if self.client.get_connected():
-                print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
+                print(
+                    f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {self.slot})")
                 return True
             else:
                 print(f"Cannot connect to S7 PLC at {self.ip}")
@@ -41,7 +43,8 @@ class plcS7:
             for i in range(0, 2):
                 try:
                     self.client.connect(self.ip, self.rack, i, self.tcpport)
-                    print(f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {i})")
+                    print(
+                        f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {i})")
                     return True
                 except Exception:
                     continue
@@ -86,8 +89,8 @@ class plcS7:
         if self.isConnected():
             if byte >= 0 and 0 <= bit <= 7:
                 try:
-                    current_data = self.client.eb_read(start=byte, size=1)  
-                    buffer_DI = bytearray(current_data)  
+                    current_data = self.client.eb_read(start=byte, size=1)
+                    buffer_DI = bytearray(current_data)
                     if value:
                         buffer_DI[0] |= (1 << bit)
                     else:
@@ -137,12 +140,14 @@ class plcS7:
             if startByte >= 0 and 0 <= value <= 65535:
                 try:
                     buffer_AI = bytearray(2)
-                    val_int = int(round(value)) if isinstance(value, float) else int(value)
+                    val_int = int(round(value)) if isinstance(
+                        value, float) else int(value)
                     lowByte = val_int & 0xFF
                     highByte = (val_int >> 8) & 0xFF
                     buffer_AI[0] = highByte
                     buffer_AI[1] = lowByte
-                    self.client.eb_write(start=startByte, size=2, data=buffer_AI)
+                    self.client.eb_write(
+                        start=startByte, size=2, data=buffer_AI)
                     return val_int
                 except Exception as e:
                     print("Error:", e)
@@ -170,7 +175,7 @@ class plcS7:
                     return -1
             return -1
         return -1
-    
+
     def SetDO(self, byte: int, bit: int, value: int) -> int:
         """
         Set a digital output (DO) bit in the PLC output process image.
@@ -215,17 +220,18 @@ class plcS7:
             if startByte >= 0 and -32768 <= value <= 32767:
                 try:
                     buffer_AO = bytearray(2)
-                    val_int = int(round(value)) if isinstance(value, float) else int(value)
-                    
+                    val_int = int(round(value)) if isinstance(
+                        value, float) else int(value)
+
                     # Convert to signed 16-bit and then to bytes (Big Endian)
                     if val_int < 0:
                         val_int = val_int & 0xFFFF  # Two's complement
-                    
+
                     lowByte = val_int & 0xFF
                     highByte = (val_int >> 8) & 0xFF
                     buffer_AO[0] = highByte
                     buffer_AO[1] = lowByte
-                    
+
                     self.client.ab_write(start=startByte, data=buffer_AO)
                     return val_int
                 except Exception as e:
@@ -249,14 +255,15 @@ class plcS7:
             if startByte >= 0 and endByte > startByte:
                 try:
                     bufferEmpty = bytearray(endByte - startByte + 1)
-                    self.client.eb_write(start=startByte, size=(endByte - startByte + 1), data=bufferEmpty)
+                    self.client.eb_write(start=startByte, size=(
+                        endByte - startByte + 1), data=bufferEmpty)
                     return True
                 except Exception as e:
                     print("Error:", e)
                     return False
             return False
         return False
-    
+
     def resetSendOutputs(self, startByte: int, endByte: int) -> bool:
         """
         Reset all output data sent to the PLC (DO, AO) by writing zeros.

@@ -39,7 +39,7 @@ class configuration:
             "ValveOut": "DQValveOut",
             "LowerValve": "DQValveOut",
             "Heater": "DQHeater",
-            
+
             # Analog outputs (controllable valves/heater)
             "ValveInFraction": "AQValveInFraction",
             "UpperValveFraction": "AQValveInFraction",
@@ -47,14 +47,14 @@ class configuration:
             "LowerValveFraction": "AQValveOutFraction",
             "HeaterFraction": "AQHeaterFraction",
             "HeaterPower": "AQHeaterFraction",
-            
+
             # === OUTPUTS FROM SIMULATOR (= PLC INPUTS) ===
             # Digital inputs
             "LevelSensorHigh": "DILevelSensorHigh",
             "TanklevelSensorHigh": "DILevelSensorHigh",
             "LevelSensorLow": "DILevelSensorLow",
             "TanklevelSensorLow": "DILevelSensorLow",
-            
+
             # Analog inputs
             "LevelSensor": "AILevelSensor",
             "TankLevel": "AILevelSensor",
@@ -64,14 +64,14 @@ class configuration:
 
         # Load IO configuration if it exists
         self.load_io_config()
-        
+
         self.lowestByte, self.highestByte = self.get_byte_range()
 
         """
         Simulation settings
         """
         self.simulationInterval = 0.2  # in seconds
-        
+
         """
         Process settings
         """
@@ -88,9 +88,9 @@ class configuration:
         self.liquidBoilingTemp: float = 100.0
 
         self.importExportVariableList = [
-            "tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp", 
-            "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel", 
-            "heaterMaxPower", "tankHeatLoss", "liquidSpecificHeatCapacity", 
+            "tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp",
+            "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel",
+            "heaterMaxPower", "tankHeatLoss", "liquidSpecificHeatCapacity",
             "liquidBoilingTemp", "liquidSpecificWeight"
         ]
 
@@ -99,18 +99,18 @@ class configuration:
         Load IO configuration from io_config.json and update the IO addresses
         """
         io_config_path = Path(config_file)
-        
+
         if not io_config_path.exists():
             print(f"i{config_file} not found, using default IO addresses")
             return False
-        
+
         try:
             with open(io_config_path, 'r', encoding='utf-8') as f:
                 config_data = json.load(f)
-            
+
             signals = config_data.get('signals', [])
             updated_signals = []
-            
+
             for signal in signals:
                 signal_name = signal.get('name', '')
                 # ... (rest of signal extraction and attribute matching logic remains the same) ...
@@ -119,49 +119,53 @@ class configuration:
                 address = signal.get('address', '')
                 byte_str = signal.get('byte', '')
                 bit_str = signal.get('bit', '')
-                
+
                 # Find the mapping for this signal (partial match)
                 config_attr = None
                 for key, attr in self.io_signal_mapping.items():
                     if key.lower() in signal_name.lower():
                         config_attr = attr
                         break
-                
+
                 if not config_attr:
                     print(f"Signal '{signal_name}' not recognized, skipped")
                     continue
-                
+
                 # Parse address data
                 try:
                     byte_val = int(byte_str) if byte_str else None
                     bit_val = int(bit_str) if bit_str else None
-                    
+
                     if byte_val is None:
                         print(f"No byte value for '{signal_name}'")
                         continue
-                    
+
                     # Update the configuration
                     if signal_type == 'bool' and bit_val is not None:
-                        setattr(self, config_attr, {"byte": byte_val, "bit": bit_val})
+                        setattr(self, config_attr, {
+                                "byte": byte_val, "bit": bit_val})
                         updated_signals.append(f"{config_attr}: {address}")
-                        print(f"{config_attr:30s} <- {signal_name:30s} @ {address}")
-                    
+                        print(
+                            f"{config_attr:30s} <- {signal_name:30s} @ {address}")
+
                     elif signal_type in ['int', 'word']:
                         setattr(self, config_attr, {"byte": byte_val})
                         updated_signals.append(f"{config_attr}: {address}")
-                        print(f"{config_attr:30s} <- {signal_name:30s} @ {address}")
-                
+                        print(
+                            f"{config_attr:30s} <- {signal_name:30s} @ {address}")
+
                 except (ValueError, AttributeError) as e:
                     print(f"Error parsing '{signal_name}': {e}")
                     continue
-            
+
             if updated_signals:
-                print(f"\nIO configuration loaded: {len(updated_signals)} signals configured")
+                print(
+                    f"\nIO configuration loaded: {len(updated_signals)} signals configured")
                 return True
             else:
                 print(f"\nNo signals configured from {config_file}")
                 return False
-            
+
         except json.JSONDecodeError as e:
             print(f"JSON parse error in {config_file}: {e}")
             return False
@@ -210,7 +214,7 @@ class configuration:
             'inputs': [],   # PLC inputs (simulator outputs)
             'outputs': []   # PLC outputs (simulator inputs)
         }
-        
+
         # Digital outputs (PLC -> Simulator)
         summary['outputs'].append({
             'name': 'DQValveIn',
@@ -227,7 +231,7 @@ class configuration:
             'address': f"Q{self.DQHeater['byte']}.{self.DQHeater['bit']}",
             'type': 'bool'
         })
-        
+
         # Analog outputs
         summary['outputs'].append({
             'name': 'AQValveInFraction',
@@ -244,7 +248,7 @@ class configuration:
             'address': f"QW{self.AQHeaterFraction['byte']}",
             'type': 'word'
         })
-        
+
         # Digital inputs (Simulator -> PLC)
         summary['inputs'].append({
             'name': 'DILevelSensorHigh',
@@ -256,7 +260,7 @@ class configuration:
             'address': f"I{self.DILevelSensorLow['byte']}.{self.DILevelSensorLow['bit']}",
             'type': 'bool'
         })
-        
+
         # Analog inputs
         summary['inputs'].append({
             'name': 'AILevelSensor',
@@ -268,23 +272,23 @@ class configuration:
             'address': f"IW{self.AITemperatureSensor['byte']}",
             'type': 'word'
         })
-        
+
         return summary
 
     # Save config to a JSON file (NEW - alongside CSV)
     def saveToJsonFile(self, exportFileName: str = "tankSimConfig.json"):
         """Save configuration in JSON format"""
         print(f"Exporting config to JSON: {exportFileName}")
-        
+
         config_dict = {}
         for variable in self.importExportVariableList:
             config_dict[variable] = getattr(self, variable)
-        
+
         # Add IO configuration
         config_dict['io_summary'] = self.get_io_summary()
         config_dict['lowestByte'] = self.lowestByte
         config_dict['highestByte'] = self.highestByte
-        
+
         try:
             with open(exportFileName, 'w', encoding='utf-8') as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
@@ -313,17 +317,17 @@ class configuration:
         try:
             with open(importFileName, 'r', encoding='utf-8') as f:
                 config_dict = json.load(f)
-            
+
             for variable in self.importExportVariableList:
                 if variable in config_dict:
                     setattr(self, variable, config_dict[variable])
-            
+
             print(f"Config loaded from JSON: {importFileName}")
-            
+
             # Also reload IO config
             self.reload_io_config()
             return True
-            
+
         except FileNotFoundError:
             print(f"File not found: {importFileName}")
             return False
@@ -331,7 +335,7 @@ class configuration:
             print(f"Error loading JSON config: {e}")
             return False
 
-    # Read config back from the CSV file 
+    # Read config back from the CSV file
     def loadFromFile(self, importFileName: str):
         """Load configuration from CSV format"""
         with open(importFileName, "r") as file:
@@ -342,7 +346,7 @@ class configuration:
                         setattr(self, variable, type(
                             getattr(self, variable))(row["value"]))
         print(f"Config loaded from CSV: {importFileName}")
-        
+
         self.reload_io_config()
 
     def print_current_config(self):
@@ -350,16 +354,18 @@ class configuration:
         print("\n" + "="*60)
         print("CURRENT IO CONFIGURATION")
         print("="*60)
-        
+
         summary = self.get_io_summary()
-        
+
         print("\n PLC OUTPUTS (Simulator Inputs):")
         for output in summary['outputs']:
-            print(f"  {output['name']:25s} @ {output['address']:8s} ({output['type']})")
-        
+            print(
+                f"  {output['name']:25s} @ {output['address']:8s} ({output['type']})")
+
         print("\nPLC INPUTS (Simulator Outputs):")
         for input_sig in summary['inputs']:
-            print(f"  {input_sig['name']:25s} @ {input_sig['address']:8s} ({input_sig['type']})")
-        
+            print(
+                f"  {input_sig['name']:25s} @ {input_sig['address']:8s} ({input_sig['type']})")
+
         print(f"\nByte range: {self.lowestByte} - {self.highestByte}")
         print("="*60 + "\n")
