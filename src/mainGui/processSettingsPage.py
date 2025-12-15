@@ -189,16 +189,16 @@ class ProcessSettingsMixin:
         """
         try:
             # Read values from UI
-            self.vat_widget.toekomendDebiet = int(
+            self.vat_widget.valveInMaxFlowValue = int(
                 self.toekomendDebietEntry.text() or 0)
-            self.vat_widget.tempWeerstand = float(
+            self.vat_widget.powerValue = float(
                 self.tempWeerstandEntry.text() or 20.0)
 
             # Checkbox states
-            self.vat_widget.regelbareKleppen = self.regelbareKlepenCheckBox.isChecked()
-            self.vat_widget.regelbareWeerstand = self.regelbareWeerstandCheckBox.isChecked()
-            self.vat_widget.niveauschakelaar = self.niveauschakelaarCheckBox.isChecked()
-            self.vat_widget.analogeWaardeTemp = self.analogeWaardeTempCheckBox.isChecked()
+            self.vat_widget.adjustableValve = self.regelbareKlepenCheckBox.isChecked()
+            self.vat_widget.adjustableHeatingCoil = self.regelbareWeerstandCheckBox.isChecked()
+            self.vat_widget.levelSwitches = self.niveauschakelaarCheckBox.isChecked()
+            self.vat_widget.analogValueTemp = self.analogeWaardeTempCheckBox.isChecked()
 
             # Controller mode
             controller_mode = self.controlerDropDown.currentText()
@@ -211,11 +211,11 @@ class ProcessSettingsMixin:
             is_gui_mode = (controller_mode == "GUI")
 
             try:
-                if is_gui_mode and self.vat_widget.regelbareKleppen:
+                if is_gui_mode and self.vat_widget.adjustableValve:
                     if not self.regelbareKlepenGUISim.isVisible():
                         self.GUiSim.hide()
                         self.regelbareKlepenGUISim.show()
-                elif is_gui_mode and not self.vat_widget.regelbareKleppen:
+                elif is_gui_mode and not self.vat_widget.adjustableValve:
                     if not self.GUiSim.isVisible():
                         self.regelbareKlepenGUISim.hide()
                         self.GUiSim.show()
@@ -227,23 +227,23 @@ class ProcessSettingsMixin:
                 pass
 
             # Valve positions (Klep standen)
-            if self.vat_widget.regelbareKleppen:
+            if self.vat_widget.adjustableValve:
                 try:
-                    self.vat_widget.KlepStandBoven = int(
+                    self.vat_widget.adjustableValveInValue = int(
                         self.klepstandBovenEntry.text() or 0)
                 except (ValueError, AttributeError):
-                    self.vat_widget.KlepStandBoven = 0
+                    self.vat_widget.adjustableValveInValue = 0
                 try:
-                    self.vat_widget.KlepStandBeneden = int(
+                    self.vat_widget.adjustableValveOutValue = int(
                         self.klepstandBenedenEntry.text() or 0)
                 except (ValueError, AttributeError):
-                    self.vat_widget.KlepStandBeneden = 0
+                    self.vat_widget.adjustableValveOutValue = 0
             else:
                 try:
                     top_checked = self.klepstandBovenCheckBox.isChecked()
                     bottom_checked = self.klepstandBenedenCheckBox.isChecked()
-                    self.vat_widget.KlepStandBoven = 100 if top_checked else 0
-                    self.vat_widget.KlepStandBeneden = 100 if bottom_checked else 0
+                    self.vat_widget.adjustableValveInValue = 100 if top_checked else 0
+                    self.vat_widget.adjustableValveOutValue = 100 if bottom_checked else 0
                 except AttributeError:
                     pass
 
@@ -258,10 +258,10 @@ class ProcessSettingsMixin:
             return
 
         if self.mainConfig.plcGuiControl == "gui":
-            self.tanksim_status.valveInOpenFraction = self.vat_widget.KlepStandBoven / 100.0
-            self.tanksim_status.valveOutOpenFraction = self.vat_widget.KlepStandBeneden / 100.0
+            self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
+            self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
 
-            if self.vat_widget.regelbareWeerstand:
+            if self.vat_widget.adjustableHeatingCoil:
                 # Assuming 0.5 is a placeholder for a controllable value not yet implemented
                 self.tanksim_status.heaterPowerFraction = 0.5
             else:

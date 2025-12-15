@@ -61,14 +61,15 @@ class VatWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Default attribute values
-        self.toekomendDebiet = 0
-        self.tempWeerstand = 20.0
-        self.regelbareKleppen = False
-        self.regelbareWeerstand = False
-        self.niveauschakelaar = False
-        self.analogeWaardeTemp = False
-        self.KlepStandBoven = 0
-        self.KlepStandBeneden = 0
+        self.valveInMaxFlowValue = 0
+        self.valveOutMaxFlowValue = 0
+        self.powerValue = 20.0
+        self.adjustableValve = False
+        self.adjustableHeatingCoil = False
+        self.levelSwitches = False
+        self.analogValueTemp = False
+        self.adjustableValveInValue = 0
+        self.adjustableValveOutValue = 0
         self.kleurWater = blue
         self.controler = "GUI"
 
@@ -103,11 +104,11 @@ class VatWidget(QWidget):
         is_gui_mode = (self.controler == "GUI")
         visibility = "shown" if is_gui_mode else "hidden"
 
-        if self.regelbareKleppen:
-            self.visibility_group("regelbareKleppen", visibility)
+        if self.adjustableValve:
+            self.visibility_group("adjustableValve", visibility)
 
-        if self.regelbareWeerstand:
-            self.visibility_group("regelbareweerstand", visibility)
+        if self.adjustableHeatingCoil:
+            self.visibility_group("adjustableHeatingCoil", visibility)
 
         self.update_svg()
         self.svg_widget.update()
@@ -116,84 +117,88 @@ class VatWidget(QWidget):
         """Complete rebuild of the SVG based on current values"""
         global currentHoogteVat, maxHoogteVat
 
-        self.set_group_color("waterTotaal", self.kleurWater)
+        self.set_group_color("WaterGroup", self.kleurWater)
 
-        if self.tempWeerstand == 0:
+        if self.powerValue == 0:
             tempVatProcent = 0.0
         else:
-            tempVatProcent = (tempVat * 100.0) / self.tempWeerstand
+            tempVatProcent = (tempVat * 100.0) / self.powerValue
 
         tempVatProcent = max(0.0, min(100.0, tempVatProcent))
 
         match tempVatProcent:
             case x if 20 < x <= 40:
-                self.set_group_color("warmteweerstand", green)
+                self.set_group_color("heatingCoil", green)
             case x if 40 < x <= 60:
-                self.set_group_color("warmteweerstand", blue)
+                self.set_group_color("heatingCoil", blue)
             case x if 60 < x <= 80:
-                self.set_group_color("warmteweerstand", orange)
+                self.set_group_color("heatingCoil", orange)
             case x if 80 < x < 100:
-                self.set_group_color("warmteweerstand", green)
+                self.set_group_color("heatingCoil", green)
             case x if x >= 100:
-                self.set_group_color("warmteweerstand", red)
+                self.set_group_color("heatingCoil", red)
             case _:
-                self.set_group_color("warmteweerstand", "#808080")
-
-        if self.niveauschakelaar:
-            self.visibility_group("niveauschakelaar", "shown")
+                self.set_group_color("heatingCoil", "#808080")
+        if self.levelSwitches:
+            self.visibility_group("levelSwitchMax", "shown")
+            self.visibility_group("levelSwitchMin", "shown")
         else:
-            self.visibility_group("niveauschakelaar", "hidden")
+            self.visibility_group("levelSwitchMax", "hidden")
+            self.visibility_group("levelSwitchMin", "hidden")
 
-        if self.analogeWaardeTemp:
-            self.visibility_group("analogeWaardeTemp", "shown")
+        if self.analogValueTemp:
+            self.visibility_group("analogValueTemp", "shown")
         else:
-            self.visibility_group("analogeWaardeTemp", "hidden")
+            self.visibility_group("analogValueTemp", "hidden")
 
         is_gui_mode = (self.controler == "GUI")
 
-        if self.regelbareKleppen:
+        if self.adjustableValve:
             visibility = "shown" if is_gui_mode else "hidden"
-            self.visibility_group("regelbareKleppen", visibility)
+            self.visibility_group("adjustableValve", visibility)
         else:
-            self.visibility_group("regelbareKleppen", "hidden")
-
-        if not self.regelbareWeerstand:
-            self.visibility_group("regelbareweerstand", "hidden")
+            self.visibility_group("adjustableValve", "hidden")
+        if not self.adjustableHeatingCoil:
+            self.visibility_group("adjustableHeatingCoil", "hidden")
             if weerstand:
-                self.set_group_color("weerstandStand", green)
+                self.set_group_color("heatingCoilValue", green)
             elif not weerstand:
-                self.set_group_color("weerstandStand", red)
+                self.set_group_color("heatingCoilValue", red)
             else:
-                self.set_group_color("weerstandStand", "#FFFFFF")
+                self.set_group_color("heatingCoilValue", "#FFFFFF")
         else:
             visibility = "shown" if is_gui_mode else "hidden"
-            self.visibility_group("regelbareweerstand", visibility)
+            self.visibility_group("adjustableHeatingCoil", visibility)
 
-        if self.KlepStandBoven == 0:
-            self.klep_breete("waterval", 0)
-            self.set_group_color("KlepBoven", "#FFFFFF")
+        if self.adjustableValveInValue == 0:
+            self.klep_breete("waterValveIn", 0)
+            self.set_group_color("valveIn", "#FFFFFF")
         else:
-            self.klep_breete("waterval", self.KlepStandBoven)
-            self.set_group_color("KlepBoven", self.kleurWater)
+            self.klep_breete("waterValveIn", self.adjustableValveInValue)
+            self.set_group_color("valveIn", self.kleurWater)
 
-        if self.KlepStandBeneden == 0:
-            self.klep_breete("waterBeneden", 0)
-            self.set_group_color("KlepBeneden", "#FFFFFF")
+        if self.adjustableValveOutValue == 0:
+            self.klep_breete("waterValveOut", 0)
+            self.set_group_color("valveOut", "#FFFFFF")
         else:
-            self.klep_breete("waterBeneden", self.KlepStandBeneden)
-            self.set_group_color("KlepBeneden", self.kleurWater)
-
-        if tempVat == self.tempWeerstand:
-            self.set_group_color("temperatuurVat", green)
+            self.klep_breete("waterValveOut", self.adjustableValveOutValue)
+            self.set_group_color("valveOut", self.kleurWater)
+        if tempVat == self.powerValue:
+            self.set_group_color("tempVat", green)
         else:
-            self.set_group_color("temperatuurVat", red)
+            self.set_group_color("tempVat", red)
 
-        self.set_svg_text("klepstandBoven", str(self.KlepStandBoven) + "%")
-        self.set_svg_text("KlepstandBeneden", str(self.KlepStandBeneden) + "%")
-        self.set_svg_text("debiet", str(self.toekomendDebiet) + "l/s")
-        self.set_svg_text("temperatuurWarmteweerstand",
-                          str(self.tempWeerstand) + "°C")
-        self.set_svg_text("temperatuurVatWaarde", str(tempVat) + "°C")
+        self.set_svg_text("adjustableValveInValue", str(
+            self.adjustableValveInValue) + "%")
+        self.set_svg_text("adjustableValveOutValue", str(
+            self.adjustableValveOutValue) + "%")
+        self.set_svg_text("valveInMaxFlowValue", str(
+            self.valveInMaxFlowValue) + "l/s")
+        self.set_svg_text("valveOutMaxFlowValue", str(
+            self.valveOutMaxFlowValue) + "l/s")
+        self.set_svg_text("powerValue",
+                          str(self.powerValue) + "W")
+        self.set_svg_text("tempVatValue", str(tempVat) + "°C")
 
         self.waterInVat = self.root.find(
             f".//svg:*[@id='waterInVat']", self.ns)
@@ -222,9 +227,13 @@ class VatWidget(QWidget):
         global currentHoogteVat, maxHoogteVat
 
         if currentHoogteVat >= maxHoogteVat:
-            self.set_group_color("niveauschakelaar", green)
+            self.set_group_color("levelSwitchMax", green)
         else:
-            self.set_group_color("niveauschakelaar", red)
+            self.set_group_color("levelSwitchMax", red)
+        if currentHoogteVat == 0:
+            self.set_group_color("levelSwitchMin", green)
+        else:
+            self.set_group_color("levelSwitchMin", red)
 
         hoogteVatGui = currentHoogteVat / maxHoogteVat * self.maxHoogteGUI
         nieuweY = self.ondersteY - hoogteVatGui
@@ -233,9 +242,9 @@ class VatWidget(QWidget):
             self.waterInVat.set("height", str(hoogteVatGui))
             self.waterInVat.set("y", str(nieuweY))
 
-        self.set_hoogte_indicator("hoogteIndicator", nieuweY)
-        self.set_hoogte_indicator("hoogteTekst", nieuweY + 2)
-        self.set_svg_text("hoogteTekst", str(int(currentHoogteVat)) + "mm")
+        self.set_hoogte_indicator("levelIndicator", nieuweY)
+        self.set_hoogte_indicator("levelValue", nieuweY + 2)
+        self.set_svg_text("levelValue", str(int(currentHoogteVat)) + "%")
 
     def set_hoogte_indicator(self, itemId, hoogte):
         """Set the Y-position of an indicator"""
