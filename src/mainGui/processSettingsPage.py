@@ -202,6 +202,10 @@ class ProcessSettingsMixin:
             self.vat_widget.powerValue = float(
                 self.powerHeatingCoilEntry.text() or 10000.0)
             self.vat_widget.maxVolume = float(self.volumeEntry.text() or 2.0)
+            self.vat_widget.levelSwitchMaxHeight = float(
+                self.levelSwitchMaxHeightEntry.text() or 2.0)
+            self.vat_widget.levelSwitchMinHeight = float(
+                self.levelSwitchMinHeightEntry.text() or 2.0)
             """ self.timeDelayFilling = float(
                 self.timeDelayfillingEntry.text() or 0.0)
             self.ambientTemp = float(self.ambientTempEntry.text() or 21.0)

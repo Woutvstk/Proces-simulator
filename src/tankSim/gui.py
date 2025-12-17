@@ -73,6 +73,8 @@ class VatWidget(QWidget):
         self.waterColor = blue
         self.controler = "GUI"
         self.maxVolume = 2.0
+        self.levelSwitchMaxHeight = 90.0
+        self.levelSwitchMinHeight = 10.0
 
         self.waterInVat = None
         self.originalY = 0.0
@@ -197,6 +199,10 @@ class VatWidget(QWidget):
             self.valveInMaxFlowValue) + "l/s")
         self.set_svg_text("valveOutMaxFlowValue", str(
             self.valveOutMaxFlowValue) + "l/s")
+        self.set_svg_text("levelSwitchMinHeight", str(
+            self.levelSwitchMinHeight) + "%")
+        self.set_svg_text("levelSwitchMaxHeight", str(
+            self.levelSwitchMaxHeight) + "%")
         self.set_svg_text("powerValue",
                           str(self.powerValue) + "W")
         self.set_svg_text("tempVatValue", str(tempVat) + "°C")
@@ -227,11 +233,11 @@ class VatWidget(QWidget):
         """Fill the tank based on liquidVolume"""
         global liquidVolume
 
-        if liquidVolume >= self.maxVolume:
+        if liquidVolume/self.maxVolume >= self.levelSwitchMaxHeight:
             self.set_group_color("levelSwitchMax", green)
         else:
             self.set_group_color("levelSwitchMax", red)
-        if liquidVolume == 0:
+        if liquidVolume/self.maxVolume >= self.levelSwitchMinHeight:
             self.set_group_color("levelSwitchMin", green)
         else:
             self.set_group_color("levelSwitchMin", red)
