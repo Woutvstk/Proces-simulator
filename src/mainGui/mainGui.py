@@ -1,24 +1,26 @@
 # mainGui.py - Main GUI entry point and navigation
-# Handles:
-# - Resource compilation
-# - UI loading
-# - Basic window initialization
-# - Navigation between pages
-# - PLC connection handling
-# - Main update timers
+# Alternative version with absolute imports
 
 import sys
 import os
 import subprocess
 from pathlib import Path
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5 import uic
 
-# Import split modules
-from mainGui.processSettingsPage import ProcessSettingsMixin
-from mainGui.ioConfigPage import IOConfigMixin
+# ============================================================================
+# ABSOLUTE IMPORTS - Add mainGui directory to path
+# ============================================================================
+current_dir = Path(__file__).parent
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+
+# Now import from same directory
+from GeneralSettings import ProcessSettingsMixin
+from ioConfigPage import IOConfigMixin
+from TankSimSettings import TankSimSettingsMixin  
 
 from tankSim.gui import VatWidget
 from conveyor.gui import TransportbandWidget
@@ -27,7 +29,6 @@ from configuration import configuration
 # =============================================================================
 # Resource and UI compilation (dynamic)
 # =============================================================================
-current_dir = Path(__file__).parent
 gui_common_dir = current_dir.parent / "guiCommon"
 
 qrc_file = gui_common_dir / "Resource.qrc"
@@ -39,42 +40,33 @@ if qrc_file.exists():
             ["pyrcc5", str(qrc_file), "-o", str(rc_py_file)],
             check=True
         )
-        # Removed unnecessary print
 
         if str(gui_common_dir) not in sys.path:
             sys.path.insert(0, str(gui_common_dir))
 
         try:
             import Resource_rc  # type: ignore[import-not-found]
-            # Removed unnecessary print
         except ImportError as e:
-            # Removed unnecessary print
             pass
 
     except subprocess.CalledProcessError as e:
-        # Removed unnecessary print
         pass
     except Exception as e:
-        # Removed unnecessary print
         pass
-else:
-    # Removed unnecessary print
-    pass
 
 # Load UI
 ui_file = gui_common_dir / "mainWindowPIDRegelaarSim.ui"
 
 if ui_file.exists():
     Ui_MainWindow, QtBaseClass = uic.loadUiType(str(ui_file))
-    # Removed unnecessary print
 else:
     raise FileNotFoundError(f"Cannot find {ui_file}! Searched in: {ui_file}")
 
 
 # =============================================================================
-# MainWindow class - Combines all functionality via mixins
+# MainWindow class - Same as before
 # =============================================================================
-class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin):
+class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin, TankSimSettingsMixin):
     """
     Main application window
     Uses mixins for process settings and I/O config functionality
@@ -83,8 +75,6 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
-
-        # Removed unnecessary print
 
         # Start with collapsed menu
         self.fullMenuWidget.setVisible(False)
@@ -96,13 +86,17 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.pushButton_exit2.clicked.connect(self.close)
 
         # Store reference to main configuration
-        self.mainConfig = None  # Will be set from main.py
+        self.mainConfig = None
         self.tanksim_config = None
         self.tanksim_status = None
 
         # Initialize connection variables
         self.validPlcConnection = False
         self.plc = None
+
+        # Float window state
+        self.floated_window = None
+        self.current_sim_page = None
 
         # IP throttling
         self.ip_change_timer = QTimer()
@@ -112,7 +106,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
         # Main update timer
         self.timer = QTimer()
-        self.timer.setInterval(100)  # 10x per second
+        self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_all_values)
         self.timer.start()
 
@@ -120,7 +114,6 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         try:
             self.update_connection_status_icon()
         except AttributeError:
-            # Removed unnecessary print
             pass
 
         # Connect button
@@ -128,20 +121,21 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             self.pushButton_connect.toggled.connect(self.on_connect_toggled)
             self.pushButton_connect.setCheckable(True)
         except AttributeError:
-            # Removed unnecessary print
             pass
 
         try:
             self.lineEdit_IPAddress.textChanged.connect(self.on_ip_changed)
         except AttributeError:
-            # Removed unnecessary print
             pass
 
-        # Initialize I/O Config Page (from IOConfigMixin)
+        # Initialize I/O Config Page
         self.init_io_config_page()
 
-        # Initialize Process Settings Page (from ProcessSettingsMixin)
+        # Initialize GENERAL Process Settings Page
         self.init_process_settings_page()
+        
+        # Initialize TANK SIM Settings Page
+        self.init_tanksim_settings_page()
 
         # Initialize network port combobox
         self._init_network_port_combobox()
@@ -149,7 +143,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         # Connect navigation buttons
         self.connect_navigation_buttons()
 
-        # Connect simulation selection buttons
+        # Connect simulation buttons
         self.connect_simulation_buttons()
 
         # Initialize GUI mode
@@ -171,24 +165,84 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.pushButton_IOPage.toggled.connect(self.go_to_io)
         self.pushButton_IOPage2.toggled.connect(self.go_to_io)
 
-        self.pushButton_simPage.toggled.connect(self.go_to_sim)
-        self.pushButton_simPage2.toggled.connect(self.go_to_sim)
+        # SIMULATION page navigation
+        self.pushButton_simPage.toggled.connect(self.go_to_sim_or_selection)
+        self.pushButton_simPage2.toggled.connect(self.go_to_sim_or_selection)
+
+        # Simulation settings page navigation
+        try:
+            self.pushButton_simSettings.toggled.connect(self.go_to_sim_settings)
+            self.pushButton_simSettings2.toggled.connect(self.go_to_sim_settings)
+        except AttributeError:
+            pass
 
     def connect_simulation_buttons(self):
-        """Connect simulation selection buttons"""
-        self.pushButton_1Vat.setAutoExclusive(True)
-        self.pushButton_2Vatten.setAutoExclusive(True)
-        self.pushButton_transportband.setAutoExclusive(True)
+        """Connect all simulation related buttons"""
+        # START SIMULATION BUTTONS
+        try:
+            self.pushButton_1Vat.setCheckable(True)
+            self.pushButton_1Vat.clicked.connect(lambda: self.start_simulation(0))
+        except AttributeError:
+            pass
 
-        self.pushButton_1Vat.toggled.connect(
-            lambda checked: checked and self.select_simulation_simple(0))
-        self.pushButton_2Vatten.toggled.connect(
-            lambda checked: checked and self.select_simulation_simple(1))
-        self.pushButton_transportband.toggled.connect(
-            lambda checked: checked and self.select_simulation_simple(2))
+        try:
+            self.pushButton_2Vatten.setCheckable(True)
+            self.pushButton_2Vatten.clicked.connect(lambda: self.start_simulation(1))
+        except AttributeError:
+            pass
+
+        try:
+            self.pushButton_transportband.setCheckable(True)
+            self.pushButton_transportband.clicked.connect(lambda: self.start_simulation(2))
+        except AttributeError:
+            pass
+
+        # CLOSE SIMULATION BUTTONS
+        try:
+            close_btn = self.vat1Page.findChild(QPushButton, "pushButton_closePIDValves")
+            if close_btn:
+                close_btn.clicked.connect(self.close_simulation)
+        except AttributeError:
+            pass
+
+        try:
+            close_btn = self.vatten2Page.findChild(QPushButton, "pushButton_ClosePIDMotor")
+            if close_btn:
+                close_btn.clicked.connect(self.close_simulation)
+        except AttributeError:
+            pass
+
+        try:
+            close_btn = self.transportbandPage.findChild(QPushButton, "pushButton_CloseConveyor")
+            if close_btn:
+                close_btn.clicked.connect(self.close_simulation)
+        except AttributeError:
+            pass
+
+        # FLOAT BUTTONS
+        try:
+            float_btn = self.vat1Page.findChild(QPushButton, "pushButton_FloatPIDValves")
+            if float_btn:
+                float_btn.clicked.connect(lambda: self.toggle_float(0))
+        except AttributeError:
+            pass
+
+        try:
+            float_btn = self.vatten2Page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+            if float_btn:
+                float_btn.clicked.connect(lambda: self.toggle_float(1))
+        except AttributeError:
+            pass
+
+        try:
+            float_btn = self.transportbandPage.findChild(QPushButton, "pushButton_FloatConveyor")
+            if float_btn:
+                float_btn.clicked.connect(lambda: self.toggle_float(2))
+        except AttributeError:
+            pass
 
     def go_to_settings(self, checked):
-        """Navigate to settings page"""
+        """Navigate to general settings page"""
         if checked:
             self.MainScreen.setCurrentIndex(3)
 
@@ -197,33 +251,143 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         if checked:
             self.MainScreen.setCurrentIndex(4)
 
-    def go_to_sim(self, checked):
-        """Navigate to simulation page"""
+    def go_to_sim_or_selection(self, checked):
+        """Navigate to active sim or selection page"""
         if checked:
-            self.MainScreen.setCurrentIndex(0)
+            if self.current_sim_page is not None:
+                # Active simulation - go there
+                self.MainScreen.setCurrentIndex(self.current_sim_page)
+            else:
+                # No active simulation - go to selection page
+                self.MainScreen.setCurrentIndex(5)
+            
+            # Ensure menu is open
             if not self.fullMenuWidget.isVisible():
                 self.pushButton_menu.setChecked(True)
 
-    def select_simulation_simple(self, sim_index):
-        """Select simulation via index"""
+    def go_to_sim_settings(self, checked):
+        """Navigate to simulation settings page"""
+        if checked:
+            self.MainScreen.setCurrentIndex(6)
+
+    def start_simulation(self, sim_index):
+        """Start a specific simulation"""
+        self.current_sim_page = sim_index
         self.MainScreen.setCurrentIndex(sim_index)
+        print(f"Started simulation {sim_index}")
+
+    def close_simulation(self):
+        """Close current simulation and return to selection page"""
+        print(f"Closing simulation {self.current_sim_page}")
+        
+        self.current_sim_page = None
+        self.MainScreen.setCurrentIndex(5)
+        
+        # Uncheck all start buttons
+        try:
+            self.pushButton_1Vat.setChecked(False)
+            self.pushButton_2Vatten.setChecked(False)
+            self.pushButton_transportband.setChecked(False)
+        except:
+            pass
+
+    def toggle_float(self, sim_index):
+        """Float or dock the simulation window"""
+        if self.floated_window is None:
+            self.float_simulation(sim_index)
+        else:
+            self.dock_simulation()
+
+    def float_simulation(self, sim_index):
+        """Create a floating window for the simulation"""
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout
+        
+        print(f"Floating simulation {sim_index}")
+        
+        self.floated_window = QDialog(self)
+        self.floated_window.setWindowTitle("Simulation - Floating")
+        self.floated_window.setWindowFlags(Qt.Window)
+        self.floated_window.resize(1000, 800)
+        
+        layout = QVBoxLayout(self.floated_window)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Get page
+        if sim_index == 0:
+            page = self.vat1Page
+        elif sim_index == 1:
+            page = self.vatten2Page
+        else:
+            page = self.transportbandPage
+        
+        # Reparent to floating window
+        page.setParent(self.floated_window)
+        layout.addWidget(page)
+        
+        # Update float button
+        try:
+            if sim_index == 0:
+                float_btn = page.findChild(QPushButton, "pushButton_FloatPIDValves")
+            elif sim_index == 1:
+                float_btn = page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+            else:
+                float_btn = page.findChild(QPushButton, "pushButton_FloatConveyor")
+            
+            if float_btn:
+                float_btn.setText("⧈ DOCK")
+        except:
+            pass
+        
+        self.floated_window.show()
+        self.floated_window.finished.connect(self.dock_simulation)
+
+    def dock_simulation(self):
+        """Dock the floating window back"""
+        if not self.floated_window:
+            return
+        
+        print(f"Docking simulation {self.current_sim_page}")
+        
+        sim_index = self.current_sim_page
+        
+        if sim_index == 0:
+            page = self.vat1Page
+        elif sim_index == 1:
+            page = self.vatten2Page
+        else:
+            page = self.transportbandPage
+        
+        if page:
+            self.MainScreen.insertWidget(sim_index, page)
+            
+            try:
+                if sim_index == 0:
+                    float_btn = page.findChild(QPushButton, "pushButton_FloatPIDValves")
+                elif sim_index == 1:
+                    float_btn = page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+                else:
+                    float_btn = page.findChild(QPushButton, "pushButton_FloatConveyor")
+                
+                if float_btn:
+                    float_btn.setText("⧉ FLOAT")
+            except:
+                pass
+        
+        if self.floated_window:
+            self.floated_window.close()
+            self.floated_window.deleteLater()
+            self.floated_window = None
 
     def update_all_values(self):
-        """
-        Main update loop - calls sub-updates
-        This function is called 10 times per second
-        """
-        # Update process settings (from ProcessSettingsMixin)
-        self.update_process_values()
-
-        # Update I/O status display (from IOConfigMixin)
+        """Main update loop"""
+        self.update_tanksim_display()  
+        self.write_gui_values_to_status() 
         self.update_io_status_display()
 
     def update_connection_status_icon(self):
         """Update connection status icon"""
         try:
             self.Label_connectStatus.setText("")
-
             current_dir = Path(__file__).parent
 
             if self.validPlcConnection:
@@ -236,35 +400,27 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 pixmap = QPixmap(str(icon_path))
                 self.Label_connectStatus.setPixmap(
                     pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        except Exception as e:
-            # Removed unnecessary print
+        except:
             pass
 
     def on_connect_toggled(self, checked):
-        """Handle connect button press - trigger connection attempt"""
+        """Handle connect button"""
         if not self.mainConfig:
-            # Removed unnecessary print
             return
-
         if checked:
-            # Removed unnecessary print
             self.mainConfig.tryConnect = True
-        else:
-            pass  # Disconnect is handled by main loop or _apply_ip_change/on_controller_changed
 
     def on_ip_changed(self, text):
-        """Update IP address with throttling"""
+        """Update IP with throttling"""
         if not self.mainConfig:
             return
-
         self.mainConfig.plcIpAdress = text
-
         self.pending_ip = text
         self.ip_change_timer.stop()
         self.ip_change_timer.start(500)
 
     def _apply_ip_change(self):
-        """Execute disconnect after throttle delay"""
+        """Execute disconnect after throttle"""
         if not self.pending_ip:
             return
 
@@ -272,9 +428,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             try:
                 if self.plc.isConnected():
                     self.plc.disconnect()
-                    # Removed unnecessary print
-            except Exception as e:
-                # Removed unnecessary print
+            except:
                 pass
 
             self.validPlcConnection = False
@@ -284,7 +438,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 self.pushButton_connect.blockSignals(True)
                 self.pushButton_connect.setChecked(False)
                 self.pushButton_connect.blockSignals(False)
-            except AttributeError:
+            except:
                 pass
 
             self.update_connection_status_icon()
@@ -292,150 +446,80 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.pending_ip = None
 
     def _init_network_port_combobox(self):
-        """Initialize network port combobox with network adapter names"""
+        """Initialize network adapter combobox"""
         try:
             import socket
-
-            # Clear existing items
             self.comboBox_networkPort.clear()
-
-            # Add default "Auto" option
             self.comboBox_networkPort.addItem("Auto (System Default)", "auto")
 
             adapters_found = False
 
-            # METHOD 1: Try using WMI (Windows only - MOST DETAILED)
-            # Shows: "Realtek USB FE Family Controller (192.168.1.100)"
             try:
                 import wmi
-
                 c = wmi.WMI()
                 for interface in c.Win32_NetworkAdapterConfiguration(IPEnabled=True):
                     if interface.IPAddress:
                         ipv4_addr = None
-                        # Get first IPv4 address
                         for ip in interface.IPAddress:
                             if '.' in ip and not ip.startswith('127.'):
                                 ipv4_addr = ip
                                 break
-
                         if ipv4_addr:
                             adapter_name = interface.Description
                             display_name = f"{adapter_name} ({ipv4_addr})"
-                            # Store the interface description as identifier
-                            self.comboBox_networkPort.addItem(
-                                display_name, adapter_name)
+                            self.comboBox_networkPort.addItem(display_name, adapter_name)
                             adapters_found = True
-                            # Removed unnecessary print
-
-                if adapters_found:
-                    # Removed unnecessary print
-                    pass
-
-            except ImportError:
-                # Removed unnecessary print
-                pass
-            except Exception as e:
-                # Removed unnecessary print
+            except:
                 pass
 
-            # METHOD 2: Try using psutil (cross-platform)
-            # Shows: "Ethernet (192.168.1.100)"
             if not adapters_found:
                 try:
                     import psutil
-
-                    # Get all network interfaces with their stats
                     net_if_addrs = psutil.net_if_addrs()
                     net_if_stats = psutil.net_if_stats()
 
                     for interface_name, addresses in net_if_addrs.items():
-                        # Skip interfaces that are down
                         if interface_name in net_if_stats:
                             if not net_if_stats[interface_name].isup:
                                 continue
 
-                        # Find IPv4 address (for display info only)
                         ipv4_addr = None
                         for addr in addresses:
-                            if addr.family == socket.AF_INET:  # IPv4
+                            if addr.family == socket.AF_INET:
                                 ipv4_addr = addr.address
                                 break
 
-                        # Add adapter (show IP for info, but store interface name)
                         if ipv4_addr and ipv4_addr != '127.0.0.1':
                             display_name = f"{interface_name} ({ipv4_addr})"
-                            self.comboBox_networkPort.addItem(
-                                display_name, interface_name)
+                            self.comboBox_networkPort.addItem(display_name, interface_name)
                             adapters_found = True
-                            # Removed unnecessary print
-
-                    if adapters_found:
-                        # Removed unnecessary print
-                        pass
-
-                except ImportError:
-                    # Removed unnecessary print
-                    pass
-                except Exception as e:
-                    # Removed unnecessary print
+                except:
                     pass
 
-            # METHOD 3: Fallback - basic socket method
             if not adapters_found:
-                # Removed unnecessary print
                 try:
-                    # Get local IP for display
                     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     s.connect(("8.8.8.8", 80))
                     local_ip = s.getsockname()[0]
                     s.close()
-
-                    self.comboBox_networkPort.addItem(
-                        f"Primary Adapter ({local_ip})", "primary")
-                    adapters_found = True
-                    # Removed unnecessary print
-                except Exception as e:
-                    # Removed unnecessary print
+                    self.comboBox_networkPort.addItem(f"Primary Adapter ({local_ip})", "primary")
+                except:
                     pass
 
-            # Connect signal (NO auto-fill of IP address)
-            self.comboBox_networkPort.currentIndexChanged.connect(
-                self._on_network_port_changed)
-
-            # Removed unnecessary print
-
-        except AttributeError:
-            # Removed unnecessary print
-            pass
-        except Exception as e:
-            # Removed unnecessary print
+            self.comboBox_networkPort.currentIndexChanged.connect(self._on_network_port_changed)
+        except:
             pass
 
     def _on_network_port_changed(self, index):
-        """Called when network port selection changes - only logs selection"""
+        """Handle network port change"""
         try:
             selected_adapter = self.comboBox_networkPort.currentData()
-            adapter_name = self.comboBox_networkPort.currentText()
-
-            # Just log the selection, DO NOT change IP address field
-            # Removed unnecessary print
-
-            # Store the selected adapter in config if needed
             if hasattr(self, 'mainConfig') and self.mainConfig:
-                if not hasattr(self.mainConfig, 'selectedNetworkAdapter'):
-                    self.mainConfig.selectedNetworkAdapter = selected_adapter
-                else:
-                    self.mainConfig.selectedNetworkAdapter = selected_adapter
-
-        except Exception as e:
-            # Removed unnecessary print
+                self.mainConfig.selectedNetworkAdapter = selected_adapter
+        except:
             pass
 
 
-# =============================================================================
-# Main Application Entry Point
-# =============================================================================
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
@@ -447,8 +531,7 @@ if __name__ == "__main__":
         try:
             with open(style_file, "r") as f:
                 app.setStyleSheet(f.read())
-        except Exception as e:
-            # Removed unnecessary print
+        except:
             pass
 
     window = MainWindow()
