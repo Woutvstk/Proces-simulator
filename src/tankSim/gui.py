@@ -100,27 +100,27 @@ class VatWidget(QWidget):
     def set_controller_mode(self, mode):
         """Set controller mode and update visibility of controls"""
         self.controler = mode
-        self.update_controls_visibility()
+        self.updateControlsVisibility()
 
-    def update_controls_visibility(self):
+    def updateControlsVisibility(self):
         """Update visibility of GUI controls based on controller mode"""
         is_gui_mode = (self.controler == "GUI")
         visibility = "shown" if is_gui_mode else "hidden"
 
         if self.adjustableValve:
-            self.visibility_group("adjustableValve", visibility)
+            self.visibilityGroup("adjustableValve", visibility)
 
         if self.adjustableHeatingCoil:
-            self.visibility_group("adjustableHeatingCoil", visibility)
+            self.visibilityGroup("adjustableHeatingCoil", visibility)
 
-        self.update_svg()
+        self.updateSVG()
         self.svg_widget.update()
 
     def rebuild(self):
         """Complete rebuild of the SVG based on current values"""
         global liquidVolume
 
-        self.set_group_color("WaterGroup", self.waterColor)
+        self.setGroupColor("WaterGroup", self.waterColor)
 
         if self.powerValue == 0:
             tempVatProcent = 0.0
@@ -131,81 +131,81 @@ class VatWidget(QWidget):
 
         match tempVatProcent:
             case x if 20 < x <= 40:
-                self.set_group_color("heatingCoil", green)
+                self.setGroupColor("heatingCoil", green)
             case x if 40 < x <= 60:
-                self.set_group_color("heatingCoil", blue)
+                self.setGroupColor("heatingCoil", blue)
             case x if 60 < x <= 80:
-                self.set_group_color("heatingCoil", orange)
+                self.setGroupColor("heatingCoil", orange)
             case x if 80 < x < 100:
-                self.set_group_color("heatingCoil", green)
+                self.setGroupColor("heatingCoil", green)
             case x if x >= 100:
-                self.set_group_color("heatingCoil", red)
+                self.setGroupColor("heatingCoil", red)
             case _:
-                self.set_group_color("heatingCoil", "#808080")
+                self.setGroupColor("heatingCoil", "#808080")
         if self.levelSwitches:
-            self.visibility_group("levelSwitchMax", "shown")
-            self.visibility_group("levelSwitchMin", "shown")
+            self.visibilityGroup("levelSwitchMax", "shown")
+            self.visibilityGroup("levelSwitchMin", "shown")
         else:
-            self.visibility_group("levelSwitchMax", "hidden")
-            self.visibility_group("levelSwitchMin", "hidden")
+            self.visibilityGroup("levelSwitchMax", "hidden")
+            self.visibilityGroup("levelSwitchMin", "hidden")
 
         if self.analogValueTemp:
-            self.visibility_group("analogValueTemp", "shown")
+            self.visibilityGroup("analogValueTemp", "shown")
         else:
-            self.visibility_group("analogValueTemp", "hidden")
+            self.visibilityGroup("analogValueTemp", "hidden")
 
         is_gui_mode = (self.controler == "GUI")
 
         if self.adjustableValve:
             visibility = "shown" if is_gui_mode else "hidden"
-            self.visibility_group("adjustableValve", visibility)
+            self.visibilityGroup("adjustableValve", visibility)
         else:
-            self.visibility_group("adjustableValve", "hidden")
+            self.visibilityGroup("adjustableValve", "hidden")
         if not self.adjustableHeatingCoil:
-            self.visibility_group("adjustableHeatingCoil", "hidden")
+            self.visibilityGroup("adjustableHeatingCoil", "hidden")
             if heatingCoil:
-                self.set_group_color("heatingCoilValue", green)
+                self.setGroupColor("heatingCoilValue", green)
             elif not heatingCoil:
-                self.set_group_color("heatingCoilValue", red)
+                self.setGroupColor("heatingCoilValue", red)
             else:
-                self.set_group_color("heatingCoilValue", "#FFFFFF")
+                self.setGroupColor("heatingCoilValue", "#FFFFFF")
         else:
             visibility = "shown" if is_gui_mode else "hidden"
-            self.visibility_group("adjustableHeatingCoil", visibility)
+            self.visibilityGroup("adjustableHeatingCoil", visibility)
 
         if self.adjustableValveInValue == 0:
-            self.klep_breete("waterValveIn", 0)
-            self.set_group_color("valveIn", "#FFFFFF")
+            self.ValveWidth("waterValveIn", 0)
+            self.setGroupColor("valveIn", "#FFFFFF")
         else:
-            self.klep_breete("waterValveIn", self.adjustableValveInValue)
-            self.set_group_color("valveIn", self.waterColor)
+            self.ValveWidth("waterValveIn", self.adjustableValveInValue)
+            self.setGroupColor("valveIn", self.waterColor)
 
         if self.adjustableValveOutValue == 0:
-            self.klep_breete("waterValveOut", 0)
-            self.set_group_color("valveOut", "#FFFFFF")
+            self.ValveWidth("waterValveOut", 0)
+            self.setGroupColor("valveOut", "#FFFFFF")
         else:
-            self.klep_breete("waterValveOut", self.adjustableValveOutValue)
-            self.set_group_color("valveOut", self.waterColor)
+            self.ValveWidth("waterValveOut", self.adjustableValveOutValue)
+            self.setGroupColor("valveOut", self.waterColor)
         if tempVat == self.powerValue:
-            self.set_group_color("tempVat", green)
+            self.setGroupColor("tempVat", green)
         else:
-            self.set_group_color("tempVat", red)
+            self.setGroupColor("tempVat", red)
 
-        self.set_svg_text("adjustableValveInValue", str(
+        self.setSVGText("adjustableValveInValue", str(
             self.adjustableValveInValue) + "%")
-        self.set_svg_text("adjustableValveOutValue", str(
+        self.setSVGText("adjustableValveOutValue", str(
             self.adjustableValveOutValue) + "%")
-        self.set_svg_text("valveInMaxFlowValue", str(
+        self.setSVGText("valveInMaxFlowValue", str(
             self.valveInMaxFlowValue) + "l/s")
-        self.set_svg_text("valveOutMaxFlowValue", str(
+        self.setSVGText("valveOutMaxFlowValue", str(
             self.valveOutMaxFlowValue) + "l/s")
-        self.set_svg_text("levelSwitchMinHeight", str(
+        self.setSVGText("levelSwitchMinHeight", str(
             self.levelSwitchMinHeight) + "%")
-        self.set_svg_text("levelSwitchMaxHeight", str(
+        self.setSVGText("levelSwitchMaxHeight", str(
             self.levelSwitchMaxHeight) + "%")
-        self.set_svg_text("powerValue",
-                          str(self.powerValue) + "W")
-        self.set_svg_text("tempVatValue", str(tempVat) + "°C")
+        self.setSVGText("powerValue",
+                        str(self.powerValue) + "W")
+        self.setSVGText("tempVatValue", str(tempVat) + "°C")
 
         self.waterInVat = self.root.find(
             f".//svg:*[@id='waterInVat']", self.ns)
@@ -219,28 +219,28 @@ class VatWidget(QWidget):
                 self.originalHeight = 0.0
 
             self.lowestY = self.originalY + self.originalHeight
-            self.vat_vullen_GUI()
+            self.LevelChangeVat()
 
-        self.update_svg()
+        self.updateSVG()
         self.svg_widget.update()
 
-    def update_svg(self):
+    def updateSVG(self):
         """Update the renderer with the current SVG"""
         xml_bytes = ET.tostring(self.root, encoding="utf-8")
         self.renderer.load(xml_bytes)
 
-    def vat_vullen_GUI(self):
+    def LevelChangeVat(self):
         """Fill the tank based on liquidVolume"""
         global liquidVolume
 
         if liquidVolume/self.maxVolume >= self.levelSwitchMaxHeight:
-            self.set_group_color("levelSwitchMax", green)
+            self.setGroupColor("levelSwitchMax", green)
         else:
-            self.set_group_color("levelSwitchMax", red)
+            self.setGroupColor("levelSwitchMax", red)
         if liquidVolume/self.maxVolume >= self.levelSwitchMinHeight:
-            self.set_group_color("levelSwitchMin", green)
+            self.setGroupColor("levelSwitchMin", green)
         else:
-            self.set_group_color("levelSwitchMin", red)
+            self.setGroupColor("levelSwitchMin", red)
 
         realGUIHeight = liquidVolume/(self.maxVolume * 100) * self.maxheightGUI
         newY = self.lowestY - realGUIHeight
@@ -248,31 +248,31 @@ class VatWidget(QWidget):
         if self.waterInVat is not None:
             self.waterInVat.set("height", str(realGUIHeight))
             self.waterInVat.set("y", str(newY))
-        self.set_hoogte_indicator("levelIndicator", newY)
-        self.set_hoogte_indicator("levelValue", newY + 2)
-        self.set_svg_text("levelValue", str(
+        self.setHightIndicator("levelIndicator", newY)
+        self.setHightIndicator("levelValue", newY + 2)
+        self.setSVGText("levelValue", str(
             int(liquidVolume/self.maxVolume)) + "%")
 
-    def set_hoogte_indicator(self, itemId, hoogte):
+    def setHightIndicator(self, itemId, hoogte):
         """Set the Y-position of an indicator"""
         item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
         if item is not None:
             item.set("y", str(hoogte))
 
-    def set_group_color(self, groupId, kleur):
+    def setGroupColor(self, groupId, kleur):
         """Set the color of an SVG group"""
         group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
         if group is not None:
             for element in group:
                 element.set("fill", kleur)
 
-    def visibility_group(self, groupId, visibility):
+    def visibilityGroup(self, groupId, visibility):
         """Set the visibility of a group"""
         group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
         if group is not None:
             group.set("visibility", visibility)
 
-    def klep_breete(self, itemId, KlepStand):
+    def ValveWidth(self, itemId, KlepStand):
         """Adjust the width of a valve based on its position"""
         item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
         if item is not None:
@@ -281,7 +281,7 @@ class VatWidget(QWidget):
             item.set("width", str(new_width))
             item.set("x", str(new_x))
 
-    def set_svg_text(self, itemId, value):
+    def setSVGText(self, itemId, value):
         """Set the text of an SVG text element"""
         item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
         if item is not None:
