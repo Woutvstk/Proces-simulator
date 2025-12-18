@@ -32,7 +32,7 @@
       "byte": "2",
       "bit": "",
       "address": "IW2",
-      "status": "13824",
+      "status": "16383",
       "description": "Tank level measurement",
       "range": "0-27648"
     },
@@ -42,7 +42,7 @@
       "byte": "4",
       "bit": "",
       "address": "IW4",
-      "status": "4608",
+      "status": "5461",
       "description": "Temperature sensor",
       "range": "0-27648"
     },

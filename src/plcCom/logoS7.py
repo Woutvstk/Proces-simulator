@@ -27,8 +27,10 @@ class logoS7:
             self.tsapServer = tsapServer
             self.tcpport = tcpport
             self.logo = snap7.logo.Logo()
+            
         except Exception as e:
             print(f"__init__ error: {e}")
+
 
     def connect(self, instance_name: str | None = None) -> bool:
         """

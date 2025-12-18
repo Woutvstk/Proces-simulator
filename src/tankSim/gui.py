@@ -62,6 +62,7 @@ class VatWidget(QWidget):
 
         # Default attribute values
         self.toekomendDebiet = 0
+        self.uitgaandDebiet = 0
         self.tempWeerstand = 20.0
         self.regelbareKleppen = False
         self.regelbareWeerstand = False
@@ -71,6 +72,7 @@ class VatWidget(QWidget):
         self.KlepStandBeneden = 0
         self.kleurWater = blue
         self.controler = "GUI"
+        self.heaterPower = 0  # 0-100%
 
         self.waterInVat = None
         self.originalY = 0.0
@@ -91,33 +93,34 @@ class VatWidget(QWidget):
         self.svg_widget = SvgDisplay(self.renderer)
         layout.addWidget(self.svg_widget)
 
+        # Backwards-compatibility: map logical ids to common English/Dutch SVG ids
+        self._svg_id_aliases = {
+            'klepstandBoven': ['adjustableValveInValue', 'adjustableValveInValue'],
+            'KlepStandBeneden': ['adjustableValveOutValue', 'adjustableValveOutValue'],
+            'hoogteIndicator': ['hoogteIndicator', 'levelIndicator', 'levelIndicator'],
+            'hoogteTekst': ['hoogteTekst', 'levelValue', 'levelValue'],
+            'waterInVat': ['waterInVat', 'waterTotaal', 'WaterGroup', 'waterGroup', 'WaterGroup'],
+            'temperatuurVatWaarde': ['temperatuurVatWaarde', 'tempVatValue', 'temperatuurVatWaarde'],
+            'temperatuurWarmteweerstand': ['temperatuurWarmteweerstand', 'temperatuurWarmteweerstand'],
+            'weerstandVermogen': ['weerstandVermogen', 'weerstandVermogen'],
+            'klepstandBoven': ['klepstandBoven', 'adjustableValveInValue'],
+            'KlepstandBeneden': ['KlepstandBeneden', 'adjustableValveOutValue'],
+            'levelSwitchMaxHeight': ['levelSwitchMaxHeight', 'levelSwitchMaxHeight', 'levelSwitchMaxHeight'],
+            'levelSwitchMinHeight': ['levelSwitchMinHeight', 'levelSwitchMinHeight', 'levelSwitchMinHeight'],
+            'adjustableValveInValue': ['adjustableValveInValue', 'klepstandBoven'],
+            'adjustableValveOutValue': ['adjustableValveOutValue', 'KlepstandBeneden']
+        }
+
         self.rebuild()
-
-    def set_controller_mode(self, mode):
-        """Set controller mode and update visibility of controls"""
-        self.controler = mode
-        self.update_controls_visibility()
-
-    def update_controls_visibility(self):
-        """Update visibility of GUI controls based on controller mode"""
-        is_gui_mode = (self.controler == "GUI")
-        visibility = "shown" if is_gui_mode else "hidden"
-
-        if self.regelbareKleppen:
-            self.visibility_group("regelbareKleppen", visibility)
-
-        if self.regelbareWeerstand:
-            self.visibility_group("regelbareweerstand", visibility)
-
-        self.update_svg()
-        self.svg_widget.update()
 
     def rebuild(self):
         """Complete rebuild of the SVG based on current values"""
-        global currentHoogteVat, maxHoogteVat
+        global currentHoogteVat, maxHoogteVat, tempVat, weerstand
 
+        # Set water color
         self.set_group_color("waterTotaal", self.kleurWater)
 
+        # Temperature percentage calculation
         if self.tempWeerstand == 0:
             tempVatProcent = 0.0
         else:
@@ -125,6 +128,7 @@ class VatWidget(QWidget):
 
         tempVatProcent = max(0.0, min(100.0, tempVatProcent))
 
+        # Heater status color
         match tempVatProcent:
             case x if 20 < x <= 40:
                 self.set_group_color("warmteweerstand", green)
@@ -139,11 +143,13 @@ class VatWidget(QWidget):
             case _:
                 self.set_group_color("warmteweerstand", "#808080")
 
+        # Level sensor visibility
         if self.niveauschakelaar:
             self.visibility_group("niveauschakelaar", "shown")
         else:
             self.visibility_group("niveauschakelaar", "hidden")
 
+        # Analog temperature display visibility
         if self.analogeWaardeTemp:
             self.visibility_group("analogeWaardeTemp", "shown")
         else:
@@ -151,24 +157,28 @@ class VatWidget(QWidget):
 
         is_gui_mode = (self.controler == "GUI")
 
+        # Controllable valves visibility (analog)
         if self.regelbareKleppen:
             visibility = "shown" if is_gui_mode else "hidden"
             self.visibility_group("regelbareKleppen", visibility)
         else:
             self.visibility_group("regelbareKleppen", "hidden")
 
-        if not self.regelbareWeerstand:
-            self.visibility_group("regelbareweerstand", "hidden")
-            if weerstand:
-                self.set_group_color("weerstandStand", green)
-            elif not weerstand:
-                self.set_group_color("weerstandStand", red)
-            else:
-                self.set_group_color("weerstandStand", "#FFFFFF")
-        else:
+        # Controllable heater visibility (analog)
+        if self.regelbareWeerstand:
             visibility = "shown" if is_gui_mode else "hidden"
             self.visibility_group("regelbareweerstand", visibility)
+        else:
+            self.visibility_group("regelbareweerstand", "hidden")
+            
+        # Digital heater status (when NOT analog)
+        if not self.regelbareWeerstand:
+            if self.heaterPower > 0:
+                self.set_group_color("weerstandStand", green)
+            else:
+                self.set_group_color("weerstandStand", red)
 
+        # Valve In visual
         if self.KlepStandBoven == 0:
             self.klep_breete("waterval", 0)
             self.set_group_color("KlepBoven", "#FFFFFF")
@@ -176,6 +186,7 @@ class VatWidget(QWidget):
             self.klep_breete("waterval", self.KlepStandBoven)
             self.set_group_color("KlepBoven", self.kleurWater)
 
+        # Valve Out visual
         if self.KlepStandBeneden == 0:
             self.klep_breete("waterBeneden", 0)
             self.set_group_color("KlepBeneden", "#FFFFFF")
@@ -183,21 +194,29 @@ class VatWidget(QWidget):
             self.klep_breete("waterBeneden", self.KlepStandBeneden)
             self.set_group_color("KlepBeneden", self.kleurWater)
 
-        if tempVat == self.tempWeerstand:
+        # Temperature indicator
+        if abs(tempVat - self.tempWeerstand) < 1.0:  # Within 1 degree
             self.set_group_color("temperatuurVat", green)
         else:
             self.set_group_color("temperatuurVat", red)
 
-        self.set_svg_text("klepstandBoven", str(self.KlepStandBoven) + "%")
-        self.set_svg_text("KlepstandBeneden", str(self.KlepStandBeneden) + "%")
-        self.set_svg_text("debiet", str(self.toekomendDebiet) + "l/s")
-        self.set_svg_text("temperatuurWarmteweerstand",
-                          str(self.tempWeerstand) + "°C")
-        self.set_svg_text("temperatuurVatWaarde", str(tempVat) + "°C")
+        # UPDATE ALL TEXT VALUES
+        self.set_svg_text("klepstandBoven", f"{self.KlepStandBoven}%")
+        self.set_svg_text("KlepstandBeneden", f"{self.KlepStandBeneden}%")
+        self.set_svg_text("debiet", f"{self.toekomendDebiet:.1f}l/s")
+        self.set_svg_text("debietUit", f"{self.uitgaandDebiet:.1f}l/s")
+        self.set_svg_text("temperatuurWarmteweerstand", f"{self.tempWeerstand:.0f}°C")
+        self.set_svg_text("temperatuurVatWaarde", f"{tempVat:.1f}°C")
+        self.set_svg_text("weerstandVermogen", f"{self.heaterPower:.0f}%")
 
-        self.waterInVat = self.root.find(
-            f".//svg:*[@id='waterInVat']", self.ns)
+        # Level sensor color (digital)
+        if currentHoogteVat >= maxHoogteVat * 0.9:
+            self.set_group_color("niveauschakelaar", green)
+        else:
+            self.set_group_color("niveauschakelaar", red)
 
+        # Fill tank
+        self.waterInVat = self.root.find(f".//svg:*[@id='waterInVat']", self.ns)
         if self.waterInVat is not None:
             try:
                 self.originalY = float(self.waterInVat.get("y"))
@@ -221,11 +240,6 @@ class VatWidget(QWidget):
         """Fill the tank based on currentHoogteVat"""
         global currentHoogteVat, maxHoogteVat
 
-        if currentHoogteVat >= maxHoogteVat:
-            self.set_group_color("niveauschakelaar", green)
-        else:
-            self.set_group_color("niveauschakelaar", red)
-
         hoogteVatGui = currentHoogteVat / maxHoogteVat * self.maxHoogteGUI
         nieuweY = self.ondersteY - hoogteVatGui
 
@@ -235,42 +249,105 @@ class VatWidget(QWidget):
 
         self.set_hoogte_indicator("hoogteIndicator", nieuweY)
         self.set_hoogte_indicator("hoogteTekst", nieuweY + 2)
-        self.set_svg_text("hoogteTekst", str(int(currentHoogteVat)) + "mm")
+        self.set_svg_text("hoogteTekst", f"{int(currentHoogteVat)}mm")
+
+    def _find_svg_item(self, itemId):
+        """Find an element/group in the SVG by id, trying common aliases for compatibility."""
+        names = [itemId]
+        # include aliases if present
+        try:
+            aliases = self._svg_id_aliases.get(itemId, [])
+            names.extend(aliases)
+        except Exception:
+            pass
+
+        for name in names:
+            # try any element with that id
+            item = self.root.find(f".//svg:*[@id='{name}']", self.ns)
+            if item is not None:
+                return item
+            # try group by id
+            group = self.root.find(f".//svg:g[@id='{name}']", self.ns)
+            if group is not None:
+                return group
+        return None
 
     def set_hoogte_indicator(self, itemId, hoogte):
-        """Set the Y-position of an indicator"""
-        item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
+        item = self._find_svg_item(itemId)
         if item is not None:
-            item.set("y", str(hoogte))
+            try:
+                item.set("y", str(hoogte))
+            except Exception:
+                pass
 
     def set_group_color(self, groupId, kleur):
-        """Set the color of an SVG group"""
-        group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
-        if group is not None:
-            for element in group:
-                element.set("fill", kleur)
+        """Set the color of an SVG group or element (compatibility aware)."""
+        item = self._find_svg_item(groupId)
+        if item is None:
+            return
+
+        # If item looks like a group (has children), apply to children; otherwise set on the item itself
+        try:
+            children = list(item)
+            if children:
+                for child in children:
+                    try:
+                        child.set("fill", kleur)
+                    except Exception:
+                        pass
+            else:
+                try:
+                    item.set("fill", kleur)
+                except Exception:
+                    pass
+        except Exception:
+            try:
+                item.set("fill", kleur)
+            except Exception:
+                pass
 
     def visibility_group(self, groupId, visibility):
-        """Set the visibility of a group"""
-        group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
-        if group is not None:
-            group.set("visibility", visibility)
+        """Set the visibility of a group or element (compatibility aware)."""
+        item = self._find_svg_item(groupId)
+        if item is None:
+            return
+        try:
+            item.set("visibility", visibility)
+        except Exception:
+            # If it's a group, try children
+            try:
+                for child in list(item):
+                    child.set("visibility", visibility)
+            except Exception:
+                pass
 
     def klep_breete(self, itemId, KlepStand):
-        """Adjust the width of a valve based on its position"""
-        item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
+        """Adjust the width of a valve based on its position (compatibility aware)."""
+        item = self._find_svg_item(itemId)
         if item is not None:
-            new_width = (KlepStand * 0.0645)
-            new_x = 105.745 - (KlepStand * 0.065) / 2
-            item.set("width", str(new_width))
-            item.set("x", str(new_x))
+            try:
+                new_width = (KlepStand * 0.0645)
+                new_x = 105.745 - (KlepStand * 0.065) / 2
+                item.set("width", str(new_width))
+                item.set("x", str(new_x))
+            except Exception:
+                # Some SVGs may nest shapes differently; try children
+                try:
+                    for child in list(item):
+                        try:
+                            child.set("width", str(new_width))
+                            child.set("x", str(new_x))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
 
     def set_svg_text(self, itemId, value):
-        """Set the text of an SVG text element"""
-        item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
+        """Set the text of an SVG text element (compatibility aware)."""
+        item = self._find_svg_item(itemId)
         if item is not None:
             tspan = item.find("svg:tspan", self.ns)
             if tspan is not None:
-                tspan.text = value
+                tspan.text = str(value)
             else:
-                item.text = value
+                item.text = str(value)

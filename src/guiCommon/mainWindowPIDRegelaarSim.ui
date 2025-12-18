@@ -17,8 +17,11 @@
    <string>Proces simulator</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>:/Icon/icon/simulation.png</normaloff>:/Icon/icon/simulation.png</iconset>
+   <iconset resource="Resource.qrc">
+    <normaloff>:/icon/media/icon/simulation.png</normaloff>:/icon/media/icon/simulation.png</iconset>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_3">
@@ -496,7 +499,7 @@
 border: thick double #32a1ce;}</string>
          </property>
          <property name="currentIndex">
-          <number>4</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="vat1Page">
           <layout class="QHBoxLayout" name="horizontalLayout_21">
@@ -644,7 +647,7 @@ border: thick double #32a1ce;}</string>
                       </size>
                      </property>
                      <property name="currentIndex">
-                      <number>0</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="regelbareKlepenGUISim">
                       <property name="minimumSize">
@@ -2835,8 +2838,8 @@ border: 3px solid rgb(193, 193, 193);
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>466</width>
-                    <height>1013</height>
+                    <width>1033</width>
+                    <height>1042</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_scroll">
@@ -3933,8 +3936,8 @@ border: 3px solid rgb(193, 193, 193);
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>278</width>
-                    <height>113</height>
+                    <width>1033</width>
+                    <height>1042</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_scrollConveyor">

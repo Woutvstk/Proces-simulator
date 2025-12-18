@@ -267,12 +267,12 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         if checked:
             self.MainScreen.setCurrentIndex(6)
             
-            # NIEUW: Update stacked widget based on current active sim
+            # Update stacked widget based on current active sim
             try:
                 if self.current_sim_page is not None:
                     if self.current_sim_page in [0, 1]:  # Tank simulations
                         self.stackedWidget_SimSettings.setCurrentIndex(0)
-                    elif self.current_sim_page == 2:  # Conveyor
+                    elif self.current_sim_page == 1:  # Conveyor
                         self.stackedWidget_SimSettings.setCurrentIndex(1)
                 else:
                     # No active sim - show tank settings by default

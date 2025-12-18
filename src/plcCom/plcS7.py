@@ -21,7 +21,7 @@ class plcS7:
         self.slot = slot
         self.tcpport = tcpport
         self.client = snap7.client.Client()
-
+        
     def connect(self, instance_name: str | None = None) -> bool:
         """
         Connect to the PLC.
@@ -39,16 +39,8 @@ class plcS7:
                 print(f"Cannot connect to S7 PLC at {self.ip}")
                 return False
         except Exception as e:
-            # Try different slots in case of an S7-400/300
-            for i in range(0, 2):
-                try:
-                    self.client.connect(self.ip, self.rack, i, self.tcpport)
-                    print(
-                        f"Connected to S7 PLC at {self.ip}:{self.tcpport} (rack {self.rack}, slot {i})")
-                    return True
-                except Exception:
-                    continue
-            print("Connection error:", e)
+            # Single connection attempt only - no blocking retry loop
+            print(f"Connection error: {e}")
             return False
 
     def disconnect(self) -> bool:

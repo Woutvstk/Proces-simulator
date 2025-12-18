@@ -216,6 +216,10 @@ if __name__ == "__main__":
                 """Update process values (Run simulation)"""
                 currentProcessSim.doSimulation(
                     currentProcessConfig, currentProcessStatus)
+                
+                # --- FIXED: Update GUI display with new process values ---
+                window.update_tanksim_display()
+                # ---------------------------------------------------------
 
                 timeLastUpdate = time.time()
 
@@ -265,8 +269,4 @@ if __name__ == "__main__":
             )
         except:
             pass
-        
-        print("Goodbye!\n")
         sys.exit(0)
-
-

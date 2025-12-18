@@ -95,15 +95,11 @@ class simulation:
             """If simulation (re)starts, set _lastRun to current time and skip update at time 0"""
             if (self._lastSimRunningState == False):
                 self._lastRun = time.time()
-                # remember sim was runnning during previous update
                 self._lastSimRunningState = status.simRunning
                 print("Simulation FIRST RUN - initializing timer")
                 return
 
-            """
-            Calculate how much time has passed since lastRun to scale changes to process values
-            Should be close to config.simulationInterval, but added for accuracy
-            """
+            """Get delayed values"""
             newDelayedValveInOpenFraction = self.delayHandler.getDelayedAttribute(
                 config, status, "valveInOpenFraction")
             newDelayedValveOutOpenFraction = self.delayHandler.getDelayedAttribute(
@@ -125,14 +121,16 @@ class simulation:
             status.flowRateIn = config.valveInMaxFlow * self.delayedValveInOpenFraction
             status.flowRateOut = config.valveOutMaxFlow * self.delayedValveOutOpenFraction
 
-            # Debug every 10 cycles
+            # Debug every 10 cycles - TOON DELAYED VALUES!
             if not hasattr(self, '_debug_counter'):
                 self._debug_counter = 0
             self._debug_counter += 1
 
             if self._debug_counter % 10 == 0:
-                print(
-                    f" doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
+                print(f"🔄 Simulation: valveIn={self.delayedValveInOpenFraction:.2f} (delayed), "
+                    f"valveOut={self.delayedValveOutOpenFraction:.2f} (delayed), "
+                    f"heater={self.delayedHeaterPowerFraction:.2f} (delayed), "
+                    f"vol={status.liquidVolume:.1f}, temp={status.liquidTemperature:.1f}°C")
 
             # calculate new liquidVolume
             status.liquidVolume = min(
@@ -148,13 +146,26 @@ class simulation:
                 status.liquidVolume >= config.digitalLevelSensorLowTriggerLevel)
 
             if (status.liquidVolume > 0):
-                # Calculate new liquid temperature
-                status.liquidTemperature = min(
-                    status.liquidTemperature+config.heaterMaxPower * self.delayedHeaterPowerFraction / config.liquidSpecificHeatCapacity/config.liquidSpecificWeight/status.liquidVolume * self._timeSinceLastRun, config.liquidBoilingTemp)
-                status.liquidTemperature = max(
-                    status.liquidTemperature-config.tankHeatLoss * 1 / config.liquidSpecificHeatCapacity/config.liquidSpecificWeight/status.liquidVolume * self._timeSinceLastRun, config.ambientTemp)
+                # Calculate temperature CHANGE per cycle
+                heater_increase = config.heaterMaxPower * self.delayedHeaterPowerFraction / (
+                    config.liquidSpecificHeatCapacity * config.liquidSpecificWeight * status.liquidVolume
+                ) * self._timeSinceLastRun
+                
+                heat_loss_decrease = config.tankHeatLoss / (
+                    config.liquidSpecificHeatCapacity * config.liquidSpecificWeight * status.liquidVolume
+                ) * self._timeSinceLastRun
+                
+                # Apply both heating and cooling
+                new_temp = status.liquidTemperature + heater_increase - heat_loss_decrease
+                
+                # Clamp between ambient and boiling
+                status.liquidTemperature = max(config.ambientTemp, min(new_temp, config.liquidBoilingTemp))
+                
+                # Debug temperature change every 50 cycles
+                if self._debug_counter % 50 == 0:
+                    print(f"🌡️  Temp: {status.liquidTemperature:.1f}°C (heater: +{heater_increase:.3f}, loss: -{heat_loss_decrease:.3f})")
             else:
-                status.liquidTemperature = 0
+                status.liquidTemperature = config.ambientTemp
 
         else:
             # remember sim was NOT runnning during previous update
