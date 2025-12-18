@@ -12,6 +12,9 @@ orange = "#FFA500"
 blue = "#1100FF"
 green = "#00FF00"
 
+# Temperature tolerance for indicating "at target" (in percentage)
+TEMPERATURE_TOLERANCE_PERCENT = 5.0
+
 # Deprecated global variables (for backward compatibility only)
 # These should not be used in new code - use instance variables instead
 maxHoogteVat = 200
@@ -218,10 +221,10 @@ class VatWidget(QWidget):
             self.klep_breete("waterBeneden", self.KlepStandBeneden)
             self.set_group_color("KlepBeneden", self.kleurWater)
 
-        # Show green if within 5% of target temperature, red otherwise
+        # Show green if within tolerance of target temperature, red otherwise
         if self.tempWeerstand > 0:
             temp_diff_percent = abs(self.tempVat - self.tempWeerstand) / self.tempWeerstand * 100.0
-            if temp_diff_percent <= 5.0:
+            if temp_diff_percent <= TEMPERATURE_TOLERANCE_PERCENT:
                 self.set_group_color("temperatuurVat", green)
             else:
                 self.set_group_color("temperatuurVat", red)
