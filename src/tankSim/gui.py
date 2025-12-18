@@ -284,8 +284,8 @@ class VatWidget(QWidget):
             item = self.root.find(f".//svg:*[@id='{itemId}']", self.ns)
             if item is not None:
                 item.set("y", str(hoogte))
-        except Exception as e:
-            # Silently handle missing SVG elements
+        except Exception:
+            # Silently handle SVG element access errors (missing elements, malformed SVG, etc.)
             pass
 
     def set_group_color(self, groupId, kleur):
@@ -295,8 +295,8 @@ class VatWidget(QWidget):
             if group is not None:
                 for element in group:
                     element.set("fill", kleur)
-        except Exception as e:
-            # Silently handle missing SVG elements
+        except Exception:
+            # Silently handle SVG element access errors (missing elements, malformed SVG, etc.)
             pass
 
     def visibility_group(self, groupId, visibility):
@@ -305,8 +305,8 @@ class VatWidget(QWidget):
             group = self.root.find(f".//svg:g[@id='{groupId}']", self.ns)
             if group is not None:
                 group.set("visibility", visibility)
-        except Exception as e:
-            # Silently handle missing SVG elements
+        except Exception:
+            # Silently handle SVG element access errors (missing elements, malformed SVG, etc.)
             pass
 
     def klep_breete(self, itemId, KlepStand):
@@ -318,8 +318,8 @@ class VatWidget(QWidget):
                 new_x = 105.745 - (KlepStand * 0.065) / 2
                 item.set("width", str(new_width))
                 item.set("x", str(new_x))
-        except Exception as e:
-            # Silently handle missing SVG elements
+        except Exception:
+            # Silently handle SVG element access errors (missing elements, malformed SVG, etc.)
             pass
 
     def set_svg_text(self, itemId, value):
@@ -332,6 +332,6 @@ class VatWidget(QWidget):
                     tspan.text = value
                 else:
                     item.text = value
-        except Exception as e:
-            # Silently handle missing SVG elements
+        except Exception:
+            # Silently handle SVG element access errors (missing elements, malformed SVG, etc.)
             pass
