@@ -135,6 +135,22 @@ class ProcessSettingsMixin:
                 self.on_config_changed)
             self.analogeWaardeTempCheckBox.toggled.connect(
                 self.on_config_changed)
+            
+            # Connect valve and heater checkboxes for immediate updates
+            try:
+                self.klepstandBovenCheckBox.toggled.connect(
+                    self.on_valve_checkbox_changed)
+                self.klepstandBenedenCheckBox.toggled.connect(
+                    self.on_valve_checkbox_changed)
+            except AttributeError:
+                pass  # These may not exist in all configurations
+            
+            try:
+                self.weerstandCheckBox.toggled.connect(
+                    self.on_heater_checkbox_changed)
+            except AttributeError:
+                pass  # May not exist in all configurations
+                
         except AttributeError as e:
             # Removed unnecessary print
             pass
@@ -156,6 +172,17 @@ class ProcessSettingsMixin:
                 for field in group:
                     field.textChanged.connect(
                         lambda text, g=group: self.syncFields(text, g))
+
+            # Connect the primary entry fields to trigger updates
+            self.toekomendDebietEntry.textChanged.connect(self.on_entry_field_changed)
+            self.tempWeerstandEntry.textChanged.connect(self.on_entry_field_changed)
+            
+            # Connect valve position entry fields if they exist
+            try:
+                self.klepstandBovenEntry.textChanged.connect(self.on_valve_entry_changed)
+                self.klepstandBenedenEntry.textChanged.connect(self.on_valve_entry_changed)
+            except AttributeError:
+                pass  # These may not exist in all configurations
 
         except AttributeError as e:
             # Removed unnecessary print
@@ -284,10 +311,80 @@ class ProcessSettingsMixin:
         """Callback when color dropdown changes"""
         new_color = self.kleurDropDown.currentData()
         self.vat_widget.kleurWater = new_color
+        self.vat_widget.rebuild()
 
     def on_config_changed(self):
         """Callback when configuration checkbox changes"""
-        pass  # Force rebuild via update_values (handled by main loop)
+        # Trigger immediate update to reflect configuration changes
+        self.update_process_values()
+
+    def on_entry_field_changed(self):
+        """Callback when entry field value changes"""
+        # Entry field changes are handled by the main update loop
+        # This provides immediate visual feedback for critical settings
+        try:
+            # Update only the display text values that depend on entry fields
+            self.vat_widget.toekomendDebiet = int(
+                self.toekomendDebietEntry.text() or 0)
+            self.vat_widget.tempWeerstand = float(
+                self.tempWeerstandEntry.text() or 20.0)
+            # Update text displays in SVG
+            self.vat_widget.set_svg_text("debiet", str(self.vat_widget.toekomendDebiet) + "l/s")
+            self.vat_widget.set_svg_text("temperatuurWarmteweerstand",
+                                          str(self.vat_widget.tempWeerstand) + "°C")
+            self.vat_widget.update_svg()
+            self.vat_widget.svg_widget.update()
+        except (ValueError, AttributeError):
+            pass  # Ignore errors during partial entry or missing widgets
+
+    def on_valve_checkbox_changed(self):
+        """Callback when valve checkbox state changes"""
+        # Trigger immediate update for valve positions
+        try:
+            if not self.vat_widget.regelbareKleppen:
+                # Update valve positions based on checkbox state
+                top_checked = self.klepstandBovenCheckBox.isChecked()
+                bottom_checked = self.klepstandBenedenCheckBox.isChecked()
+                self.vat_widget.KlepStandBoven = 100 if top_checked else 0
+                self.vat_widget.KlepStandBeneden = 100 if bottom_checked else 0
+                # Trigger rebuild to update visuals
+                self.vat_widget.rebuild()
+        except AttributeError:
+            pass  # Ignore if widgets don't exist
+
+    def on_heater_checkbox_changed(self):
+        """Callback when heater checkbox state changes"""
+        # Update heater state immediately
+        try:
+            if not self.vat_widget.regelbareWeerstand:
+                # Update status in the simulation
+                if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                    heater_on = self.weerstandCheckBox.isChecked()
+                    self.tanksim_status.heaterPowerFraction = 1.0 if heater_on else 0.0
+                # Update visual representation
+                self.vat_widget.rebuild()
+        except AttributeError:
+            pass  # Ignore if widgets don't exist
+
+    def on_valve_entry_changed(self):
+        """Callback when valve position entry changes (for controllable valves)"""
+        try:
+            if self.vat_widget.regelbareKleppen:
+                # Update valve positions from entry fields
+                try:
+                    self.vat_widget.KlepStandBoven = int(
+                        self.klepstandBovenEntry.text() or 0)
+                except (ValueError, AttributeError):
+                    self.vat_widget.KlepStandBoven = 0
+                try:
+                    self.vat_widget.KlepStandBeneden = int(
+                        self.klepstandBenedenEntry.text() or 0)
+                except (ValueError, AttributeError):
+                    self.vat_widget.KlepStandBeneden = 0
+                # Trigger rebuild to update visuals
+                self.vat_widget.rebuild()
+        except AttributeError:
+            pass  # Ignore if widgets don't exist
 
     def syncFields(self, text, group):
         """Synchronize linked entry fields"""
