@@ -51,6 +51,7 @@ class status:
         self.importExportVariableList = [
             "liquidVolume", "liquidTemperature",
             "valveInOpenFraction", "valveOutOpenFraction", "heaterPowerFraction",
+            "simRunning",
             "generalStartCmd", "generalStopCmd", "generalResetCmd",
             "generalControl1Value", "generalControl2Value", "generalControl3Value",
             "indicator1", "indicator2", "indicator3", "indicator4",

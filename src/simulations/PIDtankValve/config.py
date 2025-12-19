@@ -114,6 +114,7 @@ class configuration:
         self.liquidBoilingTemp: float = 100.0
 
         self.importExportVariableList = [
+            "simulationInterval",
             "tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp",
             "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel",
             "heaterMaxPower", "tankHeatLoss", "liquidSpecificHeatCapacity",
