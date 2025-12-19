@@ -1,0 +1,240 @@
+{
+  "offsets": {
+    "BoolInput": 0,
+    "BoolOutput": 0,
+    "DWORDInput": 2,
+    "DWORDOutput": 2
+  },
+  "signals": [
+    {
+      "name": "Start",
+      "type": "bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "V0.0",
+      "status": "FALSE",
+      "description": "Start command",
+      "range": "0-1"
+    },
+    {
+      "name": "Stop",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "V0.1",
+      "status": "FALSE",
+      "description": "Stop command",
+      "range": "0-1"
+    },
+    {
+      "name": "Reset",
+      "type": "bool",
+      "byte": "0",
+      "bit": "2",
+      "address": "V0.2",
+      "status": "FALSE",
+      "description": "Reset command",
+      "range": "0-1"
+    },
+    {
+      "name": "LevelSensorHigh",
+      "type": "bool",
+      "byte": "0",
+      "bit": "3",
+      "address": "V0.3",
+      "status": "FALSE",
+      "description": "Tank upper level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "LevelSensorLow",
+      "type": "bool",
+      "byte": "0",
+      "bit": "4",
+      "address": "V0.4",
+      "status": "FALSE",
+      "description": "Tank lower level sensor",
+      "range": "0-1"
+    },
+    {
+      "name": "Control1",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "VW2",
+      "status": "13815",
+      "description": "Control slider 1 value",
+      "range": "0-32747"
+    },
+    {
+      "name": "Control2",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "VW4",
+      "status": "0",
+      "description": "Control slider 2 value",
+      "range": "0-32747"
+    },
+    {
+      "name": "Control3",
+      "type": "int",
+      "byte": "6",
+      "bit": "",
+      "address": "VW6",
+      "status": "0",
+      "description": "Control slider 3 value",
+      "range": "0-32747"
+    },
+    {
+      "name": "TemperatureSensor",
+      "type": "int",
+      "byte": "8",
+      "bit": "",
+      "address": "VW8",
+      "status": "7754",
+      "description": "Temperature sensor",
+      "range": "0-27648"
+    },
+    {
+      "name": "LevelSensor",
+      "type": "int",
+      "byte": "10",
+      "bit": "",
+      "address": "VW10",
+      "status": "0",
+      "description": "Tank level measurement",
+      "range": "0-27648"
+    },
+    {
+      "name": "Indicator1",
+      "type": "bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "V0.0",
+      "status": "TRUE",
+      "description": "Status indicator 1",
+      "range": "0-1"
+    },
+    {
+      "name": "Indicator2",
+      "type": "bool",
+      "byte": "0",
+      "bit": "1",
+      "address": "V0.1",
+      "status": "FALSE",
+      "description": "Status indicator 2",
+      "range": "0-1"
+    },
+    {
+      "name": "Indicator3",
+      "type": "bool",
+      "byte": "0",
+      "bit": "2",
+      "address": "V0.2",
+      "status": "FALSE",
+      "description": "Status indicator 3",
+      "range": "0-1"
+    },
+    {
+      "name": "Indicator4",
+      "type": "bool",
+      "byte": "0",
+      "bit": "3",
+      "address": "V0.3",
+      "status": "FALSE",
+      "description": "Status indicator 4",
+      "range": "0-1"
+    },
+    {
+      "name": "ValveIn",
+      "type": "bool",
+      "byte": "0",
+      "bit": "4",
+      "address": "V0.4",
+      "status": "FALSE",
+      "description": "Upper valve digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "ValveOut",
+      "type": "bool",
+      "byte": "0",
+      "bit": "5",
+      "address": "V0.5",
+      "status": "TRUE",
+      "description": "Lower valve digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "Heater",
+      "type": "bool",
+      "byte": "0",
+      "bit": "6",
+      "address": "V0.6",
+      "status": "FALSE",
+      "description": "Heater digital control (ON/OFF)",
+      "range": "0-1"
+    },
+    {
+      "name": "ValveInFraction",
+      "type": "int",
+      "byte": "2",
+      "bit": "",
+      "address": "VW2",
+      "status": "0",
+      "description": "Upper valve analog position (0-100%)",
+      "range": "0-27648"
+    },
+    {
+      "name": "ValveOutFraction",
+      "type": "int",
+      "byte": "4",
+      "bit": "",
+      "address": "VW4",
+      "status": "0",
+      "description": "Lower valve analog position (0-100%)",
+      "range": "0-27648"
+    },
+    {
+      "name": "HeaterFraction",
+      "type": "int",
+      "byte": "6",
+      "bit": "",
+      "address": "VW6",
+      "status": "27648",
+      "description": "Heater analog power (0-100%)",
+      "range": "0-27648"
+    },
+    {
+      "name": "Analog1",
+      "type": "int",
+      "byte": "8",
+      "bit": "",
+      "address": "VW8",
+      "status": "0",
+      "description": "Analog value 1",
+      "range": "0-32747"
+    },
+    {
+      "name": "Analog2",
+      "type": "int",
+      "byte": "10",
+      "bit": "",
+      "address": "VW10",
+      "status": "0",
+      "description": "Analog value 2",
+      "range": "0-32747"
+    },
+    {
+      "name": "Analog3",
+      "type": "int",
+      "byte": "12",
+      "bit": "",
+      "address": "VW12",
+      "status": "0",
+      "description": "Analog value 3",
+      "range": "0-32747"
+    }
+  ]
+}
