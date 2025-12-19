@@ -1,5 +1,8 @@
 <RCC>
   <qresource prefix="icon">
+    <file>SVG-2-vatten.svg</file>
+    <file>icon/controls-svgrepo-com_blue.svg</file>
+    <file>icon/controls-svgrepo-com.svg</file>
     <file>icon/refresh-svgrepo-com.svg</file>
     <file>media/icon/close-window-64 blauw.ico</file>
     <file>media/icon/close-window-64.ico</file>

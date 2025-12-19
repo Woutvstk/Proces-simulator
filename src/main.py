@@ -21,7 +21,7 @@ from PyQt5.QtGui import QPainter
 # tankSim specific imports
 from tankSim.simulation import simulation as tankSimClass
 from tankSim.status import status as tankSimStatusClass
-from tankSim.configuration import configuration as tankSimConfigurationClass
+from tankSim.configurationTS import configuration as tankSimConfigurationClass
 from tankSim.ioHandler import ioHandler as tankSimIoHandlerClass
 from mainGui.mainGui import MainWindow
 
@@ -77,7 +77,6 @@ window.tanksim_config = tankSimConfig
 window.tanksim_status = tankSimStatus
 
 window.show()
-QTimer.singleShot(200, lambda: window._load_initial_io_config())
 
 # remember at what time we started
 startTime = time.time()
@@ -155,33 +154,35 @@ connectionLostLogged = False
 
 
 # main loop only runs if this file is run directly
-# main loop only runs if this file is run directly
 if __name__ == "__main__":
-    # Main application loop
     try:
-        while not mainConfig.doExit:  # ← NIET while True
+        while not mainConfig.doExit:
             app.processEvents()
 
             """Check for connect command from GUI and tryConnect"""
             if mainConfig.tryConnect:
                 validPlcConnection = False
-                connectionLostLogged = False
+                connectionLostLogged = False  # Reset flag when attempting new connection
                 mainConfig.tryConnect = False
                 print(f"\nAttempting connection to PLC...")
                 print(f"   IP: {mainConfig.plcIpAdress}")
                 print(f"   Protocol: {mainConfig.plcProtocol}")
                 tryConnectToPlc()
 
+                # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
                 window.plc = PlcCom if validPlcConnection else None
                 window.update_connection_status_icon()
 
             """Process loop for simulation and data exchange"""
+            # Throttle calculations and data exchange
             if ((time.time() - timeLastUpdate) > currentProcessConfig.simulationInterval):
 
                 """Get process control from plc or gui"""
+                # only try to contact plc if there is a connection
                 if validPlcConnection:
                     try:
+                        # Check if connection is still alive
                         if not PlcCom.isConnected():
                             if not connectionLostLogged:
                                 print("\nConnection lost to the PLC!")
@@ -193,8 +194,13 @@ if __name__ == "__main__":
                             currentProcessIoHandler.resetOutputs(
                                 mainConfig, currentProcessConfig, currentProcessStatus)
                         else:
+                            # Connection OK - reset flag
                             connectionLostLogged = False
+
+                            # Haal geforceerde waardes op van GUI
                             forced_values = window.get_forced_io_values()
+
+                            # Update IO met force support
                             currentProcessIoHandler.updateIO(
                                 PlcCom, mainConfig, currentProcessConfig, currentProcessStatus,
                                 forced_values=forced_values)
@@ -210,6 +216,7 @@ if __name__ == "__main__":
                         currentProcessIoHandler.resetOutputs(
                             mainConfig, currentProcessConfig, currentProcessStatus)
                 else:
+                    # if control is plc but no plc connection, pretend plc outputs are all 0
                     currentProcessIoHandler.resetOutputs(
                         mainConfig, currentProcessConfig, currentProcessStatus)
 
@@ -217,19 +224,44 @@ if __name__ == "__main__":
                 currentProcessSim.doSimulation(
                     currentProcessConfig, currentProcessStatus)
                 
-                # --- FIXED: Update GUI display with new process values ---
+                # Update GUI display with new process values
                 window.update_tanksim_display()
-                # ---------------------------------------------------------
 
                 timeLastUpdate = time.time()
 
         # ===== EXIT CLEANUP =====
-        print("\nMain loop exited")
-        
         # Final cleanup
         if validPlcConnection and PlcCom:
             try:
                 PlcCom.disconnect()
+                print("Disconnected from PLC")
+            except:
+                pass
+        
+        # Kill any remaining NetToPLCSim processes
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=2
+            )
+            if result.returncode == 0:
+                print("Terminated NetToPLCSim.exe processes")
+        except:
+            pass
+        
+        sys.exit(0)
+        
+    except KeyboardInterrupt:
+        mainConfig.doExit = True
+         
+        # Cleanup
+        if validPlcConnection and PlcCom:
+            try:
+                PlcCom.disconnect()
+                print("Disconnected from PLC")
             except:
                 pass
         
@@ -238,35 +270,11 @@ if __name__ == "__main__":
             import subprocess
             subprocess.run(
                 ['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=1
-            )
-        except:
-            pass
-        
-        print("Goodbye!\n")
-        sys.exit(0)
-        
-    except KeyboardInterrupt:
-        print("\n\nKeyboard interrupt detected")
-        mainConfig.doExit = True
-        
-        # Cleanup
-        if validPlcConnection and PlcCom:
-            try:
-                PlcCom.disconnect()
-            except:
-                pass
-        
-        try:
-            import subprocess
-            subprocess.run(
-                ['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=1
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=2
             )
         except:
             pass
         sys.exit(0)
+

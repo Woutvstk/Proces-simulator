@@ -141,7 +141,7 @@ class DroppableTableWidget(QTableWidget):
         if not current_address:
             return
         
-        # Bepaal originele IO type (I of Q) uit huidige address
+        # Determine original IO type (I or Q) from current address
         original_prefix = current_address[0] if current_address else 'I'
         
         # Converteer naar V voor LOGO! indien nodig
@@ -454,7 +454,7 @@ class DroppableTableWidget(QTableWidget):
             display_text = str(value)
         
         if self.is_row_forced(row):
-            display_text = f"🔒{display_text}"
+            display_text = f"[LOCKED] {display_text}"
         
         if status_item:
             status_item.setText(display_text)

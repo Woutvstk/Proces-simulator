@@ -1,5 +1,36 @@
 <?xml version="1.0"?>
 <Simulation>
+    <GeneralControls>
+        <Inputs>
+            <Digital>
+                <!-- PLC Inputs = Simulator Outputs -->
+                <Signal description="Start command" type="bool" range="0-1" io_prefix="I" status="FALSE">Start</Signal>
+                <Signal description="Stop command" type="bool" range="0-1" io_prefix="I" status="FALSE">Stop</Signal>
+                <Signal description="Reset command" type="bool" range="0-1" io_prefix="I" status="FALSE">Reset</Signal>
+            </Digital>
+            <Analog>
+                <!-- PLC Inputs = Simulator Outputs -->
+                <Signal description="Control slider 1 value" type="int" range="0-32747" io_prefix="I" status="0">Control1</Signal>
+                <Signal description="Control slider 2 value" type="int" range="0-32747" io_prefix="I" status="0">Control2</Signal>
+                <Signal description="Control slider 3 value" type="int" range="0-32747" io_prefix="I" status="0">Control3</Signal>
+            </Analog>
+        </Inputs>
+        <Outputs>
+            <Digital>
+                <!-- PLC Outputs = Simulator Inputs -->
+                <Signal description="Status indicator 1" type="bool" range="0-1" io_prefix="Q" status="FALSE">Indicator1</Signal>
+                <Signal description="Status indicator 2" type="bool" range="0-1" io_prefix="Q" status="FALSE">Indicator2</Signal>
+                <Signal description="Status indicator 3" type="bool" range="0-1" io_prefix="Q" status="FALSE">Indicator3</Signal>
+                <Signal description="Status indicator 4" type="bool" range="0-1" io_prefix="Q" status="FALSE">Indicator4</Signal>
+            </Digital>
+            <Analog>
+                <!-- PLC Outputs = Simulator Inputs -->
+                <Signal description="Analog value 1" type="int" range="0-32747" io_prefix="Q" status="0">Analog1</Signal>
+                <Signal description="Analog value 2" type="int" range="0-32747" io_prefix="Q" status="0">Analog2</Signal>
+                <Signal description="Analog value 3" type="int" range="0-32747" io_prefix="Q" status="0">Analog3</Signal>
+            </Analog>
+        </Outputs>
+    </GeneralControls>
     <TankSim>
         <Inputs>
             <Digital>

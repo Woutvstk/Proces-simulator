@@ -27,8 +27,52 @@ class status:
         self.flowRateIn: float = 0.0
         self.flowRateOut: float = 0.0
 
-        self.importExportVariableList = ["liquidVolume", "liquidTemperature",
-                                         "valveInOpenFraction", "valveOutOpenFraction", "heaterPowerFraction"]
+        # General Controls - commands to PLC (written by: gui)
+        self.generalStartCmd: bool = False
+        self.generalStopCmd: bool = False
+        self.generalResetCmd: bool = False
+
+        # General Controls - slider values (written by: gui)
+        self.generalControl1Value: int = 0
+        self.generalControl2Value: int = 0
+        self.generalControl3Value: int = 0
+
+        # General Controls - indicators from PLC (written by: plc)
+        self.indicator1: bool = False
+        self.indicator2: bool = False
+        self.indicator3: bool = False
+        self.indicator4: bool = False
+
+        # General Controls - analog outputs from PLC (written by: plc)
+        self.analog1: int = 0
+        self.analog2: int = 0
+        self.analog3: int = 0
+
+        self.importExportVariableList = [
+            "liquidVolume", "liquidTemperature",
+            "valveInOpenFraction", "valveOutOpenFraction", "heaterPowerFraction",
+            "generalStartCmd", "generalStopCmd", "generalResetCmd",
+            "generalControl1Value", "generalControl2Value", "generalControl3Value",
+            "indicator1", "indicator2", "indicator3", "indicator4",
+            "analog1", "analog2", "analog3",
+        ]
+
+        # General Controls - PLC Outputs reflected in status (written by: plc or force)
+        self.generalStartCmd: bool = False
+        self.generalStopCmd: bool = False
+        self.generalResetCmd: bool = False
+        self.generalControl1Value: int = 0
+        self.generalControl2Value: int = 0
+        self.generalControl3Value: int = 0
+
+        # General Controls - PLC Inputs (simulator outputs) (written by: force or UI in future)
+        self.indicator1: bool = False
+        self.indicator2: bool = False
+        self.indicator3: bool = False
+        self.indicator4: bool = False
+        self.analog1: int = 0
+        self.analog2: int = 0
+        self.analog3: int = 0
 
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a CSV file"""
@@ -56,4 +100,4 @@ class status:
                     if row["variable"] == variable:
                         setattr(self, variable, type(
                             getattr(self, variable))(row["value"]))
-        print(f"Status loaded from: {importFileName}")
+

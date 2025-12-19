@@ -194,6 +194,12 @@ class DroppableTableWidget(QTableWidget):
                 self.io_screen.validate_and_fix_manual_address(row)
             
             self._save_row_data(row)
+            # Mark IO configuration as dirty in main window
+            try:
+                if self.io_screen and hasattr(self.io_screen, 'main_window') and hasattr(self.io_screen.main_window, '_mark_io_dirty'):
+                    self.io_screen.main_window._mark_io_dirty()
+            except Exception:
+                pass
             
         except ValueError:
             pass # Removed print
@@ -330,20 +336,20 @@ class DroppableTableWidget(QTableWidget):
         """)
         
         if row in self.forced_rows:
-            remove_action = QAction(f"Remove Force from '{signal_name}'", self)
+            remove_action = QAction(f"🔓 Remove Force from '{signal_name}'", self)
             remove_action.triggered.connect(lambda: self.remove_force(row))
             menu.addAction(remove_action)
         else:
             if data_type == 'bool':
-                force_true = QAction(f"Force '{signal_name}' = TRUE", self)
+                force_true = QAction(f"🔒 Force '{signal_name}' = TRUE", self)
                 force_true.triggered.connect(lambda: self.apply_force(row, True))
                 menu.addAction(force_true)
                 
-                force_false = QAction(f"Force '{signal_name}' = FALSE", self)
+                force_false = QAction(f"🔒 Force '{signal_name}' = FALSE", self)
                 force_false.triggered.connect(lambda: self.apply_force(row, False))
                 menu.addAction(force_false)
             else:
-                force_value = QAction(f"Force '{signal_name}' to value...", self)
+                force_value = QAction(f"🔒 Force '{signal_name}' to value...", self)
                 force_value.triggered.connect(lambda: self.apply_force_analog(row, signal_name))
                 menu.addAction(force_value)
         
@@ -432,15 +438,10 @@ class DroppableTableWidget(QTableWidget):
     
     def _clear_row_data(self, row):
         """Clear all data of a row"""
-        # Only delete from forced_rows if the row is actually forced
-        if row in self.forced_rows:
-            del self.forced_rows[row]
-        
-        # Delete row data if it exists
         if row in self.row_data:
+            if row in self.forced_rows:
+                del self.forced_rows[row]  # Also clear force when clearing data
             del self.row_data[row]
-        
-        # Clear all cells
         for col in range(self.columnCount()):
             if col in [2, 3]:
                 self.setItem(row, col, EditableTableWidgetItem(""))
@@ -546,8 +547,7 @@ class DroppableTableWidget(QTableWidget):
                         try:
                             json_bytes = event.mimeData().data("application/json")
                             signal_data = json.loads(bytes(json_bytes).decode('utf-8'))
-                        except:
-                            pass
+                        except Exception:                            pass
                     
                     self.blockSignals(True)
                     self.setItem(row, 0, ReadOnlyTableWidgetItem(dropped_text))
@@ -578,6 +578,12 @@ class DroppableTableWidget(QTableWidget):
                     
                     if self.io_screen:
                         self.io_screen.save_configuration()
+                        # Mark IO configuration as dirty in main window
+                        try:
+                            if self.io_screen and hasattr(self.io_screen, 'main_window') and hasattr(self.io_screen.main_window, '_mark_io_dirty'):
+                                self.io_screen.main_window._mark_io_dirty()
+                        except Exception:
+                            pass
                     
                     event.acceptProposedAction()
                 finally:
@@ -681,7 +687,7 @@ class DroppableTableWidget(QTableWidget):
         
         is_forced = self.is_row_forced(row)
         if is_forced:
-            display_text = f"🔒{display_text}"
+            display_text = f"[LOCKED] {display_text}"
         
         if status_item:
             status_item.setText(display_text)
@@ -930,6 +936,9 @@ class IOConfigMixin:
     def init_io_config_page(self):
         """Initialize all I/O config page components"""
         self.io_screen = IOScreen(self)
+        # Dirty-state flags for IO configuration changes
+        self._io_config_dirty = False
+        self._io_dirty_prompt_shown = False
         
         self._replace_table_widget()
         self._replace_tree_widget()
@@ -937,7 +946,11 @@ class IOConfigMixin:
         self._connect_io_buttons()
         self._connect_force_button()
         
-        self.load_io_tree()
+        # Ensure tree widget is set before loading
+        if hasattr(self, 'treeWidget_IO') and self.treeWidget_IO is not None:
+            self.load_io_tree()
+        else:
+            print("WARNING: treeWidget_IO not initialized")
     
     def _replace_table_widget(self):
         """Replace standard table widget with custom DroppableTableWidget"""
@@ -1002,6 +1015,9 @@ class IOConfigMixin:
     
     def load_io_tree(self):
         """Load IO signals from XML file"""
+        if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
+            return
+        
         current_dir = Path(__file__).parent
         xml_file = current_dir.parent / "guiCommon" / "io_treeList.xml"
         
@@ -1016,6 +1032,10 @@ class IOConfigMixin:
             conveyorsim = root.find('ConveyorSim')
             if conveyorsim is not None:
                 self._load_conveyorsim_signals(conveyorsim)
+
+            general = root.find('GeneralControls')
+            if general is not None:
+                self._load_generalcontrols_signals(general)
             
             self.treeWidget_IO.expandAll()
             
@@ -1024,6 +1044,9 @@ class IOConfigMixin:
     
     def _load_tanksim_signals(self, tanksim):
         """Load TankSim signals"""
+        if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
+            return
+        
         tanksim_item = QTreeWidgetItem(self.treeWidget_IO, ["TankSim"])
         
         inputs_root = tanksim.find('Inputs')
@@ -1038,13 +1061,36 @@ class IOConfigMixin:
     
     def _load_conveyorsim_signals(self, conveyorsim):
         """Load ConveyorSim signals"""
+        if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
+            return
+        
         conveyorsim_item = QTreeWidgetItem(self.treeWidget_IO, ["ConveyorSim"])
         note = conveyorsim.find('Note')
         if note is not None and note.text:
             QTreeWidgetItem(conveyorsim_item, [note.text.strip()])
+
+    def _load_generalcontrols_signals(self, general):
+        """Load General Controls signals"""
+        if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
+            return
+        
+        general_item = QTreeWidgetItem(self.treeWidget_IO, ["GeneralControls"])
+
+        inputs_root = general.find('Inputs')
+        if inputs_root is not None:
+            inputs_item = QTreeWidgetItem(general_item, ["Inputs"])
+            self._load_signal_category(inputs_root, inputs_item)
+
+        outputs_root = general.find('Outputs')
+        if outputs_root is not None:
+            outputs_item = QTreeWidgetItem(general_item, ["Outputs"])
+            self._load_signal_category(outputs_root, outputs_item)
     
     def _load_signal_category(self, category_root, parent_item):
         """Load a category (Digital/Analog) of signals"""
+        if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
+            return
+        
         for signal_type in ['Digital', 'Analog']:
             signals = category_root.find(signal_type)
             if signals is not None:
@@ -1060,51 +1106,9 @@ class IOConfigMixin:
                         'description': signal.get('description', ''),
                         'range': signal.get('range', '')
                     }
-                    self.treeWidget_IO.signal_data[signal_name] = signal_info
-
-    def _load_initial_io_config(self):
-        """Load IO config into table at startup"""
-        try:
-            project_root = Path(__file__).resolve().parent.parent
-            io_config_path = project_root / "tankSim" / "io_configuration.json"
-            
-            if not io_config_path.exists():
-                print("⚠️  No IO configuration file found at startup")
-                return
-            
-            # Load JSON
-            with open(io_config_path, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
-            
-            if 'signals' not in config_data or not config_data['signals']:
-                print("⚠️  No signals in IO configuration")
-                return
-            
-            table = self.tableWidget_IO
-            table.blockSignals(True)
-            
-            # Load signals into table
-            loaded_count = 0
-            for idx, signal in enumerate(config_data['signals']):
-                if idx >= table.rowCount():
-                    break
-                
-                table.setItem(idx, 0, ReadOnlyTableWidgetItem(signal.get('name', '')))
-                table.setItem(idx, 1, ReadOnlyTableWidgetItem(signal.get('type', '')))
-                table.setItem(idx, 2, EditableTableWidgetItem(signal.get('byte', '')))
-                table.setItem(idx, 3, EditableTableWidgetItem(signal.get('bit', '')))
-                table.setItem(idx, 4, ReadOnlyTableWidgetItem(signal.get('address', '')))
-                table.setItem(idx, 5, ReadOnlyTableWidgetItem(signal.get('status', '')))
-                table.setItem(idx, 6, ReadOnlyTableWidgetItem(signal.get('description', '')))
-                table.setItem(idx, 7, ReadOnlyTableWidgetItem(signal.get('range', '')))
-                table._save_row_data(idx)
-                loaded_count += 1
-            
-            table.blockSignals(False)
-            print(f"✅ Loaded {loaded_count} signals into IO table at startup")
-            
-        except Exception as e:
-            print(f"❌ Failed to load IO config at startup: {e}")
+                    # Ensure signal_data exists
+                    if hasattr(self.treeWidget_IO, 'signal_data'):
+                        self.treeWidget_IO.signal_data[signal_name] = signal_info
     
     def apply_offsets(self):
         """Apply offset values"""
@@ -1137,6 +1141,11 @@ class IOConfigMixin:
             }
             
             self.io_screen.readdress_all_signals()
+            # Mark dirty due to offset changes
+            try:
+                self._mark_io_dirty()
+            except Exception:
+                pass
                 
         except Exception as e:
             pass # Removed print
@@ -1149,6 +1158,11 @@ class IOConfigMixin:
         self.QLineEdit_DWORDOutput.setText("2")
         
         self.io_screen.reset_offsets_to_default()
+        # Mark dirty due to offset changes
+        try:
+            self._mark_io_dirty()
+        except Exception:
+            pass
 
     def save_io_configuration(self):
         """Save IO configuration"""
@@ -1187,126 +1201,25 @@ class IOConfigMixin:
                 json.dump(config_data, f, indent=2, ensure_ascii=False)
             
             QMessageBox.information(self, "Success", f"IO Configuration saved")
-            
+            # Saving does not activate; keep dirty so leave-prompt still warns
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save: {str(e)}")
 
-    def load_io_config_from_file(self, config_file_path):
-        """
-        Load IO configuration from JSON file and update internal mappings.
-        SAFE VERSION - always completes
-        """
-        try:
-            # Convert to Path object if needed
-            from pathlib import Path
-            if not isinstance(config_file_path, Path):
-                config_file_path = Path(config_file_path)
-            
-            print(f"\n{'='*60}")
-            print(f"Loading IO config from: {config_file_path}")
-            print(f"{'='*60}")
-            
-            # Check file exists
-            if not config_file_path.exists():
-                print(f"❌ File does not exist!")
-                return 0
-            
-            # Load JSON
-            with open(config_file_path, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
-            
-            print(f"✓ JSON loaded successfully")
-            
-            # Check signals key
-            if 'signals' not in config_data:
-                print("❌ No 'signals' key found!")
-                return 0
-            
-            signals = config_data['signals']
-            print(f"✓ Found {len(signals)} signals in file")
-            print(f"✓ Mapping has {len(self.io_signal_mapping)} entries\n")
-            
-            loaded_count = 0
-            
-            for signal in signals:
-                try:
-                    signal_name = signal.get('name', '')
-                    address = signal.get('address', '')
-                    
-                    # Skip if not in mapping
-                    if signal_name not in self.io_signal_mapping:
-                        print(f"  ⊘ {signal_name:20s} - not in mapping (skipped)")
-                        continue
-                    
-                    attr_name = self.io_signal_mapping[signal_name]
-                    
-                    # Parse digital (I0.0, Q0.1)
-                    if '.' in address:
-                        parts = address.split('.')
-                        byte_str = parts[0][1:]  # Remove I/Q/V
-                        bit_str = parts[1]
-                        
-                        byte_val = int(byte_str)
-                        bit_val = int(bit_str)
-                        
-                        setattr(self, attr_name, {"byte": byte_val, "bit": bit_val})
-                        print(f"  ✓ {signal_name:20s} → {attr_name:25s} @ {address}")
-                        loaded_count += 1
-                    
-                    # Parse analog (IW2, QW4)
-                    elif 'W' in address:
-                        byte_str = address.split('W')[1]
-                        byte_val = int(byte_str)
-                        
-                        setattr(self, attr_name, {"byte": byte_val})
-                        print(f"  ✓ {signal_name:20s} → {attr_name:25s} @ {address}")
-                        loaded_count += 1
-                    
-                    else:
-                        print(f"  ⚠ {signal_name:20s} - unknown address format: {address}")
-                
-                except Exception as e:
-                    print(f"  ❌ Error processing {signal.get('name', 'unknown')}: {e}")
-                    continue
-            
-            # Update byte range
-            self.update_io_range()
-            
-            # Summary
-            print(f"\n{'='*60}")
-            print(f"✅ Loaded {loaded_count}/{len(signals)} signals")
-            print(f"   Byte range: {self.lowestByte} - {self.highestByte}")
-            print(f"{'='*60}\n")
-            
-            return loaded_count
-        
-        except Exception as e:
-            print(f"\n❌ FATAL ERROR in load_io_config_from_file:")
-            print(f"   {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
-            return 0
-        
     def load_io_configuration(self):
-        """Load IO configuration from file dialog"""
+        """Load IO configuration"""
         try:
             file_path, _ = QFileDialog.getOpenFileName(
                 self, "Load IO Configuration", "",
                 "JSON Files (*.json);;All Files (*)")
             
             if not file_path:
-                print("No file selected")
                 return
-            
-            print(f"\n{'='*60}")
-            print(f"Loading IO configuration from: {file_path}")
-            print(f"{'='*60}")
             
             with open(file_path, 'r', encoding='utf-8') as f:
                 config_data = json.load(f)
             
             if 'signals' not in config_data:
-                QMessageBox.warning(self, "Invalid File", "No signals found in configuration")
+                QMessageBox.warning(self, "Invalid File", "Invalid configuration")
                 return
             
             reply = QMessageBox.question(
@@ -1324,7 +1237,6 @@ class IOConfigMixin:
             for row in range(table.rowCount()):
                 table._clear_row_data(row)
             
-            # Load offsets if present
             if 'offsets' in config_data:
                 self.io_screen.byte_offsets = config_data['offsets'].copy()
                 self.QLineEdit_BoolInput.setText(str(config_data['offsets'].get('BoolInput', 0)))
@@ -1332,8 +1244,6 @@ class IOConfigMixin:
                 self.QLineEdit_DWORDInput.setText(str(config_data['offsets'].get('DWORDInput', 2)))
                 self.QLineEdit_DWORDOutput.setText(str(config_data['offsets'].get('DWORDOutput', 2)))
             
-            # Load signals into table
-            loaded_count = 0
             for idx, signal in enumerate(config_data['signals']):
                 if idx >= table.rowCount():
                     break
@@ -1347,29 +1257,19 @@ class IOConfigMixin:
                 table.setItem(idx, 6, ReadOnlyTableWidgetItem(signal.get('description', '')))
                 table.setItem(idx, 7, ReadOnlyTableWidgetItem(signal.get('range', '')))
                 table._save_row_data(idx)
-                loaded_count += 1
             
             table.blockSignals(False)
-            
-            print(f"Loaded {loaded_count} signals into table")
-            QMessageBox.information(self, "Success", f"Loaded {loaded_count} signals from configuration")
-            
-            # Also update the tanksim_config if it exists
-            if hasattr(self, 'tanksim_config') and self.tanksim_config:
-                from pathlib import Path
-                self.tanksim_config.load_io_config_from_file(Path(file_path))
-            
+            QMessageBox.information(self, "Success", "Configuration loaded")
             self.io_screen.save_configuration()
+            # Loading does not activate; mark dirty
+            try:
+                self._mark_io_dirty()
+            except Exception:
+                pass
             
-        except FileNotFoundError:
-            QMessageBox.critical(self, "Error", "File not found")
-        except json.JSONDecodeError:
-            QMessageBox.critical(self, "Error", "Invalid JSON file")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load: {str(e)}")
-            import traceback
-            traceback.print_exc()   
-        
+
     def reload_io_config(self):
         """Reload IO configuration"""
         try:
@@ -1397,8 +1297,7 @@ class IOConfigMixin:
                 if hasattr(self, 'plc') and self.plc:
                     try:
                         self.plc.disconnect()
-                    except:
-                        pass
+                    except Exception:                        pass
                 
                 self.validPlcConnection = False
                 self.plc = None
@@ -1408,8 +1307,7 @@ class IOConfigMixin:
                     self.pushButton_connect.blockSignals(True)
                     self.pushButton_connect.setChecked(False)
                     self.pushButton_connect.blockSignals(False)
-                except:
-                    pass
+                except Exception:                    pass
             
             # Load config from file into main object
             self.tanksim_config.load_io_config_from_file(io_config_path)
@@ -1431,34 +1329,15 @@ class IOConfigMixin:
             self._update_table_from_config()
             
             QMessageBox.information(self, "Success", "Configuration reloaded")
+            # Reload activates config; clear dirty state
+            try:
+                self._io_config_dirty = False
+            except Exception:
+                pass
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to reload: {str(e)}")
-
-    def check_io_config_loaded(self):
-        """Check if IO configuration is loaded and warn if not"""
-        try:
-            table = self.tableWidget_IO
-            
-            # Check if any signals are loaded
-            has_signals = False
-            for row in range(table.rowCount()):
-                name_item = table.item(row, 0)
-                if name_item and name_item.text():
-                    has_signals = True
-                    break
-            
-            if not has_signals:
-                QMessageBox.warning(
-                    self, 
-                    "No IO Configuration", 
-                    "No I/O configuration is loaded!\n\n"
-                    "Please load a configuration using the 'Load IO' or 'Reload Config' button "
-                    "to use the configured I/O signals."
-                )
-        except Exception as e:
-            pass
-            
+        
     def _update_table_from_config(self):
         """Update the GUI table with addresses from the config"""
         try:
@@ -1466,6 +1345,11 @@ class IOConfigMixin:
             config = self.tanksim_config
             
             table.blockSignals(True)
+            
+            # Determine correct address prefix based on controller type
+            is_logo = False
+            if hasattr(self, 'mainConfig') and self.mainConfig:
+                is_logo = (self.mainConfig.plcProtocol == "logo!")
             
             for row in range(table.rowCount()):
                 name_item = table.item(row, 0)
@@ -1487,8 +1371,12 @@ class IOConfigMixin:
                     byte_num = attr_value["byte"]
                     bit_num = attr_value["bit"]
                     
-                    io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
-                    address = f"{io_prefix}{byte_num}.{bit_num}"
+                    # Use V for LOGO!, I/Q for other controllers
+                    if is_logo:
+                        address = f"V{byte_num}.{bit_num}"
+                    else:
+                        io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
+                        address = f"{io_prefix}{byte_num}.{bit_num}"
                     
                     table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
                     table.setItem(row, 3, EditableTableWidgetItem(str(bit_num)))
@@ -1496,8 +1384,13 @@ class IOConfigMixin:
                     
                 else:
                     byte_num = attr_value["byte"]
-                    io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
-                    address = f"{io_prefix}W{byte_num}"
+                    
+                    # Use VW for LOGO!, IW/QW for other controllers
+                    if is_logo:
+                        address = f"VW{byte_num}"
+                    else:
+                        io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
+                        address = f"{io_prefix}W{byte_num}"
                     
                     table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
                     table.setItem(row, 3, EditableTableWidgetItem(""))
@@ -1617,6 +1510,19 @@ class IOConfigMixin:
                         value = (status.heaterPowerFraction > 0)
                     elif attr_name == "AQHeaterFraction":
                         value = int(status.heaterPowerFraction * plc_analog_max)
+                    # General Controls - PLC Inputs fallback (Start/Stop/Reset, Control1-3)
+                    elif attr_name == "DIStart":
+                        value = bool(getattr(status, 'generalStartCmd', False))
+                    elif attr_name == "DIStop":
+                        value = bool(getattr(status, 'generalStopCmd', False))
+                    elif attr_name == "DIReset":
+                        value = bool(getattr(status, 'generalResetCmd', False))
+                    elif attr_name == "AIControl1":
+                        value = int(getattr(status, 'generalControl1Value', 0))
+                    elif attr_name == "AIControl2":
+                        value = int(getattr(status, 'generalControl2Value', 0))
+                    elif attr_name == "AIControl3":
+                        value = int(getattr(status, 'generalControl3Value', 0))
                     elif attr_name == "DILevelSensorHigh":
                         value = status.digitalLevelSensorHighTriggered
                     elif attr_name == "DILevelSensorLow":
@@ -1625,6 +1531,21 @@ class IOConfigMixin:
                         value = int((status.liquidVolume / config.tankVolume) * plc_analog_max)
                     elif attr_name == "AITemperatureSensor":
                         value = int(((status.liquidTemperature + 50) / 300) * plc_analog_max)
+                    # General Controls - PLC Outputs fallback (Indicators, Analog1-3)
+                    elif attr_name == "DQIndicator1":
+                        value = bool(getattr(status, 'indicator1', False))
+                    elif attr_name == "DQIndicator2":
+                        value = bool(getattr(status, 'indicator2', False))
+                    elif attr_name == "DQIndicator3":
+                        value = bool(getattr(status, 'indicator3', False))
+                    elif attr_name == "DQIndicator4":
+                        value = bool(getattr(status, 'indicator4', False))
+                    elif attr_name == "AQAnalog1":
+                        value = int(getattr(status, 'analog1', 0))
+                    elif attr_name == "AQAnalog2":
+                        value = int(getattr(status, 'analog2', 0))
+                    elif attr_name == "AQAnalog3":
+                        value = int(getattr(status, 'analog3', 0))
                     else:
                         continue
                 
@@ -1673,3 +1594,12 @@ class IOConfigMixin:
                 forced_values[attr_name] = int(forced_value)
         
         return forced_values
+
+    # ----- Dirty-state helper -----
+    def _mark_io_dirty(self):
+        """Mark IO configuration as dirty to trigger leave-page confirmation."""
+        try:
+            self._io_config_dirty = True
+            # One-time heads-up could be shown here if desired; keeping UX minimal.
+        except Exception:
+            pass

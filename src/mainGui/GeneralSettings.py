@@ -128,11 +128,6 @@ class ProcessSettingsMixin:
 
         if hasattr(self, 'mainConfig') and self.mainConfig:
             old_protocol = self.mainConfig.plcProtocol
-            
-            # Stop NetToPLCSim when changing protocol
-            if old_protocol != new_controller:
-                self._stop_nettoplcsim_server()  #
-    
             self.mainConfig.plcProtocol = new_controller
 
             if new_controller == "GUI":
@@ -174,21 +169,6 @@ class ProcessSettingsMixin:
         if hasattr(self, 'vat_widget'):
             self.vat_widget.controler = new_controller
             self.vat_widget.rebuild()
-
-    def _stop_nettoplcsim_server(self):
-        """Stop any running NetToPLCSim server process"""
-        try:
-            import subprocess
-            # Kill all NetToPLCSim.exe processes
-            subprocess.run(
-                ['taskkill', '/F', '/IM', 'NetToPLCSim.exe'], 
-                stdout=subprocess.DEVNULL, 
-                stderr=subprocess.DEVNULL,
-                timeout=2
-            )
-        except Exception as e:
-            pass
-
 
     def _update_addresses_for_controller_change(self, old_protocol, new_protocol):
         """Update all addresses when switching to/from LOGO!"""

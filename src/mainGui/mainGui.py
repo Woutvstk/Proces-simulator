@@ -6,8 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget
+from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
 from PyQt5 import uic
 
 # ============================================================================
@@ -76,10 +76,48 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         super(MainWindow, self).__init__()
         self.setupUi(self)
 
-        # Start with collapsed menu
-        self.fullMenuWidget.setVisible(False)
-        self.iconOnlyWidget.setVisible(True)
-        self.pushButton_menu.setChecked(False)
+        # Sidebar: start collapsed (animate width), keep both widgets available
+        try:
+            self.fullMenuWidget.setVisible(True)
+            self.fullMenuWidget.setMaximumWidth(0)
+            self.iconOnlyWidget.setVisible(True)
+            self.pushButton_menu.setChecked(False)
+            self.pushButton_menu.toggled.connect(self.toggle_menu)
+        except Exception:
+            pass
+
+        # Ensure General Controls dock is not visible at startup and will float when shown
+        try:
+            if hasattr(self, 'dockWidget_GeneralControls') and self.dockWidget_GeneralControls:
+                # Hide at startup and set to floating mode so it won't dock at bottom when shown
+                self.dockWidget_GeneralControls.hide()
+                try:
+                    # Disallow docking anywhere; keep float-only + closable
+                    self.dockWidget_GeneralControls.setAllowedAreas(Qt.NoDockWidgetArea)
+                    self.dockWidget_GeneralControls.setFeatures(
+                        QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetClosable
+                    )
+                    self.dockWidget_GeneralControls.setFloating(True)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Ensure GENERAL CONTROLS sidebar buttons are unchecked initially
+        try:
+            if hasattr(self, 'pushButton_generalControls') and self.pushButton_generalControls:
+                self.pushButton_generalControls.blockSignals(True)
+                self.pushButton_generalControls.setChecked(False)
+                self.pushButton_generalControls.blockSignals(False)
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'pushButton_generalControls2') and self.pushButton_generalControls2:
+                self.pushButton_generalControls2.blockSignals(True)
+                self.pushButton_generalControls2.setChecked(False)
+                self.pushButton_generalControls2.blockSignals(False)
+        except Exception:
+            pass
 
         # Connect exit buttons
         self.pushButton_Exit.clicked.connect(self.close)
@@ -104,17 +142,10 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.ip_change_timer.timeout.connect(self._apply_ip_change)
         self.pending_ip = None
 
-        # Main update timer
+        # Main update timer (start after pages init)
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_all_values)
-        self.timer.start()
-
-        # Setup connection status icon
-        try:
-            self.update_connection_status_icon()
-        except AttributeError:
-            pass
 
         # Connect button
         try:
@@ -140,6 +171,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         # Initialize network port combobox
         self._init_network_port_combobox()
 
+        # Initialize General Controls sliders (range + labels)
+        self._init_general_controls_sliders()
+
         # Connect navigation buttons
         self.connect_navigation_buttons()
 
@@ -148,6 +182,91 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
         # Initialize GUI mode
         QTimer.singleShot(100, self._initialize_gui_mode)
+
+        # Kick off updates and connection icon after init
+        try:
+            self.update_connection_status_icon()
+        except Exception:
+            pass
+        self.timer.start()
+    def _init_general_controls_sliders(self):
+        """Set slider ranges to 0..32747 and bind labels to show live value."""
+        try:
+            slider_label_pairs = [
+                (getattr(self, 'slider_control1', None), getattr(self, 'label_sliderValue1', None)),
+                (getattr(self, 'slider_control2', None), getattr(self, 'label_sliderValue2', None)),
+                (getattr(self, 'slider_control3', None), getattr(self, 'label_sliderValue3', None)),
+            ]
+            for slider, label in slider_label_pairs:
+                if slider:
+                    slider.setMinimum(0)
+                    slider.setMaximum(32747)
+                    if label:
+                        # Initialize label text
+                        try:
+                            label.setText(str(int(slider.value())))
+                        except Exception:
+                            label.setText("0")
+                        # Connect updates
+                        slider.valueChanged.connect(lambda v, lbl=label: lbl.setText(str(int(v))))
+        except Exception:
+            pass
+        
+        # Initialize and connect Start/Stop/Reset buttons
+        self._init_general_controls_buttons()
+
+    def _init_general_controls_buttons(self):
+        """Initialize Start/Stop/Reset button event handlers."""
+        try:
+            # Get button references
+            btn_start = getattr(self, 'pushButton_control1', None)
+            btn_stop = getattr(self, 'pushButton_control2', None)
+            btn_reset = getattr(self, 'pushButton_control3', None)
+            
+            if btn_start:
+                btn_start.pressed.connect(lambda: self._on_start_pressed())
+                btn_start.released.connect(lambda: self._on_start_released())
+            
+            if btn_stop:
+                btn_stop.pressed.connect(lambda: self._on_stop_pressed())
+                btn_stop.released.connect(lambda: self._on_stop_released())
+            
+            if btn_reset:
+                btn_reset.pressed.connect(lambda: self._on_reset_pressed())
+                btn_reset.released.connect(lambda: self._on_reset_released())
+        except Exception:
+            pass
+
+    def _on_start_pressed(self):
+        """Handle START button pressed."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalStartCmd = True
+
+    def _on_start_released(self):
+        """Handle START button released."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalStartCmd = False
+
+    def _on_stop_pressed(self):
+        """Handle STOP button pressed."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalStopCmd = True
+
+    def _on_stop_released(self):
+        """Handle STOP button released."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalStopCmd = False
+
+    def _on_reset_pressed(self):
+        """Handle RESET button pressed."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalResetCmd = True
+
+    def _on_reset_released(self):
+        """Handle RESET button released."""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.generalResetCmd = False
+
 
     def _initialize_gui_mode(self):
         """Initialize GUI mode after mainConfig is available"""
@@ -159,15 +278,15 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
     def connect_navigation_buttons(self):
         """Connect all navigation buttons"""
-        self.pushButton_settingsPage.toggled.connect(self.go_to_settings)
-        self.pushButton_settingsPage2.toggled.connect(self.go_to_settings)
+        self.pushButton_settingsPage.toggled.connect(lambda checked: self._nav_settings(checked, "settings"))
+        self.pushButton_settingsPage2.toggled.connect(lambda checked: self._nav_settings(checked, "settings2"))
 
-        self.pushButton_IOPage.toggled.connect(self.go_to_io)
-        self.pushButton_IOPage2.toggled.connect(self.go_to_io)
+        self.pushButton_IOPage.toggled.connect(lambda checked: self._nav_io(checked, "io"))
+        self.pushButton_IOPage2.toggled.connect(lambda checked: self._nav_io(checked, "io2"))
 
         # SIMULATION page navigation
-        self.pushButton_simPage.toggled.connect(self.go_to_sim_or_selection)
-        self.pushButton_simPage2.toggled.connect(self.go_to_sim_or_selection)
+        self.pushButton_simPage.toggled.connect(lambda checked: self._nav_sim(checked, "sim"))
+        self.pushButton_simPage2.toggled.connect(lambda checked: self._nav_sim(checked, "sim2"))
 
         # Simulation settings page navigation
         try:
@@ -176,44 +295,60 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         except AttributeError:
             pass
 
+        # General Controls page navigation
+        try:
+            self.pushButton_generalControls.toggled.connect(self.go_to_general_controls)
+            self.pushButton_generalControls2.toggled.connect(self.go_to_general_controls)
+        except AttributeError:
+            pass
+
     def connect_simulation_buttons(self):
         """Connect all simulation related buttons"""
-        # START SIMULATION BUTTONS
+        # START SIMULATION BUTTONS - Connect ALL instances (sidebar and ActiveSimulation page)
         try:
-            self.pushButton_1Vat.setCheckable(True)
-            self.pushButton_1Vat.clicked.connect(lambda: self.start_simulation(0))
+            # Find all buttons with name pushButton_1Vat (in sidebar and ActiveSimulation page)
+            buttons_1vat = self.findChildren(QPushButton, "pushButton_1Vat")
+            for btn in buttons_1vat:
+                btn.setCheckable(True)
+                btn.clicked.connect(lambda checked, b=btn: self.start_simulation(0))
         except AttributeError:
             pass
 
         try:
-            self.pushButton_2Vatten.setCheckable(True)
-            self.pushButton_2Vatten.clicked.connect(lambda: self.start_simulation(1))
+            # Find all buttons with name pushButton_2Vatten
+            buttons_2vatten = self.findChildren(QPushButton, "pushButton_2Vatten")
+            for btn in buttons_2vatten:
+                btn.setCheckable(True)
+                btn.clicked.connect(lambda checked, b=btn: self.start_simulation(1))
         except AttributeError:
             pass
 
         try:
-            self.pushButton_transportband.setCheckable(True)
-            self.pushButton_transportband.clicked.connect(lambda: self.start_simulation(2))
+            # Find all buttons with name pushButton_transportband
+            buttons_transportband = self.findChildren(QPushButton, "pushButton_transportband")
+            for btn in buttons_transportband:
+                btn.setCheckable(True)
+                btn.clicked.connect(lambda checked, b=btn: self.start_simulation(2))
         except AttributeError:
             pass
 
         # CLOSE SIMULATION BUTTONS
         try:
-            close_btn = self.vat1Page.findChild(QPushButton, "pushButton_closePIDValves")
+            close_btn = self.findChild(QPushButton, "pushButton_closePIDValves")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
             pass
 
         try:
-            close_btn = self.vatten2Page.findChild(QPushButton, "pushButton_ClosePIDMotor")
+            close_btn = self.findChild(QPushButton, "pushButton_PIDWithMotor")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
             pass
 
         try:
-            close_btn = self.transportbandPage.findChild(QPushButton, "pushButton_CloseConveyor")
+            close_btn = self.findChild(QPushButton, "pushButton_closeConvSim")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
@@ -241,53 +376,37 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         except AttributeError:
             pass
 
-    def start_simulation(self, sim_index):
-        """Start a specific simulation"""
-        self.current_sim_page = sim_index
-        self.MainScreen.setCurrentIndex(sim_index)
-        
-        # NIEUW: Update stacked widget in simulation settings page
-        try:
-            if sim_index == 0:  # Tank with valves
-                # Show tank settings
-                self.stackedWidget_SimSettings.setCurrentIndex(0)
-            elif sim_index == 1:  # Tank with motor  
-                # Show tank settings (same as index 0 for now)
-                self.stackedWidget_SimSettings.setCurrentIndex(0)
-            elif sim_index == 2:  # Conveyor
-                # Show conveyor settings (placeholder for now)
-                self.stackedWidget_SimSettings.setCurrentIndex(1)
-        except AttributeError:
-            pass
-        
-        print(f"Started simulation {sim_index}")
-
-    def go_to_sim_settings(self, checked):
-        """Navigate to simulation settings page"""
-        if checked:
-            self.MainScreen.setCurrentIndex(6)
-            
-            # Update stacked widget based on current active sim
-            try:
-                if self.current_sim_page is not None:
-                    if self.current_sim_page in [0, 1]:  # Tank simulations
-                        self.stackedWidget_SimSettings.setCurrentIndex(0)
-                    elif self.current_sim_page == 1:  # Conveyor
-                        self.stackedWidget_SimSettings.setCurrentIndex(1)
-                else:
-                    # No active sim - show tank settings by default
-                    self.stackedWidget_SimSettings.setCurrentIndex(0)
-            except AttributeError:
-                pass
-
-
     def go_to_settings(self, checked):
         """Navigate to general settings page"""
         if checked:
-            # Check IO config when leaving IO page
-            if self.MainScreen.currentIndex() == 4:  # Coming from IO page
-                self.check_io_config_loaded()
+            # Confirm leaving IO page if there are pending changes
+            if not self._maybe_confirm_leave_io():
+                try:
+                    self.pushButton_settingsPage.blockSignals(True)
+                    self.pushButton_settingsPage.setChecked(False)
+                    self.pushButton_settingsPage.blockSignals(False)
+                    self.pushButton_settingsPage2.blockSignals(True)
+                    self.pushButton_settingsPage2.setChecked(False)
+                    self.pushButton_settingsPage2.blockSignals(False)
+                except Exception:
+                    pass
+                return
             self.MainScreen.setCurrentIndex(3)
+
+    def _nav_settings(self, checked, source):
+        """Navigate wrapper for Settings to avoid double-firing"""
+        if checked:
+            self.go_to_settings(True)
+    
+    def _nav_io(self, checked, source):
+        """Navigate wrapper for IO to avoid double-firing"""
+        if checked:
+            self.go_to_io(True)
+    
+    def _nav_sim(self, checked, source):
+        """Navigate wrapper for Sim to avoid double-firing"""
+        if checked:
+            self.go_to_sim_or_selection(True)
 
     def go_to_io(self, checked):
         """Navigate to I/O page"""
@@ -297,43 +416,224 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def go_to_sim_or_selection(self, checked):
         """Navigate to active sim or selection page"""
         if checked:
-            # Check IO config when leaving IO page
-            if self.MainScreen.currentIndex() == 4:  # Coming from IO page
-                self.check_io_config_loaded()
-            
+            # Confirm leaving IO page if there are pending changes
+            if not self._maybe_confirm_leave_io():
+                try:
+                    self.pushButton_simPage.blockSignals(True)
+                    self.pushButton_simPage.setChecked(False)
+                    self.pushButton_simPage.blockSignals(False)
+                    self.pushButton_simPage2.blockSignals(True)
+                    self.pushButton_simPage2.setChecked(False)
+                    self.pushButton_simPage2.blockSignals(False)
+                except Exception:
+                    pass
+                return
             if self.current_sim_page is not None:
+                # Active simulation - go there
                 self.MainScreen.setCurrentIndex(self.current_sim_page)
             else:
+                # No active simulation - go to selection page (ActiveSimulation page)
                 self.MainScreen.setCurrentIndex(5)
             
-            if not self.fullMenuWidget.isVisible():
-                self.pushButton_menu.setChecked(True)
+            # Ensure menu is open
+            try:
+                if self.fullMenuWidget.maximumWidth() == 0:
+                    self.pushButton_menu.setChecked(True)
+            except Exception:
+                pass
 
     def go_to_sim_settings(self, checked):
-        """Navigate to simulation settings page"""
+        """Navigate to simulation settings page (ActiveSimSettings page)"""
         if checked:
+            # Confirm leaving IO page if there are pending changes
+            if not self._maybe_confirm_leave_io():
+                try:
+                    self.pushButton_simSettings.blockSignals(True)
+                    self.pushButton_simSettings.setChecked(False)
+                    self.pushButton_simSettings.blockSignals(False)
+                    self.pushButton_simSettings2.blockSignals(True)
+                    self.pushButton_simSettings2.setChecked(False)
+                    self.pushButton_simSettings2.blockSignals(False)
+                except Exception:
+                    pass
+                return
+            # Page 6 is ActiveSimSettings
             self.MainScreen.setCurrentIndex(6)
+            
+            # Update the settings page based on active simulation
+            if hasattr(self, 'stackedWidget_SimSettings'):
+                if self.current_sim_page == 0 or self.current_sim_page == 1:
+                    # Tank simulations
+                    self.stackedWidget_SimSettings.setCurrentIndex(1)
+                elif self.current_sim_page == 2:
+                    # Conveyor simulation
+                    self.stackedWidget_SimSettings.setCurrentIndex(2)
+                else:
+                    # No active simulation
+                    self.stackedWidget_SimSettings.setCurrentIndex(0)
+
+    def go_to_general_controls(self, checked):
+        """Navigate to General Controls page and toggle dock visibility"""
+        try:
+            # Confirm leaving IO page if there are pending changes
+            if checked and not self._maybe_confirm_leave_io():
+                try:
+                    self.pushButton_generalControls.blockSignals(True)
+                    self.pushButton_generalControls.setChecked(False)
+                    self.pushButton_generalControls.blockSignals(False)
+                    self.pushButton_generalControls2.blockSignals(True)
+                    self.pushButton_generalControls2.setChecked(False)
+                    self.pushButton_generalControls2.blockSignals(False)
+                except Exception:
+                    pass
+                return
+            page = self.findChild(QWidget, "page_generalControls")
+            if checked and page is not None:
+                idx = self.MainScreen.indexOf(page)
+                if idx != -1:
+                    # Prefer setCurrentWidget to avoid hard-coded indices
+                    self.MainScreen.setCurrentWidget(page)
+                else:
+                    # Fallback: silently ignore if page is not part of the stack to avoid warnings
+                    pass
+            # Show/hide dock accordingly if present; ensure it floats immediately
+            if hasattr(self, 'dockWidget_GeneralControls') and self.dockWidget_GeneralControls:
+                if checked:
+                    try:
+                        self.dockWidget_GeneralControls.setFloating(True)
+                    except Exception:
+                        pass
+                    self.dockWidget_GeneralControls.show()
+                    try:
+                        self.dockWidget_GeneralControls.raise_()
+                    except Exception:
+                        pass
+                else:
+                    self.dockWidget_GeneralControls.hide()
+        except Exception:
+            pass
+
+    def _maybe_confirm_leave_io(self) -> bool:
+        """Return True to allow leaving IO page; False if user cancels.
+        Triggers when IO config is dirty and current page is IO.
+        """
+        try:
+            # Detect IO page by widget rather than hard-coded index
+            io_page = self.findChild(QWidget, "IOPage")
+            is_on_io_page = (self.MainScreen.currentWidget() == io_page)
+            io_dirty = getattr(self, "_io_config_dirty", False)
+            if is_on_io_page and io_dirty:
+                from PyQt5.QtWidgets import QMessageBox
+                reply = QMessageBox.question(
+                    self,
+                    "IO configuration not activated",
+                    "You have IO configuration changes that are not activated. Continue without reloading?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No,
+                )
+                return reply == QMessageBox.Yes
+            return True
+        except Exception:
+            return True
+
+    # Sidebar animation helpers
+    def _setup_menu_animation(self):
+        try:
+            self._menu_anim = QPropertyAnimation(self.fullMenuWidget, b"maximumWidth", self)
+            self._menu_anim.setDuration(600)
+            self._menu_anim.setEasingCurve(QEasingCurve.OutQuart)
+            self._menu_anim.finished.connect(self._on_menu_anim_finished)
+        except Exception:
+            self._menu_anim = None
+
+    def toggle_menu(self, checked):
+        try:
+            if not hasattr(self, "_menu_anim") or self._menu_anim is None:
+                self._setup_menu_animation()
+            target_width = 240 if checked else 0
+            # Ensure full menu is visible during animation
+            self.fullMenuWidget.setVisible(True)
+            # Hide icon-only immediately when opening; show only after close completes
+            if checked:
+                self.iconOnlyWidget.setVisible(False)
+            if hasattr(self, "_menu_anim") and self._menu_anim:
+                self._menu_anim.stop()
+                self._menu_anim.setStartValue(self.fullMenuWidget.maximumWidth())
+                self._menu_anim.setEndValue(target_width)
+                self._menu_anim.start()
+        except Exception:
+            pass
+
+    def _on_menu_anim_finished(self):
+        try:
+            expanded = self.fullMenuWidget.maximumWidth() > 0
+            # Toggle icon-only vs full menu visibility
+            self.iconOnlyWidget.setVisible(not expanded)
+            self.fullMenuWidget.setVisible(True)
+        except Exception:
+            pass
 
     def start_simulation(self, sim_index):
         """Start a specific simulation"""
         self.current_sim_page = sim_index
+        
+        # Navigate to the specific simulation page
         self.MainScreen.setCurrentIndex(sim_index)
-        print(f"Started simulation {sim_index}")
+        
+        # Update button states - ALL instances (sidebar and ActiveSimulation page)
+        try:
+            # Update all pushButton_1Vat buttons
+            for btn in self.findChildren(QPushButton, "pushButton_1Vat"):
+                btn.blockSignals(True)
+                btn.setChecked(sim_index == 0)
+                btn.blockSignals(False)
+            
+            # Update all pushButton_2Vatten buttons
+            for btn in self.findChildren(QPushButton, "pushButton_2Vatten"):
+                btn.blockSignals(True)
+                btn.setChecked(sim_index == 1)
+                btn.blockSignals(False)
+            
+            # Update all pushButton_transportband buttons
+            for btn in self.findChildren(QPushButton, "pushButton_transportband"):
+                btn.blockSignals(True)
+                btn.setChecked(sim_index == 2)
+                btn.blockSignals(False)
+        except Exception:
+            pass
 
     def close_simulation(self):
         """Close current simulation and return to selection page"""
-        print(f"Closing simulation {self.current_sim_page}")
         
+        # Clear current simulation
         self.current_sim_page = None
+        
+        # Navigate back to ActiveSimulation selection page (page 5)
         self.MainScreen.setCurrentIndex(5)
         
-        # Uncheck all start buttons
+        # Uncheck ALL start button instances (sidebar and ActiveSimulation page)
         try:
-            self.pushButton_1Vat.setChecked(False)
-            self.pushButton_2Vatten.setChecked(False)
-            self.pushButton_transportband.setChecked(False)
-        except:
-            pass
+            for btn in self.findChildren(QPushButton, "pushButton_1Vat"):
+                btn.blockSignals(True)
+                btn.setChecked(False)
+                btn.blockSignals(False)
+            
+            for btn in self.findChildren(QPushButton, "pushButton_2Vatten"):
+                btn.blockSignals(True)
+                btn.setChecked(False)
+                btn.blockSignals(False)
+            
+            for btn in self.findChildren(QPushButton, "pushButton_transportband"):
+                btn.blockSignals(True)
+                btn.setChecked(False)
+                btn.blockSignals(False)
+        except Exception:            pass
+        
+        # Keep simulation page button checked so we stay on selection
+        try:
+            if not self.pushButton_simPage.isChecked():
+                self.pushButton_simPage.setChecked(True)
+        except Exception:            pass
 
     def toggle_float(self, sim_index):
         """Float or dock the simulation window"""
@@ -379,8 +679,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             
             if float_btn:
                 float_btn.setText("⧈ DOCK")
-        except:
-            pass
+        except Exception:            pass
         
         self.floated_window.show()
         self.floated_window.finished.connect(self.dock_simulation)
@@ -414,8 +713,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 
                 if float_btn:
                     float_btn.setText("⧉ FLOAT")
-            except:
-                pass
+            except Exception:                pass
         
         if self.floated_window:
             self.floated_window.close()
@@ -426,7 +724,112 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         """Main update loop"""
         self.update_tanksim_display()  
         self.write_gui_values_to_status() 
+        self._write_general_controls_to_status()
         self.update_io_status_display()
+        # Sync General Controls dock UI from status/PLC
+        self._update_general_controls_ui()
+        # Update connection status icon (handles timeout detection)
+        self.update_connection_status_icon()
+
+    def _update_general_controls_ui(self):
+        """Update General Controls dock widgets from status/PLC values."""
+        try:
+            status = getattr(self, 'tanksim_status', None)
+            if status is None:
+                return
+
+            # Update indicator frames colors based on status.indicatorX
+            frame_map = [
+                getattr(self, 'frame_indicator1', None),
+                getattr(self, 'frame_indicator2', None),
+                getattr(self, 'frame_indicator3', None),
+                getattr(self, 'frame_indicator4', None),
+            ]
+            indicators = [
+                bool(getattr(status, 'indicator1', False)),
+                bool(getattr(status, 'indicator2', False)),
+                bool(getattr(status, 'indicator3', False)),
+                bool(getattr(status, 'indicator4', False)),
+            ]
+            for frame, is_on in zip(frame_map, indicators):
+                if not frame:
+                    continue
+                try:
+                    if is_on:
+                        frame.setStyleSheet('background-color: #10b981; border-radius: 10px; border: 1px solid #059669;')
+                    else:
+                        frame.setStyleSheet('background-color: #e5e7eb; border-radius: 10px; border: 1px solid #cbd5e0;')
+                except Exception:
+                    pass
+
+            # Update analog LCDs
+            lcds = [
+                getattr(self, 'lcdNumber_value1', None),
+                getattr(self, 'lcdNumber_value2', None),
+                getattr(self, 'lcdNumber_value3', None),
+            ]
+            analogs = [
+                int(getattr(status, 'analog1', 0)),
+                int(getattr(status, 'analog2', 0)),
+                int(getattr(status, 'analog3', 0)),
+            ]
+            for lcd, val in zip(lcds, analogs):
+                if lcd:
+                    try:
+                        lcd.display(int(val))
+                    except Exception:
+                        pass
+
+            # In PLC mode, reflect Control1-3 values onto sliders
+            try:
+                plc_mode = (self.mainConfig.plcGuiControl == 'plc') if hasattr(self, 'mainConfig') and self.mainConfig else False
+            except Exception:
+                plc_mode = False
+            if plc_mode:
+                slider_pairs = [
+                    (getattr(self, 'slider_control1', None), int(getattr(status, 'generalControl1Value', 0))),
+                    (getattr(self, 'slider_control2', None), int(getattr(status, 'generalControl2Value', 0))),
+                    (getattr(self, 'slider_control3', None), int(getattr(status, 'generalControl3Value', 0))),
+                ]
+                for slider, val in slider_pairs:
+                    if slider is None:
+                        continue
+                    try:
+                        slider.blockSignals(True)
+                        slider.setValue(int(val))
+                        slider.blockSignals(False)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    def _write_general_controls_to_status(self):
+        """Write General Controls GUI inputs (buttons + sliders) to status in GUI mode."""
+        try:
+            if not hasattr(self, 'tanksim_status') or self.tanksim_status is None:
+                return
+            gui_mode = (self.mainConfig.plcGuiControl == 'gui') if hasattr(self, 'mainConfig') and self.mainConfig else False
+            # Commands (Start/Stop/Reset) could be wired to buttons; keep simple: not auto-updated here.
+            # Sliders: always reflect GUI position into status; ioHandler will publish to PLC inputs in both modes.
+            slider_vals = [
+                getattr(self, 'slider_control1', None),
+                getattr(self, 'slider_control2', None),
+                getattr(self, 'slider_control3', None),
+            ]
+            values = []
+            for s in slider_vals:
+                try:
+                    values.append(int(s.value()) if s is not None else 0)
+                except Exception:
+                    values.append(0)
+            try:
+                self.tanksim_status.generalControl1Value = values[0]
+                self.tanksim_status.generalControl2Value = values[1]
+                self.tanksim_status.generalControl3Value = values[2]
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def update_connection_status_icon(self):
         """Update connection status icon"""
@@ -444,32 +847,29 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 pixmap = QPixmap(str(icon_path))
                 self.Label_connectStatus.setPixmap(
                     pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        except:
-            pass
+        except Exception:            pass
 
     def on_connect_toggled(self, checked):
         """Handle connect button"""
         if not self.mainConfig:
             return
-        
         if checked:
-            # User wants to connect
+            # Connect request
             self.mainConfig.tryConnect = True
         else:
-            # User wants to disconnect
+            # Disconnect request
             if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
                 try:
-                    print("Disconnecting from PLC...")
-                    self.plc.disconnect()
+                    if self.plc.isConnected():
+                        self.plc.disconnect()
+                        print("\nDisconnected from PLC")
                 except Exception as e:
-                    print(f"Error during disconnect: {e}")
+                    print(f"\nError disconnecting: {e}")
+                    pass
                 
                 self.validPlcConnection = False
                 self.plc = None
                 self.update_connection_status_icon()
-                
-                # Clear all forces when disconnecting
-                self.clear_all_forces()
 
     def on_ip_changed(self, text):
         """Update IP with throttling"""
@@ -489,8 +889,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             try:
                 if self.plc.isConnected():
                     self.plc.disconnect()
-            except:
-                pass
+            except Exception:                pass
 
             self.validPlcConnection = False
             self.plc = None
@@ -499,8 +898,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 self.pushButton_connect.blockSignals(True)
                 self.pushButton_connect.setChecked(False)
                 self.pushButton_connect.blockSignals(False)
-            except:
-                pass
+            except Exception:                pass
 
             self.update_connection_status_icon()
 
@@ -530,8 +928,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                             display_name = f"{adapter_name} ({ipv4_addr})"
                             self.comboBox_networkPort.addItem(display_name, adapter_name)
                             adapters_found = True
-            except:
-                pass
+            except Exception:                pass
 
             if not adapters_found:
                 try:
@@ -554,8 +951,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                             display_name = f"{interface_name} ({ipv4_addr})"
                             self.comboBox_networkPort.addItem(display_name, interface_name)
                             adapters_found = True
-                except:
-                    pass
+                except Exception:                    pass
 
             if not adapters_found:
                 try:
@@ -564,12 +960,10 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                     local_ip = s.getsockname()[0]
                     s.close()
                     self.comboBox_networkPort.addItem(f"Primary Adapter ({local_ip})", "primary")
-                except:
-                    pass
+                except Exception:                    pass
 
             self.comboBox_networkPort.currentIndexChanged.connect(self._on_network_port_changed)
-        except:
-            pass
+        except Exception:            pass
 
     def _on_network_port_changed(self, index):
         """Handle network port change"""
@@ -577,51 +971,13 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             selected_adapter = self.comboBox_networkPort.currentData()
             if hasattr(self, 'mainConfig') and self.mainConfig:
                 self.mainConfig.selectedNetworkAdapter = selected_adapter
-        except:
-            pass
+        except Exception:            pass
 
     def closeEvent(self, event):
-        """Handle window close event with cleanup"""
-        print("\n" + "="*60)
-        print("Shutting down...")
-        print("="*60)
-        
-        try:
-            # 1. Stop simulation
-            if hasattr(self, 'tanksim_status') and self.tanksim_status:
-                self.tanksim_status.simRunning = False
-            
-            # 2. Disconnect PLC
-            if hasattr(self, 'validPlcConnection') and self.validPlcConnection:
-                if hasattr(self, 'plc') and self.plc:
-                    try:
-                        print("Disconnecting PLC...")
-                        self.plc.disconnect()
-                    except Exception as e:
-                        print(f"Error during PLC disconnect: {e}")
-            
-            # 3. Stop NetToPLCSim.exe
-            try:
-                print("Stopping NetToPLCSim.exe...")
-                import subprocess
-                subprocess.run(
-                    ['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    timeout=2
-                )
-            except Exception as e:
-                print(f"Note: {e}")
-            
-            # 4. Signal main loop to exit
-            if hasattr(self, 'mainConfig') and self.mainConfig:
-                self.mainConfig.doExit = True
-            
-            print("Cleanup complete")
-            print("="*60 + "\n")
-            
-        except Exception as e:
-            print(f"Error during cleanup: {e}")
+        """Handle window close event"""
+        # Set exit flag so main loop will terminate
+        if hasattr(self, 'mainConfig') and self.mainConfig:
+            self.mainConfig.doExit = True
         
         # Accept the close event
         event.accept()
@@ -638,8 +994,7 @@ if __name__ == "__main__":
         try:
             with open(style_file, "r") as f:
                 app.setStyleSheet(f.read())
-        except:
-            pass
+        except Exception:            pass
 
     window = MainWindow()
     window.show()
