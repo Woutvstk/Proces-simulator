@@ -11,19 +11,17 @@ from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
 from PyQt5 import uic
 
 # ============================================================================
-# ABSOLUTE IMPORTS - Add gui and src directories to path
+# ABSOLUTE IMPORTS - Add src directory to path
 # ============================================================================
 current_dir = Path(__file__).parent
 src_dir = current_dir.parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-# Now import from same directory
-from GeneralSettings import ProcessSettingsMixin
-from ioConfigPage import IOConfigMixin
-from TankSimSettings import TankSimSettingsMixin  
+# Import from same directory using relative imports
+from .GeneralSettings import ProcessSettingsMixin
+from .ioConfigPage import IOConfigMixin
+from .TankSimSettings import TankSimSettingsMixin  
 
 # Import from new structure
 from simulations.PIDtankValve.SimGui import VatWidget
@@ -36,10 +34,10 @@ from core.configuration import configuration
 # =============================================================================
 gui_media_dir = current_dir / "media"
 
-qrc_file = gui_media_dir / "Resource.qrc" if (gui_media_dir / "Resource.qrc").exists() else None
+qrc_file = gui_media_dir / "Resource.qrc"
 rc_py_file = gui_media_dir / "Resource_rc.py"
 
-if qrc_file and qrc_file.exists():
+if qrc_file.exists():
     try:
         subprocess.run(
             ["pyrcc5", str(qrc_file), "-o", str(rc_py_file)],
@@ -58,6 +56,10 @@ if qrc_file and qrc_file.exists():
         pass
     except Exception as e:
         pass
+
+# Ensure gui_media_dir is in path so Resource_rc can be found
+if str(gui_media_dir) not in sys.path:
+    sys.path.insert(0, str(gui_media_dir))
 
 # Load UI
 ui_file = gui_media_dir / "mainWindowPIDRegelaarSim.ui"
@@ -127,7 +129,6 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
         # Connect exit buttons
         self.pushButton_Exit.clicked.connect(self.close)
-        self.pushButton_exit2.clicked.connect(self.close)
 
         # Store reference to main configuration
         self.mainConfig = None
@@ -285,26 +286,21 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def connect_navigation_buttons(self):
         """Connect all navigation buttons"""
         self.pushButton_settingsPage.toggled.connect(lambda checked: self._nav_settings(checked, "settings"))
-        self.pushButton_settingsPage2.toggled.connect(lambda checked: self._nav_settings(checked, "settings2"))
 
         self.pushButton_IOPage.toggled.connect(lambda checked: self._nav_io(checked, "io"))
-        self.pushButton_IOPage2.toggled.connect(lambda checked: self._nav_io(checked, "io2"))
 
         # SIMULATION page navigation
         self.pushButton_simPage.toggled.connect(lambda checked: self._nav_sim(checked, "sim"))
-        self.pushButton_simPage2.toggled.connect(lambda checked: self._nav_sim(checked, "sim2"))
 
         # Simulation settings page navigation
         try:
             self.pushButton_simSettings.toggled.connect(self.go_to_sim_settings)
-            self.pushButton_simSettings2.toggled.connect(self.go_to_sim_settings)
         except AttributeError:
             pass
 
         # General Controls page navigation
         try:
             self.pushButton_generalControls.toggled.connect(self.go_to_general_controls)
-            self.pushButton_generalControls2.toggled.connect(self.go_to_general_controls)
         except AttributeError:
             pass
 

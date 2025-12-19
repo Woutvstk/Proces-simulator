@@ -1,0 +1,46 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>SVG-2-vatten.svg</file>
+    <file>icon/controls-svgrepo-com_blue.svg</file>
+    <file>icon/controls-svgrepo-com.svg</file>
+    <file>icon/refresh-svgrepo-com.svg</file>
+    <file>media/icon/close-window-64 blauw.ico</file>
+    <file>media/icon/close-window-64.ico</file>
+    <file>media/icon/simulation.ico</file>
+    <file>media/icon/simulation.png</file>
+    <file>media/icon/activity-feed-32 blauw.ico</file>
+    <file>media/icon/activity-feed-32.ico</file>
+    <file>media/icon/close-window-64 blauw.ico</file>
+    <file>media/icon/close-window-64.ico</file>
+    <file>media/icon/download-2-32.ico</file>
+    <file>media/icon/Gebruik van State Machine met TIA-Portal_Theorie en opdrachten.pdf</file>
+    <file>media/icon/house-16.ico</file>
+    <file>media/icon/house-32 blauw.ico</file>
+    <file>media/icon/house-32.ico</file>
+    <file>media/icon/icons_open.svg</file>
+    <file>media/icon/icons_open_blue.svg</file>
+    <file>media/icon/mainWindowPIDRegelaarSim.ui</file>
+    <file>media/icon/menu-4-32 blauw.ico</file>
+    <file>media/icon/menu-4-32.ico</file>
+    <file>media/icon/play-6-32 blauw.ico</file>
+    <file>media/icon/play-6-32.ico</file>
+    <file>media/icon/plug_connect.svg</file>
+    <file>media/icon/plug_disconnect.svg</file>
+    <file>media/icon/save-32 blauw.ico</file>
+    <file>media/icon/save-32.ico</file>
+    <file>media/icon/settings-5-32 blauw.ico</file>
+    <file>media/icon/settings-5-32.ico</file>
+    <file>media/icon/settings-12-32 blauw.ico</file>
+    <file>media/icon/settings-12-32.ico</file>
+    <file>media/icon/simulation.ico</file>
+    <file>media/icon/simulation.png</file>
+    <file>media/icon/status_nok.svg</file>
+    <file>media/icon/status_ok.svg</file>
+    <file>media/icon/SVG vat.svg</file>
+    <file>media/icon/transportband.svg</file>
+    <file>media/icon/usb-connected-32 blauw.ico</file>
+    <file>media/icon/usb-connected-32.ico</file>
+    <file>media/icon/usb-disconnected-32 blauw.ico</file>
+    <file>media/icon/usb-disconnected-32.ico</file>
+  </qresource>
+</RCC>

@@ -13,7 +13,7 @@ from simulations.PIDtankValve.SimGui import VatWidget
 # from simulations.conveyorSim.SimGui import TransportbandWidget
 
 # Import for address updates
-from gui.customWidgets import ReadOnlyTableWidgetItem
+from .customWidgets import ReadOnlyTableWidgetItem
 
 
 class ProcessSettingsMixin:
@@ -313,7 +313,7 @@ class ProcessSettingsMixin:
 
         # Read back status for visual feedback
         if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            import tankSim.gui as gui_module
+            from simulations.PIDtankValve import SimGui as gui_module
             gui_module.liquidVolume = self.tanksim_status.liquidVolume
             gui_module.tempVat = self.tanksim_status.liquidTemperature
 

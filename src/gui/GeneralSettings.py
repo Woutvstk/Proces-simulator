@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import QTimer
 
 # Import for address updates
-from mainGui.customWidgets import ReadOnlyTableWidgetItem
+from .customWidgets import ReadOnlyTableWidgetItem
 
 
 class ProcessSettingsMixin:

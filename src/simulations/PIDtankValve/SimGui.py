@@ -84,8 +84,23 @@ class VatWidget(QWidget):
         self.lowestY = 0.0
 
         try:
-            svg_path = Path(__file__).parent.parent / \
-                "guiCommon" / "media" / "SVGVat.svg"
+            # Try multiple paths to find SVGVat.svg (handles different architectures)
+            possible_paths = [
+                Path(__file__).parent.parent.parent / "gui" / "media" / "SVGVat.svg",
+                Path(__file__).parent.parent / "guiCommon" / "media" / "SVGVat.svg",
+                Path(__file__).parent.parent.parent / "gui" / "media" / "icon" / "SVG vat.svg",
+                Path(__file__).parent.parent.parent / "guiCommon" / "media" / "SVGVat.svg",
+            ]
+            
+            svg_path = None
+            for path in possible_paths:
+                if path.exists():
+                    svg_path = path
+                    break
+            
+            if svg_path is None:
+                raise FileNotFoundError(f"SVG file not found in any of the expected locations: {possible_paths}")
+            
             self.tree = ET.parse(svg_path)
             self.root = self.tree.getroot()
             self.ns = {"svg": "http://www.w3.org/2000/svg"}

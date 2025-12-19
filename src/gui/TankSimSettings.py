@@ -47,8 +47,14 @@ class TankSimSettingsMixin:
                     container_layout.setContentsMargins(0, 0, 0, 0)
 
                 container_layout.addWidget(self.vat_widget)
+            else:
+                # If container doesn't exist in UI, still create widget
+                # It just won't be displayed
+                pass
         except Exception as e:
-            pass
+            print(f"Error initializing vat_widget: {e}")
+            self.vat_widget = None
+            raise
 
     def _init_color_dropdown(self):
         """Initialize water color dropdown"""
@@ -225,6 +231,14 @@ class TankSimSettingsMixin:
         if not hasattr(self, 'tanksim_status') or self.tanksim_status is None:
             return
 
+        # Check if vat_widget exists, if not try to initialize it
+        if not hasattr(self, 'vat_widget') or self.vat_widget is None:
+            try:
+                self._init_vat_widget()
+            except Exception as e:
+                print(f"Warning: Could not initialize vat_widget: {e}")
+                return
+
         gui_mode = False
         try:
             gui_mode = (self.mainConfig.plcGuiControl == "gui") if hasattr(self, 'mainConfig') else False
@@ -232,7 +246,7 @@ class TankSimSettingsMixin:
             gui_mode = False
 
         # Step 1: Read simulation values from status object
-        import tankSim.gui as gui_module
+        from simulations.PIDtankValve import SimGui as gui_module
         gui_module.liquidVolume = self.tanksim_status.liquidVolume
         gui_module.tempVat = self.tanksim_status.liquidTemperature
         # Pass heater power fraction to the VatWidget for coil color

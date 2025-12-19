@@ -25,7 +25,7 @@ from IO.handler import IOHandler
 from IO.protocols.plcS7 import plcS7
 from IO.protocols.logoS7 import logoS7
 from IO.protocols.PLCSimAPI.PLCSimAPI import plcSimAPI
-from IO.protocols.PLCSimAPI.PLCSimS7.PLCSimS7 import plcSimS7
+from IO.protocols.PLCSimS7 import plcSimS7
 
 # Simulation imports
 from simulations.PIDtankValve.simulation import PIDTankSimulation
