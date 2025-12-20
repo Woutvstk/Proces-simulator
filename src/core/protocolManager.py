@@ -215,3 +215,70 @@ class ProtocolManager:
         except Exception as e:
             logger.error(f"Failed to deactivate protocol: {e}")
             return False
+
+    # ---------------------------------------------------------------------
+    # Convenience helpers to build, activate, connect and prime protocols
+    # ---------------------------------------------------------------------
+    def build_protocol_from_config(self, config: Any) -> Optional[Any]:
+        """
+        Build a protocol instance from configuration.
+
+        Expected config attributes:
+        - plcProtocol: str
+        - plcIpAdress: str
+        - plcRack: int
+        - plcSlot: int
+        - tsapLogo: int
+        - tsapServer: int
+        """
+        try:
+            protocol_type = getattr(config, 'plcProtocol', None)
+            if not protocol_type:
+                logger.warning("No plcProtocol specified in configuration")
+                return None
+
+            # Lazy imports to avoid hard dependencies when unused
+            if protocol_type == "PLC S7-1500/1200/400/300/ET 200SP":
+                from IO.protocols.plcS7 import plcS7
+                return plcS7(config.plcIpAdress, config.plcRack, config.plcSlot)
+            elif protocol_type == "logo!":
+                from IO.protocols.logoS7 import logoS7
+                return logoS7(config.plcIpAdress, config.tsapLogo, config.tsapServer)
+            elif protocol_type == "PLCSim S7-1500 advanced":
+                from IO.protocols.PLCSimAPI.PLCSimAPI import plcSimAPI
+                return plcSimAPI()
+            elif protocol_type == "PLCSim S7-1500/1200/400/300/ET 200SP":
+                from IO.protocols.PLCSimS7 import plcSimS7
+                return plcSimS7(config.plcIpAdress, config.plcRack, config.plcSlot)
+            else:
+                logger.error(f"Unsupported plcProtocol: {protocol_type}")
+                return None
+        except Exception as e:
+            logger.error(f"Error building protocol from config: {e}")
+            return None
+
+    def initialize_and_connect(self, config: Any, lowest_byte: int, highest_byte: int) -> bool:
+        """
+        Build protocol from config, activate and connect it, then reset IO ranges.
+
+        Returns True on successful connection; False otherwise.
+        """
+        protocol_instance = self.build_protocol_from_config(config)
+        if not protocol_instance:
+            self.deactivate()
+            return False
+
+        if not self.activate_protocol(getattr(config, 'plcProtocol', 'UNKNOWN'), protocol_instance):
+            return False
+
+        if not self.connect():
+            return False
+
+        # Prime IO ranges
+        try:
+            self.reset_inputs(lowest_byte, highest_byte)
+            self.reset_outputs(lowest_byte, highest_byte)
+        except Exception:
+            # Continue even if reset methods are not present
+            pass
+        return True

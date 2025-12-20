@@ -22,10 +22,6 @@ from core.protocolManager import ProtocolManager
 
 # IO imports
 from IO.handler import IOHandler
-from IO.protocols.plcS7 import plcS7
-from IO.protocols.logoS7 import logoS7
-from IO.protocols.PLCSimAPI.PLCSimAPI import plcSimAPI
-from IO.protocols.PLCSimS7 import plcSimS7
 
 # Simulation imports
 from simulations.PIDtankValve.simulation import PIDTankSimulation
@@ -70,22 +66,15 @@ protocolManager = ProtocolManager()
 # Initialize IO handler
 ioHandler = IOHandler()
 
-# Get references to the active simulation objects (for backward compatibility with old GUI)
+# Get references to the active simulation objects
 active_sim = simulationManager.get_active_simulation()
-tankSimConfig = active_sim.config
-tankSimStatus = active_sim.status
-tankSimIO = ioHandler  # Use new IO handler
-
-# Set current process references (backward compatibility)
-currentProcessConfig = tankSimConfig
-currentProcessStatus = tankSimStatus
-currentProcessIoHandler = tankSimIO
-currentProcessSim = active_sim._simulation  # Access wrapped simulation
+active_config = active_sim.config
+active_status = active_sim.status
 
 # Load IO configuration from JSON file
 io_config_path = src_dir / "IO" / "IO_configuration.json"
 if io_config_path.exists():
-    tankSimConfig.load_io_config_from_file(io_config_path)
+    active_config.load_io_config_from_file(io_config_path)
     logger.info(f"IO configuration loaded from: {io_config_path}")
 else:
     logger.warning(f"IO configuration not found: {io_config_path}")
@@ -103,91 +92,16 @@ if style_path.exists():
 # Initialize main window
 window = MainWindow()
 
-# Give MainWindow access to configurations (backward compatibility)
+# Provide MainWindow access to core objects
 window.mainConfig = mainConfig
-window.tanksim_config = tankSimConfig
-window.tanksim_status = tankSimStatus
+window.tanksim_config = active_config
+window.tanksim_status = active_status
 
 window.show()
 
 # Remember start time
 startTime = time.time()
-
-# ============================================================================
-# PLC CONNECTION HANDLING
-# ============================================================================
-
 validPlcConnection: bool = False
-PlcCom = None
-
-
-def tryConnectToPlc():
-    """Initializes or attempts to connect/reconnect to the configured PLC"""
-    global mainConfig, validPlcConnection, PlcCom, protocolManager
-    
-    window.clear_all_forces()
-    
-    # Don't connect in GUI mode
-    if mainConfig.plcGuiControl == "gui":
-        validPlcConnection = False
-        window.validPlcConnection = False
-        window.plc = None
-        window.update_connection_status_icon()
-        # Untoggle connect button
-        try:
-            window.pushButton_connect.blockSignals(True)
-            window.pushButton_connect.setChecked(False)
-            window.pushButton_connect.blockSignals(False)
-        except:
-            pass
-        protocolManager.deactivate()
-        return
-    
-    # Initialize PLC communication object based on protocol
-    logger.info(f"Initializing protocol: {mainConfig.plcProtocol}")
-    
-    if mainConfig.plcProtocol == "PLC S7-1500/1200/400/300/ET 200SP":
-        PlcCom = plcS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
-    elif mainConfig.plcProtocol == "logo!":
-        PlcCom = logoS7(mainConfig.plcIpAdress, mainConfig.tsapLogo, mainConfig.tsapServer)
-    elif mainConfig.plcProtocol == "PLCSim S7-1500 advanced":
-        PlcCom = plcSimAPI()
-    elif mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
-        PlcCom = plcSimS7(mainConfig.plcIpAdress, mainConfig.plcRack, mainConfig.plcSlot)
-    else:
-        validPlcConnection = False
-        window.validPlcConnection = False
-        window.plc = None
-        window.update_connection_status_icon()
-        return
-    
-    # Activate protocol in protocol manager
-    protocolManager.activate_protocol(mainConfig.plcProtocol, PlcCom)
-    
-    # Attempt connection
-    if protocolManager.connect():
-        validPlcConnection = True
-        logger.info(f"Connected to {mainConfig.plcProtocol}")
-        
-        # Reset INPUTS (sensors from simulator to PLC)
-        protocolManager.reset_inputs(
-            currentProcessConfig.lowestByte,
-            currentProcessConfig.highestByte
-        )
-        
-        # Reset OUTPUTS (actuators from PLC to simulator)
-        protocolManager.reset_outputs(
-            currentProcessConfig.lowestByte,
-            currentProcessConfig.highestByte
-        )
-    else:
-        validPlcConnection = False
-        logger.warning("Connection failed")
-    
-    # Update GUI
-    window.validPlcConnection = validPlcConnection
-    window.plc = PlcCom if validPlcConnection else None
-    window.update_connection_status_icon()
 
 
 # ============================================================================
@@ -212,16 +126,37 @@ if __name__ == "__main__":
                 print(f"\nAttempting connection to PLC...")
                 print(f"   IP: {mainConfig.plcIpAdress}")
                 print(f"   Protocol: {mainConfig.plcProtocol}")
-                tryConnectToPlc()
+                # Clear GUI force overrides before connecting
+                try:
+                    window.clear_all_forces()
+                except Exception:
+                    pass
+
+                # In GUI mode, skip PLC connection entirely
+                if mainConfig.plcGuiControl == "gui":
+                    validPlcConnection = False
+                    window.validPlcConnection = False
+                    window.plc = None
+                    window.update_connection_status_icon()
+                    protocolManager.deactivate()
+                else:
+                    ok = protocolManager.initialize_and_connect(
+                        mainConfig,
+                        active_config.lowestByte,
+                        active_config.highestByte,
+                    )
+                    validPlcConnection = bool(ok)
+                    if not ok:
+                        logger.warning("Connection failed")
                 
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
-                window.plc = PlcCom if validPlcConnection else None
+                window.plc = protocolManager.get_active_protocol() if validPlcConnection else None
                 window.update_connection_status_icon()
             
             # Process loop for simulation and data exchange
             # Throttle calculations and data exchange
-            if (time.time() - timeLastUpdate) > currentProcessConfig.simulationInterval:
+            if (time.time() - timeLastUpdate) > active_config.simulationInterval:
                 
                 # Get process control from PLC or GUI
                 if validPlcConnection:
@@ -235,8 +170,8 @@ if __name__ == "__main__":
                             window.validPlcConnection = False
                             window.plc = None
                             window.update_connection_status_icon()
-                            currentProcessIoHandler.resetOutputs(
-                                mainConfig, currentProcessConfig, currentProcessStatus)
+                            ioHandler.resetOutputs(
+                                mainConfig, active_config, active_status)
                         else:
                             # Connection OK - reset flag
                             connectionLostLogged = False
@@ -245,8 +180,11 @@ if __name__ == "__main__":
                             forced_values = window.get_forced_io_values()
                             
                             # Update IO with force support
-                            currentProcessIoHandler.updateIO(
-                                PlcCom, mainConfig, currentProcessConfig, currentProcessStatus,
+                            ioHandler.updateIO(
+                                protocolManager.get_active_protocol(),
+                                mainConfig,
+                                active_config,
+                                active_status,
                                 forced_values=forced_values)
                     
                     except Exception as e:
@@ -258,12 +196,12 @@ if __name__ == "__main__":
                         window.validPlcConnection = False
                         window.plc = None
                         window.update_connection_status_icon()
-                        currentProcessIoHandler.resetOutputs(
-                            mainConfig, currentProcessConfig, currentProcessStatus)
+                        ioHandler.resetOutputs(
+                            mainConfig, active_config, active_status)
                 else:
                     # If control is PLC but no PLC connection, pretend PLC outputs are all 0
-                    currentProcessIoHandler.resetOutputs(
-                        mainConfig, currentProcessConfig, currentProcessStatus)
+                    ioHandler.resetOutputs(
+                        mainConfig, active_config, active_status)
                 
                 # Update process values (Run simulation)
                 # Using the simulation manager's update method

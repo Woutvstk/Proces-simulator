@@ -14,7 +14,7 @@ src_dir = Path(__file__).resolve().parent.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-from simulations.PIDtankValve.SimGui import VatWidget
+from simulations.PIDtankValve.gui import VatWidget
 
 
 class TankSimSettingsMixin:
@@ -246,7 +246,7 @@ class TankSimSettingsMixin:
             gui_mode = False
 
         # Step 1: Read simulation values from status object
-        from simulations.PIDtankValve import SimGui as gui_module
+        from simulations.PIDtankValve import gui as gui_module
         gui_module.liquidVolume = self.tanksim_status.liquidVolume
         gui_module.tempVat = self.tanksim_status.liquidTemperature
         # Pass heater power fraction to the VatWidget for coil color

@@ -8,12 +8,12 @@ src_dir = Path(__file__).resolve().parent.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-from simulations.PIDtankValve.SimGui import VatWidget
+from simulations.PIDtankValve.gui import VatWidget
 # TODO: conveyor simulation not yet migrated
 # from simulations.conveyorSim.SimGui import TransportbandWidget
 
 # Import for address updates
-from .customWidgets import ReadOnlyTableWidgetItem
+from gui.customWidgets import ReadOnlyTableWidgetItem
 
 
 class ProcessSettingsMixin:
@@ -98,9 +98,7 @@ class ProcessSettingsMixin:
 
             self.colorDropDown.currentIndexChanged.connect(
                 self.on_kleur_changed)
-            # Removed unnecessary print
         except AttributeError as e:
-            # Removed unnecessary print
             pass
 
     def _init_controller_dropdown(self):
@@ -129,10 +127,7 @@ class ProcessSettingsMixin:
                     self.pushButton_connect.setEnabled(False)
                 except AttributeError:
                     pass
-
-            # Removed unnecessary print
         except AttributeError as e:
-            # Removed unnecessary print
             pass
 
     def _init_checkboxes(self):
@@ -147,7 +142,6 @@ class ProcessSettingsMixin:
             self.analogValueTempCheckBox.toggled.connect(
                 self.on_config_changed)
         except AttributeError as e:
-            # Removed unnecessary print
             pass
 
     def _init_entry_fields(self):
@@ -175,7 +169,6 @@ class ProcessSettingsMixin:
                         lambda text, g=group: self.syncFields(text, g))
 
         except AttributeError as e:
-            # Removed unnecessary print
             pass
 
     def _init_simulation_button(self):
@@ -196,7 +189,6 @@ class ProcessSettingsMixin:
                 }
             """)
         except AttributeError:
-            # Removed unnecessary print
             pass
 
     def update_process_values(self):
@@ -313,7 +305,7 @@ class ProcessSettingsMixin:
 
         # Read back status for visual feedback
         if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            from simulations.PIDtankValve import SimGui as gui_module
+            from simulations.PIDtankValve import gui as gui_module
             gui_module.liquidVolume = self.tanksim_status.liquidVolume
             gui_module.tempVat = self.tanksim_status.liquidTemperature
 
