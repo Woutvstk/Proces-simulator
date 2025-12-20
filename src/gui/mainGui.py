@@ -88,6 +88,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         try:
             self.fullMenuWidget.setVisible(True)
             self.fullMenuWidget.setMaximumWidth(0)
+            # Restore dual-sidebar behavior
             self.iconOnlyWidget.setVisible(True)
             self.pushButton_menu.setChecked(False)
             self.pushButton_menu.toggled.connect(self.toggle_menu)
@@ -276,7 +277,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             # Disconnect request
             if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
                 try:
-                    if self.plc.isConnected():
+                        self.iconOnlyWidget.setVisible(False)
                         self.plc.disconnect()
                         print("\nDisconnected from PLC")
                 except Exception as e:
