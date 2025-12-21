@@ -1,7 +1,19 @@
+/*= Professional Blue Theme - Color Palette
+  ==================================================== 
+  Primary Blue: #3a7bd5
+  Dark Blue: #2a5f9e
+  Light Blue: #4a8fe7
+  Accent Blue: #5aa3ff
+  Background Dark: #1e1e1e
+  Background Light: #2d2d30
+  Text Primary: #ffffff
+  Text Secondary: #cccccc
+*/
+
 /*= Style for mainwindow START
   ==================================================== */
 #MainWindow {
-	background-color: #fff;
+	background-color: #f0f4f8;
 }
 
 /*= END
@@ -32,26 +44,34 @@
   ==================================================== */
 /* style for widget */
 #iconOnlyWidget {
-	background-color: #313a46;
+	background-color: #2d2d30;
 	width: 50px;
+	min-width: 50px;
+	max-width: 50px;
 }
 
 /* style for QPushButton and QLabel */
 #iconOnlyWidget QPushButton,
 QLabel {
 	height: 50px;
+	min-height: 50px;
 	border: none;
-
-	/* border-bottom: 1px solid #b0b0b0; */
+	color: #cccccc;
 }
 
 #iconOnlyWidget QPushButton:hover {
-	background-color: rgba(86, 101, 115, 0.5);
+	background-color: #2a5f9e;
+	transition: background-color 150ms ease-in-out;
+}
+
+#iconOnlyWidget QPushButton:checked {
+	background-color: #3a7bd5;
+	color: #ffffff;
 }
 
 /* style for logo image */
 #logo {
-	padding: 5px
+	padding: 5px;
 }
 
 /*= END
@@ -61,37 +81,42 @@ QLabel {
   ==================================================== */
 /* style for widget */
 #fullMenuWidget {
-	background-color: #313a46;
+	background-color: #2d2d30;
+	min-width: 200px;
 }
 
 /* style for QPushButton */
 #fullMenuWidget QPushButton {
 	border: none;
-	border-radius: 3px;
+	border-radius: 4px;
 	text-align: left;
 	padding: 15px 0 15px 15px;
-	color: #788596;
+	color: #cccccc;
+	transition: all 150ms ease-in-out;
 }
 
 #fullMenuWidget QPushButton:hover {
-	background-color: rgba(86, 101, 115, 0.5);
+	background-color: #2a5f9e;
+	color: #ffffff;
+	transform: scale(1.02);
 }
 
 #fullMenuWidget QPushButton:checked {
-	color: #fff;
+	background-color: #3a7bd5;
+	color: #ffffff;
+	font-weight: 600;
 }
 
 /* style for logo image */
 #logo2 {
 	color: white;
 	padding: 5px;
-
 }
 
 /* style for APP title */
 #logoText {
-
-	color: #fff;
+	color: #ffffff;
+	font-weight: 600;
 }
 
 /*= END
@@ -116,6 +141,226 @@ QLabel {
   ==================================================== */
 #pushButton_connect {
 	border: none;
+}
+
+/*= END
+  ==================================================== */
+/*= Professional Button Styling START
+  ==================================================== */
+QPushButton {
+background-color: #3a7bd5;
+color: #ffffff;
+border: none;
+border-radius: 4px;
+padding: 8px 16px;
+font-weight: 500;
+transition: all 100ms ease-in-out;
+}
+
+QPushButton:hover {
+background-color: #4a8fe7;
+transform: translateY(-1px);
+}
+
+QPushButton:pressed {
+background-color: #2a5f9e;
+transform: translateY(0px);
+}
+
+QPushButton:disabled {
+background-color: #cccccc;
+color: #888888;
+}
+
+QPushButton:checked {
+background-color: #2a5f9e;
+border: 2px solid #5aa3ff;
+}
+
+/*= END
+  ==================================================== */
+
+/*= Input Fields Styling START
+  ==================================================== */
+QLineEdit, QSpinBox, QDoubleSpinBox {
+background-color: #ffffff;
+border: 1px solid #cbd5e0;
+border-radius: 4px;
+padding: 8px 12px;
+color: #1e293b;
+transition: border 150ms ease-in-out;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+border: 2px solid #3a7bd5;
+background-color: #ffffff;
+}
+
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
+background-color: #e2e8f0;
+color: #94a3b8;
+}
+
+/*= END
+  ==================================================== */
+
+/*= Slider Styling START
+  ==================================================== */
+QSlider::groove:horizontal {
+border: 1px solid #cbd5e0;
+height: 6px;
+background: #e2e8f0;
+border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+background: #3a7bd5;
+border: 2px solid #ffffff;
+width: 16px;
+height: 16px;
+margin: -6px 0;
+border-radius: 8px;
+transition: all 150ms ease-in-out;
+}
+
+QSlider::handle:horizontal:hover {
+background: #4a8fe7;
+transform: scale(1.1);
+}
+
+QSlider::sub-page:horizontal {
+background: #3a7bd5;
+border-radius: 3px;
+}
+
+/*= END
+  ==================================================== */
+
+/*= Tab Widget Styling START
+  ==================================================== */
+QTabWidget::pane {
+border: 1px solid #cbd5e0;
+border-radius: 4px;
+background: #ffffff;
+}
+
+QTabBar::tab {
+background: #e2e8f0;
+color: #64748b;
+padding: 10px 20px;
+border: none;
+border-top-left-radius: 4px;
+border-top-right-radius: 4px;
+margin-right: 2px;
+transition: all 150ms ease-in-out;
+}
+
+QTabBar::tab:hover {
+background: #cbd5e0;
+color: #1e293b;
+}
+
+QTabBar::tab:selected {
+background: #3a7bd5;
+color: #ffffff;
+font-weight: 600;
+}
+
+/*= END
+  ==================================================== */
+
+/*= Scroll Bar Styling START
+  ==================================================== */
+QScrollBar:vertical {
+border: none;
+background: #f1f5f9;
+width: 10px;
+margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+background: #3a7bd5;
+min-height: 20px;
+border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+background: #4a8fe7;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+height: 0px;
+}
+
+QScrollBar:horizontal {
+border: none;
+background: #f1f5f9;
+height: 10px;
+margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+background: #3a7bd5;
+min-width: 20px;
+border-radius: 5px;
+}
+
+QScrollBar::handle:horizontal:hover {
+background: #4a8fe7;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+width: 0px;
+}
+
+/*= END
+  ==================================================== */
+
+/*= ToolTip Styling START
+  ==================================================== */
+QToolTip {
+background-color: #2d2d30;
+color: #ffffff;
+border: 2px solid #3a7bd5;
+border-radius: 4px;
+padding: 6px 10px;
+font-size: 12px;
+}
+
+/*= END
+  ==================================================== */
+
+/*= Sidebar Button Custom Widget START
+  ==================================================== */
+SidebarButton {
+min-width: 50px;
+max-width: 50px;
+min-height: 50px;
+border: none;
+text-align: left;
+padding: 15px 5px;
+color: #cccccc;
+background-color: transparent;
+transition: all 300ms ease-in-out;
+}
+
+SidebarButton[expanded="true"] {
+min-width: 200px;
+max-width: 240px;
+padding: 15px 0 15px 15px;
+}
+
+SidebarButton:hover {
+background-color: #2a5f9e;
+color: #ffffff;
+}
+
+SidebarButton:checked {
+background-color: #3a7bd5;
+color: #ffffff;
+font-weight: 600;
 }
 
 /*= END

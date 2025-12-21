@@ -202,8 +202,8 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def _setup_menu_animation(self):
         try:
             self._menu_anim = QPropertyAnimation(self.fullMenuWidget, b"maximumWidth", self)
-            self._menu_anim.setDuration(600)
-            self._menu_anim.setEasingCurve(QEasingCurve.OutQuart)
+            self._menu_anim.setDuration(300)  # Reduced from 600ms to 300ms for smoother UX
+            self._menu_anim.setEasingCurve(QEasingCurve.InOutQuad)  # Changed to ease-in-out
             self._menu_anim.finished.connect(self._on_menu_anim_finished)
         except Exception:
             self._menu_anim = None
