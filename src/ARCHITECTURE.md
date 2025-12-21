@@ -4,6 +4,152 @@
 
 This document describes the modular architecture implemented for the Industrial Simulation Framework. The application manages multiple simulations (PLC tank controls, conveyors, etc.) with different protocols (Logo S7, PLC S7, PLCSimAPI) and provides a GUI interface for monitoring and control.
 
+---
+
+## Data Flow Overview (For First-Time Readers)
+
+This section explains how data flows through the application for newcomers to the codebase.
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          USER INTERFACE                          │
+│  ┌───────────────┐  ┌───────────────┐  ┌────────────────────┐  │
+│  │   Sidebar     │  │  Sim Controls │  │   I/O Config       │  │
+│  │   Navigation  │  │  (Buttons,    │  │   (Tree/Table)     │  │
+│  │               │  │   Sliders)    │  │                    │  │
+│  └───────┬───────┘  └───────┬───────┘  └─────────┬──────────┘  │
+│          │                  │                     │              │
+│          └──────────────────┴─────────────────────┘              │
+│                             │                                    │
+└─────────────────────────────┼────────────────────────────────────┘
+                              │
+                    ┌─────────▼──────────┐
+                    │    mainGui.py      │
+                    │  (Main Window)     │
+                    │  - Page Mixins     │
+                    │  - Update Timer    │
+                    └─────────┬──────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼────────┐   ┌────────▼────────┐   ┌───────▼──────────┐
+│ configuration  │   │ SimulationMgr   │   │ ProtocolManager  │
+│ (Settings)     │   │ (Active Sim)    │   │ (PLC Connect)    │
+└───────┬────────┘   └────────┬────────┘   └───────┬──────────┘
+        │                     │                     │
+        └─────────────────────┴─────────────────────┘
+                              │
+                    ┌─────────▼──────────┐
+                    │    IOHandler       │
+                    │  (Data Exchange)   │
+                    └─────────┬──────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼────────┐   ┌────────▼────────┐   ┌───────▼──────────┐
+│  GUI Controls  │   │   Simulation    │   │   PLC Device     │
+│  (User Input)  │◄──│   Engine        │◄──│  (S7/Logo/API)   │
+│                │   │  (Physics/Logic)│   │                  │
+└────────────────┘   └─────────────────┘   └──────────────────┘
+```
+
+### Data Flow Sequence
+
+1. **User Input** → User interacts with GUI (clicks Start, adjusts slider)
+   - GUI widgets (buttons, sliders) trigger signal handlers
+   - Signal handlers update `tanksim_status` variables
+   
+2. **GUI → Status** → Updates are written to status object
+   - Example: `tanksim_status.generalStartCmd = True`
+   - Example: `tanksim_status.generalControl1Value = slider_value`
+
+3. **Status → I/O Handler** → IOHandler reads status values
+   - In GUI mode: GUI controls are treated as simulation inputs
+   - In PLC mode: PLC outputs override GUI controls
+   
+4. **I/O Handler ↔ PLC** → Bidirectional communication
+   - `IOHandler.updateIO()` called in main loop
+   - Reads PLC outputs → writes to status (PLC controls simulation)
+   - Reads status → writes to PLC inputs (simulation feeds back to PLC)
+   
+5. **Simulation Engine** → Physics/logic calculations
+   - `simulation.update(dt)` processes one time step
+   - Reads inputs from status (valve positions, heater power)
+   - Calculates new state (liquid level, temperature)
+   - Writes results back to status
+   
+6. **Display Update** → GUI reflects current state
+   - Main timer (`update_all_values()`) runs every 100ms
+   - Reads status values and updates all displays
+   - Tank visualization, I/O table, indicators, etc.
+
+### Control Modes
+
+The application supports two control modes via `configuration.plcGuiControl`:
+
+**GUI Mode (`"gui"`)**:
+- User controls simulation directly via GUI widgets
+- GUI sliders/buttons → `tanksim_status` → Simulation
+- PLC receives simulation outputs as inputs (monitoring only)
+- Flow: `GUI → Status → Simulation → Status → PLC`
+
+**PLC Mode (`"plc"`)**:
+- PLC controls the simulation
+- PLC outputs → `tanksim_status` → Simulation
+- GUI displays reflect PLC control (read-only mode)
+- Flow: `PLC → Status → Simulation → Status → GUI`
+
+### Key Data Structures
+
+**`configuration`** (Global App Settings):
+- `plcGuiControl`: Control mode ("gui" or "plc")
+- `plcProtocol`: Selected protocol ("PLC S7", "Logo S7", etc.)
+- `plcIpAdress`: PLC IP address
+- `tryConnect`: Connection request flag
+
+**`tanksim_config`** (Simulation Parameters):
+- `tankVolume`: Tank capacity in liters
+- `valveInMaxFlow`: Max inlet flow rate
+- `valveOutMaxFlow`: Max outlet flow rate
+- `heaterPower`: Heater power in watts
+- Static configuration that rarely changes
+
+**`tanksim_status`** (Runtime Values):
+- `liquidVolume`: Current liquid level
+- `liquidTemperature`: Current temperature
+- `valveInOpenFraction`: Inlet valve position (0.0-1.0)
+- `valveOutOpenFraction`: Outlet valve position (0.0-1.0)
+- `heaterPowerFraction`: Heater power fraction (0.0-1.0)
+- `simRunning`: Is simulation active?
+- `generalStartCmd`, `generalStopCmd`, `generalResetCmd`: Control commands
+- `generalControl1Value`, `generalControl2Value`, `generalControl3Value`: Analog setpoints
+- Dynamic values that change continuously
+
+### Example: Start Button Press Flow
+
+```
+1. User clicks "Start" button in General Controls dock
+   ↓
+2. Signal handler: generalControls._on_start_clicked()
+   ↓
+3. Updates status: tanksim_status.generalStartCmd = True
+   ↓
+4. Main loop iteration:
+   a. IOHandler.updateIO() transfers generalStartCmd to PLC input
+   b. Simulation.update(dt) sees start command, sets simRunning = True
+   c. Simulation begins physics calculations
+   ↓
+5. GUI update timer (100ms):
+   a. Reads tanksim_status.simRunning
+   b. Updates status indicator (LED turns green)
+   c. Updates tank visualization
+   d. Updates I/O table display
+```
+
+---
+
 ### Directory Structure
 
 ````
@@ -426,3 +572,297 @@ python main.py
 4. Add more comprehensive validation in Load()
 5. Support for multiple simultaneous simulations
 6. Plugin architecture for custom simulations
+
+---
+
+## GUI Widgets Documentation
+
+### Custom Widgets (`/src/gui/widgets/`)
+
+The application includes custom reusable widgets for enhanced user experience:
+
+#### SidebarButton (`sidebar_button.py`)
+
+Custom QPushButton subclass for collapsible sidebar navigation.
+
+**Features:**
+- Supports `expanded` property for dynamic QSS styling
+- Smooth hover effects with scale transformation (1.02x)
+- Active/checked state styling with visual feedback
+- Integrates with sidebar animation system (300ms ease-in-out)
+
+**Usage:**
+```python
+from gui.widgets import SidebarButton
+
+button = SidebarButton("Settings", icon=settings_icon)
+button.expanded = True  # Expand to show text
+button.expanded = False  # Collapse to icon only
+```
+
+#### SimControlPanel (`sim_control_panel.py`)
+
+Standardized control panel for simulation pages with consistent UX.
+
+**Control Buttons (Color-coded):**
+- **Start** (Green #4CAF50) - Initiates simulation
+- **Stop** (Red #f44336) - Halts simulation
+- **Pause** (Yellow #ff9800) - Temporarily pauses execution
+- **Reset** (Gray #757575) - Resets to default values
+
+**Setpoint Sliders:**
+- Temperature: 0-100°C with real-time value display
+- Water Flow: 0-100 L/min with real-time value display
+
+**Status Indicator:**
+- LED-style indicator showing current state (Running/Stopped/Paused)
+- Color changes based on state
+
+**I/O Integration:**
+Each control automatically generates I/O configuration entries with unique IDs following the pattern: `SIM_{SimName}_{ControlType}_{Index}`
+
+**Signals:**
+```python
+startClicked()          # Emitted when Start button clicked
+stopClicked()           # Emitted when Stop button clicked
+pauseClicked()          # Emitted when Pause button clicked
+resetClicked()          # Emitted when Reset button clicked
+temperatureChanged(int) # Emitted when temperature setpoint changes
+waterFlowChanged(int)   # Emitted when water flow setpoint changes
+```
+
+**Usage:**
+```python
+from gui.widgets import SimControlPanel
+
+control_panel = SimControlPanel(parent=self, sim_name="TankSimulation")
+control_panel.startClicked.connect(self.on_simulation_start)
+control_panel.temperatureChanged.connect(self.on_temp_setpoint_changed)
+
+# Get I/O configuration for integration
+io_config = control_panel.get_io_config()
+```
+
+---
+
+## Visual Design System
+
+### Professional Blue Theme
+
+The application follows a consistent professional blue accent theme throughout:
+
+**Color Palette:**
+- **Primary Blue:** #3a7bd5 - Main actions and active states
+- **Dark Blue:** #2a5f9e - Hover states and emphasis
+- **Light Blue:** #4a8fe7 - Secondary actions
+- **Accent Blue:** #5aa3ff - Highlights and borders
+- **Background Dark:** #1e1e1e - Dark backgrounds
+- **Background Light:** #2d2d30 - Sidebar and panels
+- **Text Primary:** #ffffff - Main text on dark backgrounds
+- **Text Secondary:** #cccccc - Secondary text
+
+**Control-Specific Colors:**
+- **Success/Start:** #4CAF50 (Green)
+- **Danger/Stop:** #f44336 (Red)
+- **Warning/Pause:** #ff9800 (Orange)
+- **Neutral/Reset:** #757575 (Gray)
+
+### Animation Timings
+
+Consistent animation timings for professional feel:
+- **Hover effects:** 150ms transition
+- **Button press:** 100ms animation
+- **Sidebar expand/collapse:** 300ms ease-in-out
+- **Panel expansions:** 300ms ease-in-out
+- **Value updates:** 200ms smooth interpolation
+
+### Design Principles
+
+1. **Consistency:** All buttons, inputs, and controls follow the same design language
+2. **Feedback:** Visual feedback for all user interactions (hover, active, disabled states)
+3. **Accessibility:** Clear contrast ratios, adequate click targets (minimum 40px height)
+4. **Professional:** Industrial application aesthetic with modern touches
+5. **Performance:** Smooth animations without impacting simulation performance
+
+---
+
+## License Compliance
+
+### Third-Party Libraries
+
+This project uses the following open-source libraries:
+
+**PyQt5** (GPL v3 License)
+- Website: https://www.riverbankcomputing.com/software/pyqt/
+- License: GNU General Public License v3
+- Usage: GUI framework and widgets
+
+**NumPy** (BSD License)
+- Website: https://numpy.org/
+- License: BSD 3-Clause License
+- Usage: Numerical computations in simulation engine
+
+**python-snap7** (MIT License)
+- Website: https://github.com/gijzelaerr/python-snap7
+- License: MIT License
+- Usage: Siemens S7 PLC communication
+
+**pymodbus** (BSD License)
+- Website: https://github.com/pymodbus-dev/pymodbus
+- License: BSD License
+- Usage: Modbus protocol implementation
+
+**pythonnet** (MIT License)
+- Website: https://github.com/pythonnet/pythonnet
+- License: MIT License
+- Usage: .NET interoperability for PLCSim API
+
+### License Header Template
+
+All new Python files include the following header:
+
+```python
+"""
+This module is part of the PLC-modbus-proces-simulator project.
+
+Libraries used:
+- PyQt5: GPL v3 License (https://www.riverbankcomputing.com/software/pyqt/)
+- NumPy: BSD License (https://numpy.org/doc/stable/license.html)
+- python-snap7: MIT License (https://github.com/gijzelaerr/python-snap7)
+- pymodbus: BSD License (https://github.com/pymodbus-dev/pymodbus)
+- pythonnet: MIT License (https://github.com/pythonnet/pythonnet)
+
+Full license information available in LICENSE.txt
+"""
+```
+
+### Compliance Notes
+
+- **GPL v3 (PyQt5):** This project complies with GPL v3 by being open source
+- **BSD/MIT Libraries:** Compatible with GPL v3, no restrictions
+- All licenses preserved in their respective library installations
+- Full license texts available in project LICENSE.txt file
+
+---
+
+## Migration Status
+
+### Completed ✅
+
+- [x] Core module architecture (configuration, simulationManager, protocolManager)
+- [x] PIDtankValve simulation fully migrated and tested
+- [x] GUI refactored to page mixins (generalSettings, ioConfigPage, generalControls, simPage)
+- [x] Per-simulation IO tree loading system
+- [x] Save/Load complete application state (JSON)
+- [x] Protocol manager with helper functions
+- [x] General Controls dock with GUI/PLC mode support
+- [x] Professional blue theme styling
+- [x] Sidebar animation improvements (600ms → 300ms)
+- [x] Custom GUI widgets (SidebarButton, SimControlPanel)
+- [x] Comprehensive data flow documentation
+
+### In Progress 🔄
+
+- [ ] Dashboard editor with drag-and-drop widget creation
+- [ ] I/O configuration enhancements (inline editing, search/filter)
+- [ ] Settings page with persistence (QSettings)
+- [ ] Integration of SimControlPanel into simulation pages
+
+### Planned 📋
+
+- [ ] Conveyor simulation migration
+- [ ] Additional simulation types (heating system, mixing tank)
+- [ ] Advanced PID tuning interface
+- [ ] Real-time trending and data logging
+- [ ] Recipe management system
+- [ ] Multi-language support (i18n)
+- [ ] Advanced diagnostics and error logging
+- [ ] Simulation scenario scripting
+
+---
+
+## Development Guidelines
+
+### Adding a New Simulation
+
+1. Create simulation folder in `/src/simulations/{name}/`
+2. Implement `SimulationInterface` in `simulation.py`
+3. Create `config.py` and `status.py` classes
+4. Create visualization widget in `gui.py`
+5. Create IO tree XML: `IO/IO_treeList_{name}.xml`
+6. Register simulation in `main.py`
+7. Add navigation button in UI file
+
+### Modifying GUI
+
+1. Edit `.ui` file in Qt Designer (recommended) OR
+2. Update page mixins in `/src/gui/pages/` for logic
+3. Update `style.qss` for styling (preferred over inline styles)
+4. Follow professional blue theme color palette
+5. Maintain consistent animation timings
+
+### Testing Workflow
+
+1. Test individual components in isolation
+2. Test integration with existing systems
+3. Verify PLC communication doesn't break
+4. Check GUI mode and PLC mode both work
+5. Test save/load functionality
+6. Verify no console errors or warnings
+
+### Code Style
+
+- Follow PEP 8 for Python code
+- Use type hints where appropriate
+- Document all public methods with docstrings
+- Add comments for complex logic only
+- Keep functions focused and concise
+- Maintain existing code patterns
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**pyrcc5 fails to compile resources:**
+- Application continues without compiled resources
+- Icons may not display correctly
+- Install PyQt5-tools: `pip install PyQt5-tools`
+
+**PLC connection fails:**
+- Check IP address configuration
+- Verify PLC is accessible on network
+- Ensure correct protocol selected
+- Check firewall settings
+
+**Simulation doesn't update:**
+- Verify simulation is started (check status indicator)
+- Check main loop is running
+- Verify timer interval is appropriate
+- Check for exceptions in console
+
+**GUI elements not styled:**
+- Verify style.qss is loaded
+- Check for QSS syntax errors
+- Inspect element names match selectors
+- Use Qt Style Sheet editor for debugging
+
+### Debug Mode
+
+Enable debug logging by setting environment variable:
+```bash
+export DEBUG_MODE=1
+python src/main.py
+```
+
+### Performance Optimization
+
+- Reduce update timer interval if needed (default 100ms)
+- Disable unused visualizations
+- Optimize simulation calculations
+- Profile with cProfile if performance issues persist
+
+---
+
+End of Architecture Documentation
