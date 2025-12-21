@@ -10,5 +10,6 @@ Full license information available in LICENSE.txt
 """
 
 from .sidebar_button import SidebarButton
+from .sim_control_panel import SimControlPanel
 
-__all__ = ['SidebarButton']
+__all__ = ['SidebarButton', 'SimControlPanel']
