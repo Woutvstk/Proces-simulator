@@ -82,12 +82,10 @@ else:
 # Initialize Qt Application
 app = QApplication(sys.argv)
 
-# Load QSS style sheet
-style_path = src_dir / "gui" / "media" / "style.qss"
-if style_path.exists():
-    with open(style_path, "r") as f:
-        app.setStyleSheet(f.read())
-    logger.info("Style sheet loaded")
+# Apply modern theme using Theme Manager
+from gui.theme_manager import ThemeManager
+ThemeManager.apply_theme(app, "dark")  # Use dark theme by default
+logger.info("Dark theme applied")
 
 # Initialize main window
 window = MainWindow()

@@ -29,6 +29,9 @@ from simulations.PIDtankValve.gui import VatWidget
 # from simulations.conveyorSim.SimGui import TransportbandWidget
 from core.configuration import configuration
 
+# Import UI functions for animations
+from .ui_functions import UIFunctions
+
 # =============================================================================
 # Resource and UI compilation (dynamic)
 # =============================================================================
@@ -261,41 +264,12 @@ class MainWindow(QMainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralContro
         except Exception:
             return True
 
-    # Sidebar animation helpers
-    def _setup_menu_animation(self):
-        try:
-            self._menu_anim = QPropertyAnimation(self.fullMenuWidget, b"maximumWidth", self)
-            self._menu_anim.setDuration(600)
-            self._menu_anim.setEasingCurve(QEasingCurve.OutQuart)
-            self._menu_anim.finished.connect(self._on_menu_anim_finished)
-        except Exception:
-            self._menu_anim = None
-
     def toggle_menu(self, checked):
+        """Toggle sidebar menu using UIFunctions animation"""
         try:
-            if not hasattr(self, "_menu_anim") or self._menu_anim is None:
-                self._setup_menu_animation()
-            target_width = 240 if checked else 0
-            # Ensure full menu is visible during animation
-            self.fullMenuWidget.setVisible(True)
-            # Hide icon-only immediately when opening; show only after close completes
-            if checked:
-                self.iconOnlyWidget.setVisible(False)
-            if hasattr(self, "_menu_anim") and self._menu_anim:
-                self._menu_anim.stop()
-                self._menu_anim.setStartValue(self.fullMenuWidget.maximumWidth())
-                self._menu_anim.setEndValue(target_width)
-                self._menu_anim.start()
-        except Exception:
-            pass
-
-    def _on_menu_anim_finished(self):
-        try:
-            expanded = self.fullMenuWidget.maximumWidth() > 0
-            # Toggle icon-only vs full menu visibility
-            self.iconOnlyWidget.setVisible(not expanded)
-            self.fullMenuWidget.setVisible(True)
-        except Exception:
+            UIFunctions.toggle_menu(self, checked, animation_duration=500)
+        except Exception as e:
+            print(f"Error toggling menu: {e}")
             pass
 
 
