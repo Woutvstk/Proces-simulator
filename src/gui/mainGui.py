@@ -72,6 +72,67 @@ if not ui_file.exists():
 
 
 # =============================================================================
+# Helper function for dynamic UI loading with PySide6
+# =============================================================================
+def load_ui_into_base_instance(ui_file_path, base_instance):
+    """
+    Load a .ui file and transfer all its properties and children to a base instance.
+    This mimics the behavior of PyQt5's uic.loadUiType pattern.
+    """
+    loader = QUiLoader()
+    ui_file_obj = QFile(str(ui_file_path))
+    ui_file_obj.open(QIODevice.ReadOnly)
+    loaded_widget = loader.load(ui_file_obj, None)
+    ui_file_obj.close()
+    
+    if not loaded_widget:
+        raise RuntimeError(f"Failed to load UI file: {ui_file_path}")
+    
+    # Transfer window properties
+    if hasattr(loaded_widget, 'windowTitle'):
+        base_instance.setWindowTitle(loaded_widget.windowTitle())
+    if hasattr(loaded_widget, 'windowIcon'):
+        base_instance.setWindowIcon(loaded_widget.windowIcon())
+    if hasattr(loaded_widget, 'geometry'):
+        base_instance.setGeometry(loaded_widget.geometry())
+    
+    # Transfer central widget
+    if isinstance(loaded_widget, QMainWindow):
+        central = loaded_widget.centralWidget()
+        if central:
+            central.setParent(None)
+            base_instance.setCentralWidget(central)
+        
+        # Transfer menubar
+        menubar = loaded_widget.menuBar()
+        if menubar:
+            menubar.setParent(None)
+            base_instance.setMenuBar(menubar)
+        
+        # Transfer statusbar
+        statusbar = loaded_widget.statusBar()
+        if statusbar:
+            statusbar.setParent(None)
+            base_instance.setStatusBar(statusbar)
+        
+        # Transfer dock widgets
+        from PySide6.QtWidgets import QDockWidget
+        for dock in loaded_widget.findChildren(QDockWidget):
+            # Get the dock area before reparenting
+            dock_area = loaded_widget.dockWidgetArea(dock)
+            dock.setParent(None)
+            base_instance.addDockWidget(dock_area, dock)
+    
+    # Copy all widgets as attributes for easy access
+    for widget in loaded_widget.findChildren(QWidget):
+        name = widget.objectName()
+        if name:
+            setattr(base_instance, name, widget)
+    
+    return base_instance
+
+
+# =============================================================================
 # MainWindow class - Updated for PySide6
 # =============================================================================
 class MainWindow(QMainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralControlsMixin, SimPageMixin, TankSimSettingsMixin):
@@ -83,21 +144,8 @@ class MainWindow(QMainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralContro
     def __init__(self):
         super(MainWindow, self).__init__()
         
-        # Load UI using QUiLoader
-        loader = QUiLoader()
-        ui_file_obj = QFile(str(ui_file))
-        ui_file_obj.open(QIODevice.ReadOnly)
-        self.ui = loader.load(ui_file_obj, self)
-        ui_file_obj.close()
-        
-        # Set the loaded UI as the central widget
-        self.setCentralWidget(self.ui)
-        
-        # Copy all widgets from ui to self for easier access
-        for widget in self.ui.findChildren(QWidget):
-            widget_name = widget.objectName()
-            if widget_name:
-                setattr(self, widget_name, widget)
+        # Load UI dynamically using helper function
+        load_ui_into_base_instance(ui_file, self)
 
         # Sidebar: start collapsed (animate width), keep both widgets available
         try:
