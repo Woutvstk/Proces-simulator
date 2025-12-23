@@ -6,9 +6,9 @@ import os
 import subprocess
 from pathlib import Path
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget
-from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
-from PyQt5 import uic
+from PySide6.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget
+from PySide6.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve, QFile, QIODevice
+from PySide6.QtUiTools import QUiLoader
 
 # ============================================================================
 # ABSOLUTE IMPORTS - Add src directory to path
@@ -40,7 +40,7 @@ rc_py_file = gui_media_dir / "Resource_rc.py"
 if qrc_file.exists():
     try:
         subprocess.run(
-            ["pyrcc5", str(qrc_file), "-o", str(rc_py_file)],
+            ["pyside6-rcc", str(qrc_file), "-o", str(rc_py_file)],
             check=True
         )
 
@@ -61,20 +61,20 @@ if qrc_file.exists():
 if str(gui_media_dir) not in sys.path:
     sys.path.insert(0, str(gui_media_dir))
 
-# Load UI
+# Load UI using PySide6's QUiLoader
 ui_file = gui_media_dir / "mainWindowPIDRegelaarSim.ui"
 
-if ui_file.exists():
-    Ui_MainWindow, QtBaseClass = uic.loadUiType(str(ui_file))
-else:
+if not ui_file.exists():
     raise FileNotFoundError(f"Cannot find {ui_file}! Searched in: {ui_file}")
 
+# We'll load the UI in the MainWindow class constructor instead of using uic.loadUiType
+
 
 
 # =============================================================================
-# MainWindow class - Same as before
+# MainWindow class - Updated for PySide6
 # =============================================================================
-class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralControlsMixin, SimPageMixin, TankSimSettingsMixin):
+class MainWindow(QMainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralControlsMixin, SimPageMixin, TankSimSettingsMixin):
     """
     Main application window
     Uses mixins for process settings and I/O config functionality
@@ -82,7 +82,22 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.setupUi(self)
+        
+        # Load UI using QUiLoader
+        loader = QUiLoader()
+        ui_file_obj = QFile(str(ui_file))
+        ui_file_obj.open(QIODevice.ReadOnly)
+        self.ui = loader.load(ui_file_obj, self)
+        ui_file_obj.close()
+        
+        # Set the loaded UI as the central widget
+        self.setCentralWidget(self.ui)
+        
+        # Copy all widgets from ui to self for easier access
+        for widget in self.ui.findChildren(QWidget):
+            widget_name = widget.objectName()
+            if widget_name:
+                setattr(self, widget_name, widget)
 
         # Sidebar: start collapsed (animate width), keep both widgets available
         try:
@@ -185,7 +200,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             is_on_io_page = (self.MainScreen.currentWidget() == io_page)
             io_dirty = getattr(self, "_io_config_dirty", False)
             if is_on_io_page and io_dirty:
-                from PyQt5.QtWidgets import QMessageBox
+                from PySide6.QtWidgets import QMessageBox
                 reply = QMessageBox.question(
                     self,
                     "IO configuration not activated",
@@ -260,7 +275,7 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 icon_path = current_dir / "media" / "icon" / "status_nok.svg"
 
             if icon_path.exists():
-                from PyQt5.QtGui import QPixmap
+                from PySide6.QtGui import QPixmap
                 pixmap = QPixmap(str(icon_path))
                 self.Label_connectStatus.setPixmap(
                     pixmap.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -416,4 +431,4 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

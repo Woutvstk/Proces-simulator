@@ -27,7 +27,7 @@ from IO.handler import IOHandler
 from simulations.PIDtankValve.simulation import PIDTankSimulation
 
 # GUI imports
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from gui.mainGui import MainWindow
 
 # Configure logging

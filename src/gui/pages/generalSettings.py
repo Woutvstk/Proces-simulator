@@ -1,6 +1,6 @@
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from PyQt5.QtCore import QTimer
+from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtCore import QTimer
 
 # Import for address updates
 from gui.customWidgets import ReadOnlyTableWidgetItem

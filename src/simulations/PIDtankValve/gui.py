@@ -1,10 +1,11 @@
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from PyQt5.QtCore import QSize, QRectF
-from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtGui import QPainter
+from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtCore import QSize, QRectF
+from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QPainter
 
 # Colors
 red = "#FF0000"

@@ -1,5 +1,5 @@
 """
-customWidgets.py - Custom PyQt5 Widgets
+customWidgets.py - Custom PySide6 Widgets
 Contains:
 - CustomTableWidgetItem (smart sorting)
 - EditableTableWidgetItem
@@ -9,12 +9,12 @@ Contains:
 """
 
 import json
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QTableWidget, QTableWidgetItem,
-    QMenu, QAction, QApplication, QInputDialog
+    QMenu, QApplication, QInputDialog
 )
-from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtGui import QDrag, QColor
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDrag, QColor, QAction
 
 
 # =============================================================================

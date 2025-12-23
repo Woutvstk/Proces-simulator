@@ -7,7 +7,7 @@
 
 import sys
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 # Add src to path for imports
 src_dir = Path(__file__).resolve().parent.parent

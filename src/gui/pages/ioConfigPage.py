@@ -12,12 +12,12 @@ import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QTableWidget, QTableWidgetItem,
-    QMenu, QAction, QApplication, QInputDialog, QFileDialog, QMessageBox
+    QMenu, QApplication, QInputDialog, QFileDialog, QMessageBox
 )
-from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtGui import QDrag, QColor
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDrag, QColor, QAction
 
 logger = logging.getLogger(__name__)
 
@@ -725,12 +725,12 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QTableWidget, QTableWidgetItem,
-    QMenu, QAction, QApplication, QInputDialog, QFileDialog, QMessageBox
+    QMenu, QApplication, QInputDialog, QFileDialog, QMessageBox
 )
-from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtGui import QDrag, QColor
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDrag, QColor, QAction
 
 # Import custom widgets from separate file
 # NOTE: The original file had a self-import issue. Since we are merging/cleaning,
