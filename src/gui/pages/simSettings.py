@@ -174,11 +174,11 @@ class ProcessSettingsMixin:
     def _init_simulation_button(self):
         """Initialize simulation start/stop button"""
         try:
-            self.pushButton_startSimulatie.setCheckable(True)
-            self.pushButton_startSimulatie.toggled.connect(
+            self.pushButton_startSimulation.setCheckable(True)
+            self.pushButton_startSimulation.toggled.connect(
                 self.toggle_simulation)
-            self.pushButton_startSimulatie.setText("START SIMULATIE")
-            self.pushButton_startSimulatie.setStyleSheet("""
+            self.pushButton_startSimulation.setText("START SIMULATION")
+            self.pushButton_startSimulation.setStyleSheet("""
                 QPushButton {
                     background-color: #44FF44;
                     color: black;
@@ -343,8 +343,8 @@ class ProcessSettingsMixin:
         """Toggle simulation on/off with visual feedback"""
         if checked:
             self.start_simulation()
-            self.pushButton_startSimulatie.setText("STOP SIMULATIE")
-            self.pushButton_startSimulatie.setStyleSheet("""
+            self.pushButton_startSimulation.setText("STOP SIMULATION")
+            self.pushButton_startSimulation.setStyleSheet("""
                 QPushButton {
                     background-color: #FF4444;
                     color: white;
@@ -356,8 +356,8 @@ class ProcessSettingsMixin:
             """)
         else:
             self.stop_simulation()
-            self.pushButton_startSimulatie.setText("START SIMULATIE")
-            self.pushButton_startSimulatie.setStyleSheet("""
+            self.pushButton_startSimulation.setText("START SIMULATION")
+            self.pushButton_startSimulation.setStyleSheet("""
                 QPushButton {
                     background-color: #44FF44;
                     color: black;

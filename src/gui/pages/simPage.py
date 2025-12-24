@@ -55,24 +55,24 @@ class SimPageMixin:
     def connect_simulation_buttons(self):
         """Connect all simulation related buttons across sidebar and pages."""
         try:
-            buttons_1vat = self.findChildren(QPushButton, "pushButton_1Vat")
-            for btn in buttons_1vat:
+            buttons_PIDtankValve = self.findChildren(QPushButton, "pushButton_PIDtankValve")
+            for btn in buttons_PIDtankValve:
                 btn.setCheckable(True)
                 btn.clicked.connect(lambda checked, b=btn: self.start_simulation(0))
         except AttributeError:
             pass
 
         try:
-            buttons_2vatten = self.findChildren(QPushButton, "pushButton_2Vatten")
-            for btn in buttons_2vatten:
+            buttons_dualTank = self.findChildren(QPushButton, "pushButton_dualTank")
+            for btn in buttons_dualTank:
                 btn.setCheckable(True)
                 btn.clicked.connect(lambda checked, b=btn: self.start_simulation(1))
         except AttributeError:
             pass
 
         try:
-            buttons_transportband = self.findChildren(QPushButton, "pushButton_transportband")
-            for btn in buttons_transportband:
+            buttons_conveyor = self.findChildren(QPushButton, "pushButton_conveyor")
+            for btn in buttons_conveyor:
                 btn.setCheckable(True)
                 btn.clicked.connect(lambda checked, b=btn: self.start_simulation(2))
         except AttributeError:
@@ -80,21 +80,21 @@ class SimPageMixin:
 
         # Close simulation buttons
         try:
-            close_btn = self.findChild(QPushButton, "pushButton_closePIDValves")
+            close_btn = self.findChild(QPushButton, "pushButton_PIDtankValve_2")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
             pass
 
         try:
-            close_btn = self.findChild(QPushButton, "pushButton_PIDWithMotor")
+            close_btn = self.findChild(QPushButton, "pushButton_closeDualTank")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
             pass
 
         try:
-            close_btn = self.findChild(QPushButton, "pushButton_closeConvSim")
+            close_btn = self.findChild(QPushButton, "pushButton_closeConveyor")
             if close_btn:
                 close_btn.clicked.connect(self.close_simulation)
         except AttributeError:
@@ -102,21 +102,21 @@ class SimPageMixin:
 
         # Float buttons per page
         try:
-            float_btn = self.vat1Page.findChild(QPushButton, "pushButton_FloatPIDValves")
+            float_btn = self.singleTankPage.findChild(QPushButton, "pushButton_FloatPIDTankValve")
             if float_btn:
                 float_btn.clicked.connect(lambda: self.toggle_float(0))
         except AttributeError:
             pass
 
         try:
-            float_btn = self.vatten2Page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+            float_btn = self.dualTankPage.findChild(QPushButton, "pushButton_FloatDualTank")
             if float_btn:
                 float_btn.clicked.connect(lambda: self.toggle_float(1))
         except AttributeError:
             pass
 
         try:
-            float_btn = self.transportbandPage.findChild(QPushButton, "pushButton_FloatConveyor")
+            float_btn = self.conveyorPage.findChild(QPushButton, "pushButton_FloatConveyor")
             if float_btn:
                 float_btn.clicked.connect(lambda: self.toggle_float(2))
         except AttributeError:
@@ -171,15 +171,15 @@ class SimPageMixin:
         except Exception:
             pass
         try:
-            for btn in self.findChildren(QPushButton, "pushButton_1Vat"):
+            for btn in self.findChildren(QPushButton, "pushButton_PIDtankValve"):
                 btn.blockSignals(True)
                 btn.setChecked(sim_index == 0)
                 btn.blockSignals(False)
-            for btn in self.findChildren(QPushButton, "pushButton_2Vatten"):
+            for btn in self.findChildren(QPushButton, "pushButton_dualTank"):
                 btn.blockSignals(True)
                 btn.setChecked(sim_index == 1)
                 btn.blockSignals(False)
-            for btn in self.findChildren(QPushButton, "pushButton_transportband"):
+            for btn in self.findChildren(QPushButton, "pushButton_conveyor"):
                 btn.blockSignals(True)
                 btn.setChecked(sim_index == 2)
                 btn.blockSignals(False)
@@ -191,15 +191,15 @@ class SimPageMixin:
         self.current_sim_page = None
         self.MainScreen.setCurrentIndex(5)
         try:
-            for btn in self.findChildren(QPushButton, "pushButton_1Vat"):
+            for btn in self.findChildren(QPushButton, "pushButton_PIDtankValve"):
                 btn.blockSignals(True)
                 btn.setChecked(False)
                 btn.blockSignals(False)
-            for btn in self.findChildren(QPushButton, "pushButton_2Vatten"):
+            for btn in self.findChildren(QPushButton, "pushButton_dualTank"):
                 btn.blockSignals(True)
                 btn.setChecked(False)
                 btn.blockSignals(False)
-            for btn in self.findChildren(QPushButton, "pushButton_transportband"):
+            for btn in self.findChildren(QPushButton, "pushButton_conveyor"):
                 btn.blockSignals(True)
                 btn.setChecked(False)
                 btn.blockSignals(False)
@@ -228,18 +228,18 @@ class SimPageMixin:
         layout = QVBoxLayout(self.floated_window)
         layout.setContentsMargins(0, 0, 0, 0)
         if sim_index == 0:
-            page = self.vat1Page
+            page = self.singleTankPage
         elif sim_index == 1:
-            page = self.vatten2Page
+            page = self.dualTankPage
         else:
-            page = self.transportbandPage
+            page = self.conveyorPage
         page.setParent(self.floated_window)
         layout.addWidget(page)
         try:
             if sim_index == 0:
-                float_btn = page.findChild(QPushButton, "pushButton_FloatPIDValves")
+                float_btn = page.findChild(QPushButton, "pushButton_FloatPIDTankValve")
             elif sim_index == 1:
-                float_btn = page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+                float_btn = page.findChild(QPushButton, "pushButton_FloatDualTank")
             else:
                 float_btn = page.findChild(QPushButton, "pushButton_FloatConveyor")
             if float_btn:
@@ -256,18 +256,18 @@ class SimPageMixin:
         print(f"Docking simulation {self.current_sim_page}")
         sim_index = self.current_sim_page
         if sim_index == 0:
-            page = self.vat1Page
+            page = self.singleTankPage
         elif sim_index == 1:
-            page = self.vatten2Page
+            page = self.dualTankPage
         else:
-            page = self.transportbandPage
+            page = self.conveyorPage
         if page:
             self.MainScreen.insertWidget(sim_index, page)
             try:
                 if sim_index == 0:
-                    float_btn = page.findChild(QPushButton, "pushButton_FloatPIDValves")
+                    float_btn = page.findChild(QPushButton, "pushButton_FloatPIDTankValve")
                 elif sim_index == 1:
-                    float_btn = page.findChild(QPushButton, "pushButton_FloatPIDMotor")
+                    float_btn = page.findChild(QPushButton, "pushButton_FloatDualTank")
                 else:
                     float_btn = page.findChild(QPushButton, "pushButton_FloatConveyor")
                 if float_btn:

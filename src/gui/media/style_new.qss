@@ -1,0 +1,476 @@
+/* ============================================================
+   PROFESSIONAL GUI STYLESHEET - PLC Modbus Process Simulator
+   ============================================================ */
+
+/* Main Window Styling */
+#MainWindow {
+	background-color: #f5f7fa;
+}
+
+/* Header Widget - Top Bar with Connection Controls */
+#headerWidget {
+	background-color: #ffffff;
+	border-bottom: 1px solid #e2e8f0;
+	padding: 0px;
+	min-height: 50px;
+}
+
+/* Main Content Area */
+#MainContent {
+	background-color: #f5f7fa;
+}
+
+/* ============================================================
+   SIDEBAR STYLING
+   ============================================================ */
+
+/* Icon-Only Sidebar */
+#iconOnlyWidget {
+	background-color: #1e293b;
+	border-right: 1px solid #0f172a;
+	width: 50px;
+	padding: 0px;
+	margin: 0px;
+}
+
+#iconOnlyWidget QPushButton {
+	height: 50px;
+	width: 50px;
+	border: none;
+	border-radius: 0px;
+	background-color: #1e293b;
+	color: #94a3b8;
+	padding: 0px;
+	margin: 0px;
+}
+
+#iconOnlyWidget QPushButton:hover {
+	background-color: #334155;
+	color: #cbd5e0;
+}
+
+#iconOnlyWidget QPushButton:checked {
+	background-color: #3b82f6;
+	color: #ffffff;
+	border-left: 3px solid #60a5fa;
+}
+
+#iconOnlyWidget QLabel {
+	height: 50px;
+	border: none;
+	background-color: #1e293b;
+}
+
+/* Logo Image in Sidebar */
+#logo {
+	padding: 8px;
+	background-color: #1e293b;
+}
+
+/* ============================================================
+   FULL MENU SIDEBAR (EXPANDED)
+   ============================================================ */
+
+#fullMenuWidget {
+	background-color: #1e293b;
+	border-right: 1px solid #0f172a;
+	min-width: 200px;
+}
+
+#fullMenuWidget QPushButton {
+	border: none;
+	border-radius: 6px;
+	text-align: left;
+	padding: 12px 14px;
+	color: #94a3b8;
+	background-color: #1e293b;
+	font-size: 13px;
+	font-weight: 500;
+	margin: 4px 8px;
+}
+
+#fullMenuWidget QPushButton:hover {
+	background-color: #334155;
+	color: #cbd5e0;
+}
+
+#fullMenuWidget QPushButton:checked {
+	background-color: #3b82f6;
+	color: #ffffff;
+	border-left: 3px solid #60a5fa;
+}
+
+/* Logo and Title in Expanded Menu */
+#logo2 {
+	color: #ffffff;
+	padding: 12px;
+	background-color: #1e293b;
+	font-weight: 600;
+}
+
+#logoText {
+	color: #ffffff;
+	font-weight: 600;
+	font-size: 14px;
+	padding: 8px 10px;
+	background-color: #1e293b;
+}
+
+/* ============================================================
+   NAVIGATION BUTTONS
+   ============================================================ */
+
+#pushButton_menu {
+	padding: 6px;
+	border: none;
+	width: 36px;
+	height: 36px;
+	border-radius: 6px;
+	background-color: #f1f5f9;
+	color: #1e293b;
+	margin-right: 8px;
+	font-weight: 500;
+}
+
+#pushButton_menu:hover {
+	background-color: #e2e8f0;
+}
+
+#pushButton_menu:pressed {
+	background-color: #cbd5e0;
+}
+
+/* ============================================================
+   NETWORK CONNECTION CONTROLS
+   ============================================================ */
+
+/* IP Address Input */
+#lineEdit_IPAddress {
+	background-color: #ffffff;
+	border: 1px solid #cbd5e0;
+	border-radius: 6px;
+	padding: 8px 12px;
+	color: #1e293b;
+	min-height: 28px;
+	font-size: 12px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#lineEdit_IPAddress:focus {
+	border: 2px solid #3b82f6;
+	background-color: #ffffff;
+}
+
+#lineEdit_IPAddress:disabled {
+	background-color: #e2e8f0;
+	color: #94a3b8;
+}
+
+/* Network Port ComboBox */
+#comboBox_networkPort {
+	background-color: #ffffff;
+	border: 1px solid #cbd5e0;
+	border-radius: 6px;
+	padding: 8px 12px;
+	min-height: 28px;
+	color: #1e293b;
+	font-size: 12px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#comboBox_networkPort:focus {
+	border: 2px solid #3b82f6;
+}
+
+#comboBox_networkPort:disabled {
+	background-color: #e2e8f0;
+	color: #94a3b8;
+}
+
+/* Connection Status Button */
+#pushButton_connect {
+	background-color: #10b981;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 10px 20px;
+	font-weight: 600;
+	min-height: 28px;
+	font-size: 12px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#pushButton_connect:hover {
+	background-color: #059669;
+}
+
+#pushButton_connect:pressed {
+	background-color: #047857;
+}
+
+#pushButton_connect:checked {
+	background-color: #ef4444;
+	color: #ffffff;
+}
+
+#pushButton_connect:checked:hover {
+	background-color: #dc2626;
+}
+
+#pushButton_connect:disabled {
+	background-color: #cbd5e0;
+	color: #94a3b8;
+}
+
+/* Connection Status Label */
+#Label_connectStatus {
+	border: none;
+	background-color: transparent;
+	padding: 0px 6px;
+	color: #1e293b;
+	font-weight: 500;
+}
+
+/* Exit Buttons */
+#pushButton_Exit,
+#pushButton_exit2 {
+	background-color: #ef4444;
+	color: #ffffff;
+	border: none;
+	border-radius: 6px;
+	padding: 10px 16px;
+	font-weight: 600;
+	min-height: 28px;
+	font-size: 12px;
+	margin-top: auto;
+}
+
+#pushButton_Exit:hover,
+#pushButton_exit2:hover {
+	background-color: #dc2626;
+}
+
+#pushButton_Exit:pressed,
+#pushButton_exit2:pressed {
+	background-color: #b91c1c;
+}
+
+/* ============================================================
+   SIMULATION CARD WIDGETS
+   ============================================================ */
+
+/* Card Container Styling */
+#singleTankCard {
+	background-color: #ffffff;
+	border: 2px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 20px;
+	margin: 10px;
+}
+
+#singleTankCard:hover {
+	border: 2px solid #3b82f6;
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+/* Simulation Start Buttons */
+#pushButton_singleTank,
+#pushButton_dualTank,
+#pushButton_conveyor {
+	background-color: #3b82f6;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 20px;
+	font-weight: 600;
+	min-height: 36px;
+	font-size: 13px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#pushButton_singleTank:hover,
+#pushButton_dualTank:hover,
+#pushButton_conveyor:hover {
+	background-color: #2563eb;
+}
+
+#pushButton_singleTank:pressed,
+#pushButton_dualTank:pressed,
+#pushButton_conveyor:pressed {
+	background-color: #1d4ed8;
+}
+
+#pushButton_singleTank:checked,
+#pushButton_dualTank:checked,
+#pushButton_conveyor:checked {
+	background-color: #10b981;
+	color: #ffffff;
+}
+
+/* Simulation Close Buttons */
+#pushButton_closeSingleTank,
+#pushButton_closeDualTank,
+#pushButton_closeConveyor {
+	background-color: #ef4444;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 10px 16px;
+	font-weight: 600;
+	min-height: 32px;
+	font-size: 12px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#pushButton_closeSingleTank:hover,
+#pushButton_closeDualTank:hover,
+#pushButton_closeConveyor:hover {
+	background-color: #dc2626;
+}
+
+#pushButton_closeSingleTank:pressed,
+#pushButton_closeDualTank:pressed,
+#pushButton_closeConveyor:pressed {
+	background-color: #b91c1c;
+}
+
+/* ============================================================
+   SIMULATION CONTROL BUTTONS
+   ============================================================ */
+
+#pushButton_startSimulation {
+	background-color: #10b981;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 20px;
+	font-weight: 600;
+	min-height: 36px;
+	font-size: 13px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#pushButton_startSimulation:hover {
+	background-color: #059669;
+}
+
+#pushButton_startSimulation:pressed {
+	background-color: #047857;
+}
+
+#pushButton_startSimulation:checked {
+	background-color: #ef4444;
+	color: #ffffff;
+}
+
+#pushButton_startSimulation:checked:hover {
+	background-color: #dc2626;
+}
+
+/* ============================================================
+   GENERAL STYLING
+   ============================================================ */
+
+QLabel {
+	color: #1e293b;
+	font-family: "Segoe UI", Arial, sans-serif;
+	font-size: 12px;
+}
+
+QLineEdit, QSpinBox, QDoubleSpinBox {
+	background-color: #ffffff;
+	border: 1px solid #cbd5e0;
+	border-radius: 4px;
+	padding: 8px 12px;
+	color: #1e293b;
+	min-height: 24px;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+	border: 2px solid #3b82f6;
+	background-color: #ffffff;
+}
+
+QComboBox {
+	background-color: #ffffff;
+	border: 1px solid #cbd5e0;
+	border-radius: 4px;
+	padding: 8px 12px;
+	min-height: 24px;
+	color: #1e293b;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+QComboBox:focus {
+	border: 2px solid #3b82f6;
+}
+
+QGroupBox {
+	background-color: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	margin-top: 12px;
+	padding-top: 12px;
+	font-weight: 600;
+	color: #1e293b;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+QGroupBox::title {
+	left: 12px;
+	padding: 0 8px;
+	background-color: #ffffff;
+}
+
+QCheckBox {
+	color: #475569;
+	font-family: "Segoe UI", Arial, sans-serif;
+}
+
+QCheckBox::indicator {
+	width: 18px;
+	height: 18px;
+	border: 1px solid #cbd5e0;
+	border-radius: 3px;
+	background-color: #ffffff;
+}
+
+QCheckBox::indicator:checked {
+	background-color: #3b82f6;
+	border-color: #3b82f6;
+}
+
+QScrollBar:vertical {
+	border: none;
+	background-color: #f1f5f9;
+	width: 12px;
+	border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+	background-color: #cbd5e0;
+	border-radius: 6px;
+	min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+	background-color: #94a3b8;
+}
+
+QScrollBar:horizontal {
+	border: none;
+	background-color: #f1f5f9;
+	height: 12px;
+	border-radius: 6px;
+}
+
+QScrollBar::handle:horizontal {
+	background-color: #cbd5e0;
+	border-radius: 6px;
+	min-width: 30px;
+}
+
+QScrollBar::handle:horizontal:hover {
+	background-color: #94a3b8;
+}

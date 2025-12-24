@@ -721,8 +721,8 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
            </property>
            <property name="iconSize">
             <size>
-             <width>30</width>
-             <height>30</height>
+             <width>20</width>
+             <height>20</height>
             </size>
            </property>
            <property name="checkable">
@@ -1067,7 +1067,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
          <property name="currentIndex">
           <number>0</number>
          </property>
-         <widget class="QWidget" name="vat1Page">
+         <widget class="QWidget" name="singleTankPage">
           <layout class="QGridLayout" name="gridLayout_3">
            <item row="0" column="2">
             <layout class="QHBoxLayout" name="horizontalLayout_45">
@@ -1084,14 +1084,27 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>148</width>
+                 <width>64</width>
                  <height>20</height>
                 </size>
                </property>
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_closePIDValves">
+              <widget class="QPushButton" name="pushButton_FloatPIDTankValve">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>44</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>FLOAT</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_PIDtankValve_2">
                <property name="minimumSize">
                 <size>
                  <width>160</width>
@@ -1113,7 +1126,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                </property>
                <property name="styleSheet">
                 <string notr="true">
-#pushButton_closePIDValves {
+#pushButton_closeSingleTank {
     background-color: #ef4444;
     color: #ffffff;
     border: none;
@@ -1123,11 +1136,11 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     min-height: 20px;
 }
 
-#pushButton_closePIDValves:hover {
+#pushButton_closeSingleTank:hover {
     background-color: #dc2626;
 }
 
-#pushButton_closePIDValves:pressed {
+#pushButton_closeSingleTank:pressed {
     background-color: #b91c1c;
 }
                 </string>
@@ -1150,7 +1163,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
             </layout>
            </item>
            <item row="2" column="2">
-            <widget class="QPushButton" name="pushButton_startSimulatie">
+            <widget class="QPushButton" name="pushButton_startSimulation">
              <property name="minimumSize">
               <size>
                <width>300</width>
@@ -1172,7 +1185,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
              </property>
              <property name="styleSheet">
               <string notr="true">
-#pushButton_startSimulatie {
+#pushButton_startSimulation {
     background-color: #ef4444;
     color: #ffffff;
     border: none;
@@ -1182,20 +1195,20 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     min-height: 20px;
 }
 
-#pushButton_startSimulatie:hover {
+#pushButton_startSimulation:hover {
     background-color: #dc2626;
 }
 
-#pushButton_startSimulatie:pressed {
+#pushButton_startSimulation:pressed {
     background-color: #b91c1c;
 }
 
-#pushButton_startSimulatie:checked {
+#pushButton_startSimulation:checked {
     background-color: #10b981;
     color: #ffffff;
 }
 
-#pushButton_startSimulatie:checked:hover {
+#pushButton_startSimulation:checked:hover {
     background-color: #059669;
 }
               </string>
@@ -1346,25 +1359,31 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                     <property name="font">
                      <font>
                       <family>Segoe UI,Arial,sans-serif</family>
-                      <weight>75</weight>
+                      <weight>62</weight>
                       <bold>true</bold>
                      </font>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">
-                    QGroupBox {
-                      border: 2px solid #a7c7e7;
-                      border-radius: 8px;
-                      margin-top: 12px;
-                      background-color: #f0f7ff;
-                    }
-                    QGroupBox::title {
-                      color: #1e293b;
-                      subcontrol-origin: margin;
-                      left: 10px;
-                      padding: 0 8px;
-                    }
-                  </string>
+                     <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
                     </property>
                     <property name="title">
                      <string>Control Parameters</string>
@@ -1746,25 +1765,31 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                     <property name="font">
                      <font>
                       <family>Segoe UI,Arial,sans-serif</family>
-                      <weight>75</weight>
+                      <weight>62</weight>
                       <bold>true</bold>
                      </font>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">
-                    QGroupBox {
-                      border: 2px solid #a7c7e7;
-                      border-radius: 8px;
-                      margin-top: 12px;
-                      background-color: #f0f7ff;
-                    }
-                    QGroupBox::title {
-                      color: #1e293b;
-                      subcontrol-origin: margin;
-                      left: 10px;
-                      padding: 0 8px;
-                    }
-                  </string>
+                     <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
                     </property>
                     <property name="title">
                      <string>Control Parameters</string>
@@ -2044,7 +2069,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="vatten2Page">
+         <widget class="QWidget" name="dualTankPage">
           <layout class="QGridLayout" name="gridLayout_5">
            <item row="1" column="0">
             <widget class="QLabel" name="label_2">
@@ -2075,7 +2100,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_PIDWithMotor">
+              <widget class="QPushButton" name="pushButton_closeDualTank">
                <property name="minimumSize">
                 <size>
                  <width>160</width>
@@ -2141,10 +2166,10 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="transportbandPage">
+         <widget class="QWidget" name="conveyorPage">
           <layout class="QHBoxLayout" name="horizontalLayout_25">
            <item>
-            <widget class="QWidget" name="transportbandWidgetContainer" native="true">
+            <widget class="QWidget" name="conveyorWidgetContainer" native="true">
              <property name="styleSheet">
               <string notr="true">background-color: rgb(54, 121, 173);</string>
              </property>
@@ -2180,7 +2205,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_closeConvSim">
+                 <widget class="QPushButton" name="pushButton_closeConveyor">
                   <property name="minimumSize">
                    <size>
                     <width>160</width>
@@ -2567,7 +2592,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>50</width>
-                       <height>30</height>
+                       <height>42</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2623,7 +2648,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>50</width>
-                       <height>30</height>
+                       <height>42</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2679,7 +2704,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>50</width>
-                       <height>30</height>
+                       <height>42</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2735,7 +2760,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>50</width>
-                       <height>30</height>
+                       <height>42</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2770,7 +2795,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>40</width>
-                       <height>30</height>
+                       <height>40</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2798,7 +2823,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>40</width>
-                       <height>30</height>
+                       <height>40</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -3338,7 +3363,7 @@ border: 3px solid rgb(193, 193, 193);
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_2Vatten">
+               <widget class="QPushButton" name="pushButton_dualTank">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -3405,7 +3430,7 @@ border: 3px solid rgb(193, 193, 193);
             </widget>
            </item>
            <item row="0" column="0" colspan="2">
-            <widget class="QWidget" name="PIDValves" native="true">
+            <widget class="QWidget" name="singleTankCard" native="true">
              <property name="minimumSize">
               <size>
                <width>320</width>
@@ -3426,12 +3451,12 @@ border: 3px solid rgb(193, 193, 193);
              </property>
              <property name="styleSheet">
               <string notr="true">
-                  #PIDValves {
+                  #singleTankCard {
                     background-color: #ffffff;
                     border: 2px solid #e5e7eb;
                     border-radius: 12px;
                   }
-                  #PIDValves:hover {
+                  #singleTankCard:hover {
                     border-color: #3daee9;
                   }
                 </string>
@@ -3502,7 +3527,7 @@ border: 3px solid rgb(193, 193, 193);
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_1Vat">
+               <widget class="QPushButton" name="pushButton_PIDtankValve">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -3660,7 +3685,7 @@ border: 3px solid rgb(193, 193, 193);
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_transportband">
+               <widget class="QPushButton" name="pushButton_conveyor">
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
@@ -3898,9 +3923,9 @@ border: 3px solid rgb(193, 193, 193);
                   <property name="geometry">
                    <rect>
                     <x>0</x>
-                    <y>0</y>
+                    <y>-2</y>
                     <width>1277</width>
-                    <height>1059</height>
+                    <height>1119</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_tankSimScroll">
@@ -3911,25 +3936,31 @@ border: 3px solid rgb(193, 193, 193);
                        <property name="font">
                         <font>
                          <family>Segoe UI,Arial,sans-serif</family>
-                         <weight>75</weight>
+                         <weight>62</weight>
                          <bold>true</bold>
                         </font>
                        </property>
                        <property name="styleSheet">
-                        <string notr="true">
-                          QGroupBox {
-                            border: 2px solid #bfdbfe;
-                            border-radius: 8px;
-                            margin-top: 12px;
-                            background-color: #eff6ff;
-                          }
-                          QGroupBox::title {
-                            color: #1e293b;
-                            subcontrol-origin: margin;
-                            left: 10px;
-                            padding: 0 8px;
-                          }
-                        </string>
+                        <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
                        </property>
                        <property name="title">
                         <string>Tank Dimensions</string>
@@ -4141,25 +4172,31 @@ border: 3px solid rgb(193, 193, 193);
                        <property name="font">
                         <font>
                          <family>Segoe UI,Arial,sans-serif</family>
-                         <weight>75</weight>
+                         <weight>62</weight>
                          <bold>true</bold>
                         </font>
                        </property>
                        <property name="styleSheet">
-                        <string notr="true">
-                          QGroupBox {
-                            border: 2px solid #a7c7e7;
-                            border-radius: 8px;
-                            margin-top: 12px;
-                            background-color: #f0f7ff;
-                          }
-                          QGroupBox::title {
-                            color: #1e293b;
-                            subcontrol-origin: margin;
-                            left: 10px;
-                            padding: 0 8px;
-                          }
-                        </string>
+                        <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
                        </property>
                        <property name="title">
                         <string>Control Settings</string>
@@ -4653,25 +4690,31 @@ border: 3px solid rgb(193, 193, 193);
                        <property name="font">
                         <font>
                          <family>Segoe UI,Arial,sans-serif</family>
-                         <weight>75</weight>
+                         <weight>62</weight>
                          <bold>true</bold>
                         </font>
                        </property>
                        <property name="styleSheet">
-                        <string notr="true">
-                          QGroupBox {
-                            border: 2px solid #bfdbfe;
-                            border-radius: 8px;
-                            margin-top: 12px;
-                            background-color: #eff6ff;
-                          }
-                          QGroupBox::title {
-                            color: #1e293b;
-                            subcontrol-origin: margin;
-                            left: 10px;
-                            padding: 0 8px;
-                          }
-                        </string>
+                        <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
                        </property>
                        <property name="title">
                         <string>Liquid Properties</string>
@@ -5939,6 +5982,7 @@ QSpinBox::up-button, QSpinBox::down-button {
     </layout>
    </widget>
   </widget>
+  <zorder>dockWidget_GeneralControls</zorder>
  </widget>
  <resources>
   <include location="Resource.qrc"/>
