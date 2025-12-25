@@ -298,3 +298,56 @@ class VatWidget(QWidget):
                 tspan.text = value
             else:
                 item.text = value
+
+    def connect_pidvalve_controls(self):
+        # Connect all new IO controls to the IO system
+        # Flip-flop logic for Auto/Manual
+        if hasattr(self, 'pushButton_PidValveAuto') and hasattr(self, 'pushButton_PidValveMan'):
+            self.pushButton_PidValveAuto.setCheckable(True)
+            self.pushButton_PidValveMan.setCheckable(True)
+            self.pushButton_PidValveAuto.setChecked(True)  # Default to Auto
+            self.pushButton_PidValveAuto.toggled.connect(
+                lambda checked: self.pushButton_PidValveMan.setChecked(not checked)
+            )
+            self.pushButton_PidValveMan.toggled.connect(
+                lambda checked: self.pushButton_PidValveAuto.setChecked(not checked)
+            )
+        # Connect digital buttons
+        for btn_name in [
+            'pushButton_PidValveStart', 'pushButton_PidValveStop',
+            'radioButton_PidTankValveAItemp', 'radioButton_PidTankValveDItemp',
+            'radioButton_PidTankValveAIlevel', 'radioButton_PidTankValveDIlevel']:
+            btn = getattr(self, btn_name, None)
+            if btn:
+                btn.setCheckable(True)
+                # Optionally: connect to a slot to update IO state
+        # Connect sliders to labels
+        # Ensure slider value is always shown on label
+        slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+        label_temp = getattr(self, 'label_PidTankTempSP', None)
+        if slider_temp and label_temp:
+            label_temp.setText(str(slider_temp.value()))
+            slider_temp.valueChanged.connect(lambda val: label_temp.setText(str(val)))
+        slider_level = getattr(self, 'slider_PidTankLevelSP', None)
+        label_level = getattr(self, 'label_PidTankLevelSP', None)
+        if slider_level and label_level:
+            label_level.setText(str(slider_level.value()))
+            slider_level.valueChanged.connect(lambda val: label_level.setText(str(val)))
+
+    def set_plc_pidcontrol_index(self, gui_mode: bool):
+        """Set PLCControl_PIDControl index: 0 for PLC, 1 for GUI."""
+        # This assumes the parent or main window exposes these widgets
+        parent = self.parent()
+        # Try to find the PLCControl_PIDControl widget in the parent hierarchy
+        plc_control = None
+        w = self
+        while w is not None:
+            plc_control = getattr(w, 'PLCControl_PIDControl', None)
+            if plc_control is not None:
+                break
+            w = getattr(w, 'parent', lambda: None)()
+        if plc_control is not None:
+            if gui_mode:
+                plc_control.setCurrentIndex(1)
+            else:
+                plc_control.setCurrentIndex(0)

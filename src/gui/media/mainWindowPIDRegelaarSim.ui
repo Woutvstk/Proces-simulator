@@ -9,14 +9,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1645</width>
-    <height>1538</height>
+    <width>1402</width>
+    <height>1850</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1200</width>
+    <height>1000</height>
+   </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>16777215</width>
-    <height>16777215</height>
+    <width>20000</width>
+    <height>20000</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -193,551 +199,6 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_6">
-    <item row="0" column="0">
-     <widget class="QWidget" name="iconOnlyWidget" native="true">
-      <property name="styleSheet">
-       <string notr="true">
-#iconOnlyWidget {
-    background-color: #2d5a8c;
-    border-right: 1px solid #3d6ab3;
-}
-
-#iconOnlyWidget QPushButton {
-    background-color: transparent;
-    border: none;
-    border-radius: 0px;
-    padding: 12px;
-    color: #ffffff;
-}
-
-#iconOnlyWidget QPushButton:hover {
-    background-color: rgba(59, 130, 246, 0.3);
-    border-left: 3px solid #60a5fa;
-}
-
-#iconOnlyWidget QPushButton:checked {
-    background-color: rgba(59, 130, 246, 0.4);
-    border-left: 3px solid #60a5fa;
-}
-       </string>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QLabel" name="logo">
-           <property name="minimumSize">
-            <size>
-             <width>50</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>40</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap resource="Resource.qrc">:/icon/media/icon/simulation.png</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="pushButton_settingsPage">
-           <property name="maximumSize">
-            <size>
-             <width>60</width>
-             <height>48</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_IOPage">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>40</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-12-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-12-32 blauw.ico</normalon>:/icon/media/icon/settings-12-32.ico</iconset>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_simPage">
-           <property name="maximumSize">
-            <size>
-             <width>60</width>
-             <height>48</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/play-6-32.ico</normaloff>
-             <normalon>:/icon/media/icon/play-6-32 blauw.ico</normalon>:/icon/media/icon/play-6-32.ico</iconset>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_simSettings">
-           <property name="maximumSize">
-            <size>
-             <width>60</width>
-             <height>48</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_generalControls">
-           <property name="maximumSize">
-            <size>
-             <width>60</width>
-             <height>48</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>30</width>
-             <height>30</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>890</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton_Exit">
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="Resource.qrc">
-           <normaloff>:/icon/media/icon/close-window-64.ico</normaloff>
-           <normalon>:/icon/media/icon/close-window-64 blauw.ico</normalon>:/icon/media/icon/close-window-64.ico</iconset>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <property name="autoExclusive">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QWidget" name="fullMenuWidget" native="true">
-      <property name="styleSheet">
-       <string notr="true">
-#fullMenuWidget {
-    background-color: #2d5a8c;
-    border-right: 1px solid #3d6ab3;
-}
-
-#fullMenuWidget QPushButton {
-    background-color: transparent;
-    border: none;
-    border-radius: 6px;
-    text-align: left;
-    padding: 12px 16px;
-    color: #ffffff;
-    font-weight: 500;
-}
-
-#fullMenuWidget QPushButton:hover {
-    background-color: rgba(96, 165, 250, 0.3);
-    color: #ffffff;
-}
-
-#fullMenuWidget QPushButton:checked {
-    background-color: rgba(96, 165, 250, 0.4);
-    color: #ffffff;
-    border-left: 3px solid #60a5fa;
-}
-
-#logoText {
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 600;
-}
-       </string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_4">
-       <property name="leftMargin">
-        <number>9</number>
-       </property>
-       <property name="topMargin">
-        <number>9</number>
-       </property>
-       <property name="rightMargin">
-        <number>9</number>
-       </property>
-       <property name="bottomMargin">
-        <number>9</number>
-       </property>
-       <item row="2" column="0">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>838</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="pushButton_exit2">
-         <property name="font">
-          <font>
-           <family>Segoe UI,Arial,sans-serif</family>
-           <weight>62</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>EXIT</string>
-         </property>
-         <property name="icon">
-          <iconset resource="Resource.qrc">
-           <normaloff>:/icon/media/icon/close-window-64.ico</normaloff>
-           <normalon>:/icon/media/icon/close-window-64 blauw.ico</normalon>:/icon/media/icon/close-window-64.ico</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <property name="autoExclusive">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_5">
-           <item>
-            <widget class="QLabel" name="logo2">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>40</width>
-               <height>40</height>
-              </size>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="pixmap">
-              <pixmap>icon/simulation.png</pixmap>
-             </property>
-             <property name="scaledContents">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="logoText">
-             <property name="font">
-              <font>
-               <family>Segoe UI,Arial,sans-serif</family>
-               <pointsize>-1</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Process Simulator</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_settingsPage2">
-           <property name="font">
-            <font>
-             <family>Segoe UI,Arial,sans-serif</family>
-             <weight>62</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>GENERAL SETTINGS</string>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_IOPage2">
-           <property name="font">
-            <font>
-             <family>Segoe UI,Arial,sans-serif</family>
-             <weight>62</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>I/O SETTINGS</string>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-12-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-12-32 blauw.ico</normalon>:/icon/media/icon/settings-12-32.ico</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_simPage2">
-           <property name="font">
-            <font>
-             <family>Segoe UI,Arial,sans-serif</family>
-             <weight>62</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>SIMULATION</string>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/play-6-32.ico</normaloff>
-             <normalon>:/icon/media/icon/play-6-32 blauw.ico</normalon>:/icon/media/icon/play-6-32.ico</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_simSettings2">
-           <property name="font">
-            <font>
-             <family>Segoe UI,Arial,sans-serif</family>
-             <weight>62</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>SIMULATION SETTINGS</string>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
-             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_generalControls2">
-           <property name="font">
-            <font>
-             <family>Segoe UI,Arial,sans-serif</family>
-             <weight>62</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>GENERAL CONTROLS</string>
-           </property>
-           <property name="icon">
-            <iconset resource="Resource.qrc">
-             <normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</normaloff>
-             <normalon>:/icon/icon/controls-svgrepo-com.svg</normalon>:/icon/icon/controls-svgrepo-com_blue.svg</iconset>
-           </property>
-           <property name="iconSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="autoExclusive">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="0" column="2">
      <widget class="QWidget" name="MainContent" native="true">
       <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -795,7 +256,9 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
 }
 
 #pushButton_connect {
-    background-color: #10b981;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -805,13 +268,39 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
 }
 
 #pushButton_connect:hover {
-    background-color: #059669;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
 }
 
 #pushButton_connect:pressed {
-    background-color: #047857;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
 }
-          </string>
+
+#pushButton_connect:checked {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(16, 185, 129, 255), 
+        stop:1 rgba(52, 211, 153, 255));
+    color: #ffffff;
+}
+
+#pushButton_connect:checked:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(110, 231, 183, 255), 
+        stop:0.5 rgba(52, 211, 153, 255), 
+        stop:1 rgba(16, 185, 129, 255));
+}
+
+#pushButton_connect:checked:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(5, 150, 105, 255), 
+        stop:0.5 rgba(4, 120, 87, 255), 
+        stop:1 rgba(6, 78, 59, 255));
+}</string>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <property name="spacing">
@@ -1058,6 +547,12 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
        </item>
        <item>
         <widget class="QStackedWidget" name="MainScreen">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>820</height>
+          </size>
+         </property>
          <property name="sizeIncrement">
           <size>
            <width>100</width>
@@ -1069,7 +564,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
          </property>
          <widget class="QWidget" name="singleTankPage">
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="2">
+           <item row="0" column="1">
             <layout class="QHBoxLayout" name="horizontalLayout_45">
              <property name="spacing">
               <number>0</number>
@@ -1084,24 +579,11 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>64</width>
+                 <width>170</width>
                  <height>20</height>
                 </size>
                </property>
               </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_FloatPIDTankValve">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>44</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>FLOAT</string>
-               </property>
-              </widget>
              </item>
              <item>
               <widget class="QPushButton" name="pushButton_PIDtankValve_2">
@@ -1125,25 +607,29 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true">
-#pushButton_closeSingleTank {
-    background-color: #ef4444;
-    color: #ffffff;
+                <string notr="true">QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
+    color: white;
     border: none;
     border-radius: 8px;
-    padding: 12px 16px;
-    font-weight: 600;
-    min-height: 20px;
+    padding: 12px;
 }
 
-#pushButton_closeSingleTank:hover {
-    background-color: #dc2626;
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
 }
 
-#pushButton_closeSingleTank:pressed {
-    background-color: #b91c1c;
-}
-                </string>
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
+}</string>
                </property>
                <property name="text">
                 <string>CLOSE SIM</string>
@@ -1162,29 +648,79 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
              </item>
             </layout>
            </item>
-           <item row="2" column="2">
-            <widget class="QPushButton" name="pushButton_startSimulation">
-             <property name="minimumSize">
+           <item row="2" column="1">
+            <spacer name="verticalSpacer_9">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
               <size>
-               <width>300</width>
-               <height>44</height>
+               <width>0</width>
+               <height>5</height>
               </size>
              </property>
-             <property name="maximumSize">
+            </spacer>
+           </item>
+           <item row="4" column="1">
+            <spacer name="verticalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
               <size>
-               <width>200</width>
-               <height>50</height>
+               <width>20</width>
+               <height>5</height>
               </size>
              </property>
-             <property name="font">
-              <font>
-               <family>Segoe UI,Arial,sans-serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">
+            </spacer>
+           </item>
+           <item row="7" column="1">
+            <layout class="QHBoxLayout" name="horizontalLayout_21">
+             <item>
+              <spacer name="horizontalSpacer_4">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>25</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_startSimulation">
+               <property name="minimumSize">
+                <size>
+                 <width>300</width>
+                 <height>44</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>200</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI,Arial,sans-serif</family>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">
 #pushButton_startSimulation {
     background-color: #ef4444;
     color: #ffffff;
@@ -1212,46 +748,470 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     background-color: #059669;
 }
               </string>
-             </property>
-             <property name="text">
-              <string>START SIMULATION</string>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-            </widget>
+               </property>
+               <property name="text">
+                <string>START SIMULATION</string>
+               </property>
+               <property name="checkable">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="0" column="0" rowspan="3">
-            <widget class="QWidget" name="vatWidgetContainer" native="true">
+           <item row="5" column="1">
+            <widget class="QGroupBox" name="groupBox_plcPidTankValveControls_2">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>500</width>
-               <height>500</height>
+               <width>325</width>
+               <height>100</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>2000</width>
-               <height>2000</height>
+               <width>300</width>
+               <height>150</height>
               </size>
              </property>
-             <property name="styleSheet">
-              <string notr="true">
-#vatWidgetContainer {
-    background-color: #ffffff;
-}
-              </string>
+             <property name="palette">
+              <palette>
+               <active>
+                <colorrole role="WindowText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Text">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Base">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Window">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </active>
+               <inactive>
+                <colorrole role="WindowText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Text">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Base">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Window">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </inactive>
+               <disabled>
+                <colorrole role="WindowText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Button">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Text">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="ButtonText">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>30</red>
+                   <green>41</green>
+                   <blue>59</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Base">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+                <colorrole role="Window">
+                 <brush brushstyle="SolidPattern">
+                  <color alpha="255">
+                   <red>245</red>
+                   <green>250</green>
+                   <blue>255</blue>
+                  </color>
+                 </brush>
+                </colorrole>
+               </disabled>
+              </palette>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_9"/>
+             <property name="font">
+              <font>
+               <family>Segoe UI,Arial,sans-serif</family>
+               <weight>62</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}
+
+/* Radio Button Container */
+QRadioButton {
+    spacing: 8px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+/* Radio Button Indicator (Circle) */
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 2px solid #d1d5db;
+    background-color: white;
+}
+
+/* Hover State */
+QRadioButton::indicator:hover {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(255, 255, 255, 255),
+        stop:1 rgba(239, 246, 255, 255));
+}
+
+/* Checked State */
+QRadioButton::indicator:checked {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(96, 165, 250, 255),
+        stop:0.5 rgba(59, 130, 246, 255),
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+/* Checked Hover State */
+QRadioButton::indicator:checked:hover {
+    border: 2px solid #2563eb;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(147, 197, 253, 255),
+        stop:0.5 rgba(96, 165, 250, 255),
+        stop:1 rgba(59, 130, 246, 255));
+}
+
+/* Pressed State */
+QRadioButton::indicator:pressed {
+    border: 2px solid #1d4ed8;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(29, 78, 216, 255),
+        stop:0.5 rgba(30, 64, 175, 255),
+        stop:1 rgba(23, 37, 84, 255));
+}
+
+/* Disabled State */
+QRadioButton::indicator:disabled {
+    border: 2px solid #e5e7eb;
+    background-color: #f3f4f6;
+}
+
+QRadioButton:disabled {
+    color: #9ca3af;
+}</string>
+             </property>
+             <property name="title">
+              <string>Trends</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_13">
+              <property name="spacing">
+               <number>4</number>
+              </property>
+              <property name="leftMargin">
+               <number>4</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>4</number>
+              </property>
+              <property name="bottomMargin">
+               <number>4</number>
+              </property>
+              <item>
+               <layout class="QHBoxLayout" name="ManAutoPidTankValve_2">
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_29">
+                  <item>
+                   <widget class="QPushButton" name="pushButton_PidValveAuto_2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>44</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>200</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Segoe UI,Arial,sans-serif</family>
+                      <weight>75</weight>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
+                    </property>
+                    <property name="text">
+                     <string>TEMPERATURE</string>
+                    </property>
+                    <property name="iconSize">
+                     <size>
+                      <width>60</width>
+                      <height>60</height>
+                     </size>
+                    </property>
+                    <property name="checkable">
+                     <bool>false</bool>
+                    </property>
+                    <property name="autoExclusive">
+                     <bool>false</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pushButton_PidValveMan_2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>80</width>
+                      <height>44</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>200</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <family>Segoe UI,Arial,sans-serif</family>
+                      <weight>75</weight>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
+                    </property>
+                    <property name="text">
+                     <string>LEVEL</string>
+                    </property>
+                    <property name="iconSize">
+                     <size>
+                      <width>60</width>
+                      <height>60</height>
+                     </size>
+                    </property>
+                    <property name="checkable">
+                     <bool>false</bool>
+                    </property>
+                    <property name="autoExclusive">
+                     <bool>false</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
             </widget>
            </item>
-           <item row="1" column="2">
+           <item row="1" column="1">
             <widget class="QWidget" name="regelingSimGuiContainer" native="true">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -1286,7 +1246,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>700</height>
+                  <height>300</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1296,7 +1256,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                  </size>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="adjustableVavleGUISim">
                  <layout class="QVBoxLayout" name="verticalLayout_adjustableValve">
@@ -1316,45 +1276,196 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
                    <number>5</number>
                   </property>
                   <item>
-                   <widget class="QLabel" name="label_14">
-                    <property name="font">
-                     <font>
-                      <family>Segoe UI,Arial,sans-serif</family>
-                      <pointsize>15</pointsize>
-                      <weight>50</weight>
-                      <bold>false</bold>
-                     </font>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">color: #1e293b;</string>
-                    </property>
-                    <property name="text">
-                     <string>GUI Simulation</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QGroupBox" name="groupBox_simControls">
                     <property name="sizePolicy">
-                     <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
                     <property name="minimumSize">
                      <size>
-                      <width>300</width>
+                      <width>325</width>
                       <height>300</height>
                      </size>
                     </property>
                     <property name="maximumSize">
                      <size>
-                      <width>300</width>
+                      <width>325</width>
                       <height>700</height>
                      </size>
+                    </property>
+                    <property name="palette">
+                     <palette>
+                      <active>
+                       <colorrole role="WindowText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Button">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Text">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="ButtonText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Base">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Window">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                      </active>
+                      <inactive>
+                       <colorrole role="WindowText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Button">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Text">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="ButtonText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Base">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Window">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                      </inactive>
+                      <disabled>
+                       <colorrole role="WindowText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Button">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Text">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="ButtonText">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>30</red>
+                          <green>41</green>
+                          <blue>59</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Base">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                       <colorrole role="Window">
+                        <brush brushstyle="SolidPattern">
+                         <color alpha="255">
+                          <red>245</red>
+                          <green>250</green>
+                          <blue>255</blue>
+                         </color>
+                        </brush>
+                       </colorrole>
+                      </disabled>
+                     </palette>
                     </property>
                     <property name="font">
                      <font>
@@ -1551,6 +1662,51 @@ QGroupBox::title {
                        </item>
                       </layout>
                      </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_heaterPower">
+                       <property name="font">
+                        <font>
+                         <family>Segoe UI,Arial,sans-serif</family>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Heating Coil Power:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_heaterPower_2">
+                       <item>
+                        <widget class="QSlider" name="heaterPowerSlider_2">
+                         <property name="minimum">
+                          <number>0</number>
+                         </property>
+                         <property name="maximum">
+                          <number>32747</number>
+                         </property>
+                         <property name="value">
+                          <number>0</number>
+                         </property>
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="heaterPowerValueLabel_2">
+                         <property name="minimumSize">
+                          <size>
+                           <width>50</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>0</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
                      <item row="5" column="0">
                       <widget class="QLabel" name="label_9">
                        <property name="font">
@@ -1649,66 +1805,8 @@ QGroupBox::title {
                        </item>
                       </layout>
                      </item>
-                     <item row="3" column="0">
-                      <widget class="QLabel" name="label_heaterPower">
-                       <property name="font">
-                        <font>
-                         <family>Segoe UI,Arial,sans-serif</family>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Heating Coil Power:</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="3" column="1">
-                      <layout class="QHBoxLayout" name="horizontalLayout_heaterPower_2">
-                       <item>
-                        <widget class="QSlider" name="heaterPowerSlider_2">
-                         <property name="minimum">
-                          <number>0</number>
-                         </property>
-                         <property name="maximum">
-                          <number>32747</number>
-                         </property>
-                         <property name="value">
-                          <number>0</number>
-                         </property>
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLabel" name="heaterPowerValueLabel_2">
-                         <property name="minimumSize">
-                          <size>
-                           <width>50</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="text">
-                          <string>0</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
                     </layout>
                    </widget>
-                  </item>
-                  <item>
-                   <spacer name="verticalSpacer_adjustableValve">
-                    <property name="orientation">
-                     <enum>Qt::Vertical</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>20</width>
-                      <height>40</height>
-                     </size>
-                    </property>
-                   </spacer>
                   </item>
                  </layout>
                 </widget>
@@ -1730,30 +1828,17 @@ QGroupBox::title {
                    <number>5</number>
                   </property>
                   <item>
-                   <widget class="QLabel" name="label_15">
-                    <property name="font">
-                     <font>
-                      <family>Segoe UI,Arial,sans-serif</family>
-                      <pointsize>15</pointsize>
-                     </font>
-                    </property>
-                    <property name="layoutDirection">
-                     <enum>Qt::LeftToRight</enum>
-                    </property>
-                    <property name="styleSheet">
-                     <string notr="true">color: #1e293b;</string>
-                    </property>
-                    <property name="text">
-                     <string>GUI Simulation</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QGroupBox" name="groupBox_simControls2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="minimumSize">
                      <size>
-                      <width>300</width>
-                      <height>300</height>
+                      <width>325</width>
+                      <height>325</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -2047,25 +2132,1635 @@ QGroupBox::title {
                     </layout>
                    </widget>
                   </item>
-                  <item>
-                   <spacer name="verticalSpacer_guiSim">
-                    <property name="orientation">
-                     <enum>Qt::Vertical</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                     <size>
-                      <width>20</width>
-                      <height>40</height>
-                     </size>
-                    </property>
-                   </spacer>
-                  </item>
                  </layout>
                 </widget>
                </widget>
               </item>
              </layout>
             </widget>
+           </item>
+           <item row="0" column="0" rowspan="8">
+            <widget class="QWidget" name="vatWidgetContainer" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>500</width>
+               <height>700</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>20000</width>
+               <height>20000</height>
+              </size>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">
+#vatWidgetContainer {
+    background-color: #ffffff;
+}
+              </string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QStackedWidget" name="PLCControl_PIDControl">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>325</width>
+               <height>250</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>400</width>
+               <height>350</height>
+              </size>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="PLCControls">
+              <layout class="QVBoxLayout" name="verticalLayout_adjustableValve_2">
+               <property name="spacing">
+                <number>8</number>
+               </property>
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="groupBox_plcPidTankValveControls">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>330</width>
+                   <height>325</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>300</width>
+                   <height>700</height>
+                  </size>
+                 </property>
+                 <property name="palette">
+                  <palette>
+                   <active>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </active>
+                   <inactive>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </inactive>
+                   <disabled>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </disabled>
+                  </palette>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI,Arial,sans-serif</family>
+                   <weight>62</weight>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}
+
+/* Radio Button Container */
+QRadioButton {
+    spacing: 8px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+/* Radio Button Indicator (Circle) */
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 2px solid #d1d5db;
+    background-color: white;
+}
+
+/* Hover State */
+QRadioButton::indicator:hover {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(255, 255, 255, 255),
+        stop:1 rgba(239, 246, 255, 255));
+}
+
+/* Checked State */
+QRadioButton::indicator:checked {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(96, 165, 250, 255),
+        stop:0.5 rgba(59, 130, 246, 255),
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+/* Checked Hover State */
+QRadioButton::indicator:checked:hover {
+    border: 2px solid #2563eb;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(147, 197, 253, 255),
+        stop:0.5 rgba(96, 165, 250, 255),
+        stop:1 rgba(59, 130, 246, 255));
+}
+
+/* Pressed State */
+QRadioButton::indicator:pressed {
+    border: 2px solid #1d4ed8;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(29, 78, 216, 255),
+        stop:0.5 rgba(30, 64, 175, 255),
+        stop:1 rgba(23, 37, 84, 255));
+}
+
+/* Disabled State */
+QRadioButton::indicator:disabled {
+    border: 2px solid #e5e7eb;
+    background-color: #f3f4f6;
+}
+
+QRadioButton:disabled {
+    color: #9ca3af;
+}</string>
+                 </property>
+                 <property name="title">
+                  <string>PLC controls</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_9">
+                  <property name="spacing">
+                   <number>4</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>4</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="startstopresetPidTankValve">
+                    <item>
+                     <widget class="QPushButton" name="pushButton_PidValveStart">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>44</height>
+                       </size>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">/* Groen */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(16, 185, 129, 255), 
+        stop:1 rgba(52, 211, 153, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(110, 231, 183, 255), 
+        stop:0.5 rgba(52, 211, 153, 255), 
+        stop:1 rgba(16, 185, 129, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(5, 150, 105, 255), 
+        stop:0.5 rgba(4, 120, 87, 255), 
+        stop:1 rgba(6, 78, 59, 255));
+}</string>
+                      </property>
+                      <property name="text">
+                       <string>START</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_PidValveStop">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>44</height>
+                       </size>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
+}</string>
+                      </property>
+                      <property name="text">
+                       <string>STOP</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="pushButton_PidValveReset">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>44</height>
+                       </size>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
+                      </property>
+                      <property name="text">
+                       <string>RESET</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="ManAutoPidTankValve">
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_22">
+                      <item>
+                       <widget class="QPushButton" name="pushButton_PidValveAuto">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="minimumSize">
+                         <size>
+                          <width>0</width>
+                          <height>44</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>200</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
+                        </property>
+                        <property name="text">
+                         <string>AUTOMATIC</string>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>60</width>
+                          <height>60</height>
+                         </size>
+                        </property>
+                        <property name="checkable">
+                         <bool>false</bool>
+                        </property>
+                        <property name="autoExclusive">
+                         <bool>false</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QPushButton" name="pushButton_PidValveMan">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="minimumSize">
+                         <size>
+                          <width>80</width>
+                          <height>44</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>200</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                          <weight>75</weight>
+                          <bold>true</bold>
+                         </font>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
+                        </property>
+                        <property name="text">
+                         <string>MANUAL</string>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>60</width>
+                          <height>60</height>
+                         </size>
+                        </property>
+                        <property name="checkable">
+                         <bool>false</bool>
+                        </property>
+                        <property name="autoExclusive">
+                         <bool>false</bool>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QFormLayout" name="AutoModesPidTankValve">
+                    <property name="verticalSpacing">
+                     <number>2</number>
+                    </property>
+                    <item row="0" column="0" colspan="2">
+                     <widget class="QLabel" name="label_67">
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>75</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>AUTOMATIC MODES </string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveAItemp">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>AnalogTemperature</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveDItemp">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>DigitalTemperature</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveAIlevel">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>AnalogWaterLeveling</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveDIlevel">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>DigitalWaterLeveling</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QVBoxLayout" name="SPSlidersPidTanKValve">
+                    <property name="spacing">
+                     <number>2</number>
+                    </property>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_9">
+                      <item>
+                       <widget class="QLabel" name="label_slider1_2">
+                        <property name="minimumSize">
+                         <size>
+                          <width>80</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">color: #1e293b; font-weight: 600;</string>
+                        </property>
+                        <property name="text">
+                         <string>Temp SP</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QSlider" name="slider_PidTankTempSP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>170</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>100</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QSlider::groove:horizontal {
+  border: 1px solid #cbd5e0;
+  background: #e2e8f0;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+QSlider::handle:horizontal {
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  width: 18px;
+  margin: -8px 0;
+  border-radius: 9px;
+}
+QSlider::handle:horizontal:hover {
+  background: #2563eb;
+}
+              </string>
+                        </property>
+                        <property name="minimum">
+                         <number>-50</number>
+                        </property>
+                        <property name="maximum">
+                         <number>300</number>
+                        </property>
+                        <property name="singleStep">
+                         <number>5</number>
+                        </property>
+                        <property name="pageStep">
+                         <number>1</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="tickPosition">
+                         <enum>QSlider::NoTicks</enum>
+                        </property>
+                        <property name="tickInterval">
+                         <number>5</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_PidTankTempSP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>50</width>
+                          <height>34</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QSpinBox {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #1e293b;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+  background-color: #f0f4f8;
+  border: 1px solid #cbd5e0;
+}
+              </string>
+                        </property>
+                        <property name="text">
+                         <string>0</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_47">
+                      <item>
+                       <widget class="QLabel" name="label_slider1_3">
+                        <property name="minimumSize">
+                         <size>
+                          <width>80</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">color: #1e293b; font-weight: 600;</string>
+                        </property>
+                        <property name="text">
+                         <string>Level SP</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QSlider" name="slider_PidTankLevelSP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>170</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>100</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QSlider::groove:horizontal {
+  border: 1px solid #cbd5e0;
+  background: #e2e8f0;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+QSlider::handle:horizontal {
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  width: 18px;
+  margin: -8px 0;
+  border-radius: 9px;
+}
+QSlider::handle:horizontal:hover {
+  background: #2563eb;
+}
+              </string>
+                        </property>
+                        <property name="minimum">
+                         <number>0</number>
+                        </property>
+                        <property name="maximum">
+                         <number>100</number>
+                        </property>
+                        <property name="pageStep">
+                         <number>1</number>
+                        </property>
+                        <property name="value">
+                         <number>0</number>
+                        </property>
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="tickPosition">
+                         <enum>QSlider::TicksAbove</enum>
+                        </property>
+                        <property name="tickInterval">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_PidTankLevelSP">
+                        <property name="minimumSize">
+                         <size>
+                          <width>50</width>
+                          <height>34</height>
+                         </size>
+                        </property>
+                        <property name="styleSheet">
+                         <string notr="true">
+QSpinBox {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #1e293b;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+  background-color: #f0f4f8;
+  border: 1px solid #cbd5e0;
+}
+              </string>
+                        </property>
+                        <property name="text">
+                         <string>0</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="PIDControls">
+              <layout class="QVBoxLayout" name="verticalLayout_guiSim_2">
+               <property name="spacing">
+                <number>8</number>
+               </property>
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="groupBox_plcPidTankValveControls_3">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>325</width>
+                   <height>250</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>325</width>
+                   <height>250</height>
+                  </size>
+                 </property>
+                 <property name="palette">
+                  <palette>
+                   <active>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </active>
+                   <inactive>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </inactive>
+                   <disabled>
+                    <colorrole role="WindowText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Button">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Text">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="ButtonText">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>30</red>
+                       <green>41</green>
+                       <blue>59</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Base">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                    <colorrole role="Window">
+                     <brush brushstyle="SolidPattern">
+                      <color alpha="255">
+                       <red>245</red>
+                       <green>250</green>
+                       <blue>255</blue>
+                      </color>
+                     </brush>
+                    </colorrole>
+                   </disabled>
+                  </palette>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI,Arial,sans-serif</family>
+                   <weight>62</weight>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}
+
+/* Radio Button Container */
+QRadioButton {
+    spacing: 8px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+/* Radio Button Indicator (Circle) */
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 2px solid #d1d5db;
+    background-color: white;
+}
+
+/* Hover State */
+QRadioButton::indicator:hover {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(255, 255, 255, 255),
+        stop:1 rgba(239, 246, 255, 255));
+}
+
+/* Checked State */
+QRadioButton::indicator:checked {
+    border: 2px solid #3b82f6;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(96, 165, 250, 255),
+        stop:0.5 rgba(59, 130, 246, 255),
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+/* Checked Hover State */
+QRadioButton::indicator:checked:hover {
+    border: 2px solid #2563eb;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(147, 197, 253, 255),
+        stop:0.5 rgba(96, 165, 250, 255),
+        stop:1 rgba(59, 130, 246, 255));
+}
+
+/* Pressed State */
+QRadioButton::indicator:pressed {
+    border: 2px solid #1d4ed8;
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1,
+        stop:0 rgba(29, 78, 216, 255),
+        stop:0.5 rgba(30, 64, 175, 255),
+        stop:1 rgba(23, 37, 84, 255));
+}
+
+/* Disabled State */
+QRadioButton::indicator:disabled {
+    border: 2px solid #e5e7eb;
+    background-color: #f3f4f6;
+}
+
+QRadioButton:disabled {
+    color: #9ca3af;
+}</string>
+                 </property>
+                 <property name="title">
+                  <string>PID controls</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_14">
+                  <property name="spacing">
+                   <number>4</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>4</number>
+                  </property>
+                  <item>
+                   <layout class="QVBoxLayout" name="verticalLayout_8">
+                    <item>
+                     <widget class="QLabel" name="label_14">
+                      <property name="minimumSize">
+                       <size>
+                        <width>30</width>
+                        <height>0</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>75</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>PID factors</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_12">
+                      <item>
+                       <widget class="QLabel" name="label_16">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>P</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="maxFlowInEntry1_2">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>42</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>80</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>1</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_5">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_15">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>I</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="maxFlowInEntry1_3">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>42</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>80</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>1</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_6">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_26">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>D</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="maxFlowInEntry1_4">
+                        <property name="minimumSize">
+                         <size>
+                          <width>20</width>
+                          <height>42</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>80</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>1</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QFormLayout" name="AutoModesPidTankValve_2">
+                    <property name="verticalSpacing">
+                     <number>2</number>
+                    </property>
+                    <item row="0" column="0" colspan="2">
+                     <widget class="QLabel" name="label_68">
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>75</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Enable PID factors</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveAItemp_2">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>P</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveDItemp_2">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>I</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QRadioButton" name="radioButton_PidTankValveAIlevel_2">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>60</width>
+                        <height>26</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>62</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>D</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <spacer name="verticalSpacer_12">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </widget>
@@ -2121,18 +3816,29 @@ QGroupBox::title {
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true">
-                        QPushButton {
-                          background-color: #ef4444;
-                          color: white;
-                          border: none;
-                          border-radius: 8px;
-                          padding: 12px;
-                        }
-                        QPushButton:hover {
-                          background-color: #dc2626;
-                        }
-                      </string>
+                <string notr="true">QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
+}</string>
                </property>
                <property name="text">
                 <string>CLOSE SIM</string>
@@ -2226,18 +3932,29 @@ QGroupBox::title {
                    </font>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">
-                        QPushButton {
-                          background-color: #ef4444;
-                          color: white;
-                          border: none;
-                          border-radius: 8px;
-                          padding: 12px;
-                        }
-                        QPushButton:hover {
-                          background-color: #dc2626;
-                        }
-                      </string>
+                   <string notr="true">QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
+}</string>
                   </property>
                   <property name="text">
                    <string>CLOSE SIM</string>
@@ -2275,7 +3992,7 @@ QGroupBox::title {
           </layout>
          </widget>
          <widget class="QWidget" name="settingsPage">
-          <layout class="QVBoxLayout" name="verticalLayout_8">
+          <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_15">
              <item>
@@ -2319,85 +4036,397 @@ border: 3px solid rgb(193, 193, 193);
             </layout>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_16">
-             <property name="bottomMargin">
-              <number>10</number>
+            <widget class="QScrollArea" name="scrollArea_tankSim_2">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
              </property>
-             <item>
-              <widget class="QLabel" name="label">
-               <property name="font">
-                <font>
-                 <family>Segoe UI,Arial,sans-serif</family>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Controller Type:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="controlerDropDown">
-               <property name="font">
-                <font>
-                 <family>Segoe UI,Arial,sans-serif</family>
-                </font>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Logo</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>S7-1200 PLC</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>S7-1500 PLC</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>PLC Sim</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>GUI</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_12">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_6">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
+             <property name="verticalScrollBarPolicy">
+              <enum>Qt::ScrollBarAsNeeded</enum>
              </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>50</height>
-              </size>
+             <property name="horizontalScrollBarPolicy">
+              <enum>Qt::ScrollBarAsNeeded</enum>
              </property>
-            </spacer>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents_generalSettings">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>328</width>
+                <height>429</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_tankSimScroll_2">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_7">
+                 <item>
+                  <widget class="QGroupBox" name="groupBox_tankDimensions_4">
+                   <property name="font">
+                    <font>
+                     <family>Segoe UI,Arial,sans-serif</family>
+                     <weight>62</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
+                   </property>
+                   <property name="title">
+                    <string>Communication</string>
+                   </property>
+                   <layout class="QFormLayout" name="formLayout_comm">
+                    <property name="horizontalSpacing">
+                     <number>15</number>
+                    </property>
+                    <property name="verticalSpacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>15</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label">
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Controller Type:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_16">
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QComboBox" name="controlerDropDown">
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>Logo</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>S7-1200 PLC</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>S7-1500 PLC</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>PLC Sim</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>GUI</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_12">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QGroupBox" name="groupBox_control_2">
+                   <property name="font">
+                    <font>
+                     <family>Segoe UI,Arial,sans-serif</family>
+                     <weight>62</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
+                   </property>
+                   <property name="title">
+                    <string>visualisation</string>
+                   </property>
+                   <layout class="QFormLayout" name="formLayout_visual">
+                    <property name="horizontalSpacing">
+                     <number>15</number>
+                    </property>
+                    <property name="verticalSpacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>15</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_styleTheme_2">
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>GUI Theme:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_styleSwitch_2">
+                      <property name="bottomMargin">
+                       <number>10</number>
+                      </property>
+                      <item>
+                       <widget class="QComboBox" name="comboBox_styleTheme">
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>Classic Dark</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Professional Modern</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_styleTheme_2">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QGroupBox" name="groupBox_liquid_2">
+                   <property name="font">
+                    <font>
+                     <family>Segoe UI,Arial,sans-serif</family>
+                     <weight>62</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QGroupBox {
+  border: 1.5px solid #4a90e2;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding-top: 24px;
+  background-color: #f5faff;
+  font-weight: 500;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  left: 12px;
+  padding: 4px 12px;
+  background-color: #4a90e2;
+  color: #ffffff;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size 9pt;
+}</string>
+                   </property>
+                   <property name="title">
+                    <string>XXX</string>
+                   </property>
+                   <layout class="QFormLayout" name="formLayout_xxx">
+                    <property name="horizontalSpacing">
+                     <number>15</number>
+                    </property>
+                    <property name="verticalSpacing">
+                     <number>8</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>15</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>15</number>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_79">
+                      <property name="font">
+                       <font>
+                        <family>Segoe UI,Arial,sans-serif</family>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>XXX</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_56">
+                      <item>
+                       <widget class="QLineEdit" name="timeDelayTempEntry_2">
+                        <property name="maximumSize">
+                         <size>
+                          <width>100</width>
+                          <height>16777215</height>
+                         </size>
+                        </property>
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>0.0</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_87">
+                        <property name="font">
+                         <font>
+                          <family>Segoe UI,Arial,sans-serif</family>
+                         </font>
+                        </property>
+                        <property name="text">
+                         <string>sec</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_46">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_6">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -2503,7 +4532,7 @@ border: 1px solid rgb(182, 182, 182);
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>290</height>
+                  <height>300</height>
                  </size>
                 </property>
                 <property name="styleSheet">
@@ -2517,11 +4546,20 @@ Qlabel{
 }</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_12">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
                  <property name="leftMargin">
-                  <number>11</number>
+                  <number>10</number>
                  </property>
                  <property name="topMargin">
-                  <number>11</number>
+                  <number>10</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>10</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>10</number>
                  </property>
                  <item>
                   <widget class="QLabel" name="OffsTitle">
@@ -2591,7 +4629,7 @@ border: 3px solid rgb(193, 193, 193);
                     <widget class="QLineEdit" name="QLineEdit_BoolInput">
                      <property name="minimumSize">
                       <size>
-                       <width>50</width>
+                       <width>30</width>
                        <height>42</height>
                       </size>
                      </property>
@@ -2647,7 +4685,7 @@ border: 3px solid rgb(193, 193, 193);
                     <widget class="QLineEdit" name="QLineEdit_BoolOutput">
                      <property name="minimumSize">
                       <size>
-                       <width>50</width>
+                       <width>30</width>
                        <height>42</height>
                       </size>
                      </property>
@@ -2703,7 +4741,7 @@ border: 3px solid rgb(193, 193, 193);
                     <widget class="QLineEdit" name="QLineEdit_DWORDInput">
                      <property name="minimumSize">
                       <size>
-                       <width>50</width>
+                       <width>30</width>
                        <height>42</height>
                       </size>
                      </property>
@@ -2759,7 +4797,7 @@ border: 3px solid rgb(193, 193, 193);
                     <widget class="QLineEdit" name="QLineEdit_DWORDOutput">
                      <property name="minimumSize">
                       <size>
-                       <width>50</width>
+                       <width>30</width>
                        <height>42</height>
                       </size>
                      </property>
@@ -2784,6 +4822,9 @@ border: 3px solid rgb(193, 193, 193);
                  </item>
                  <item>
                   <layout class="QHBoxLayout" name="horizontalLayout_24">
+                   <property name="spacing">
+                    <number>7</number>
+                   </property>
                    <item>
                     <widget class="QPushButton" name="pushButton_DefaultOffset">
                      <property name="sizePolicy">
@@ -2795,7 +4836,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>40</width>
-                       <height>40</height>
+                       <height>44</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2805,7 +4846,30 @@ border: 3px solid rgb(193, 193, 193);
                       </size>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true"/>
+                      <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
                      </property>
                      <property name="text">
                       <string>DEFAULT</string>
@@ -2823,7 +4887,7 @@ border: 3px solid rgb(193, 193, 193);
                      <property name="minimumSize">
                       <size>
                        <width>40</width>
-                       <height>40</height>
+                       <height>44</height>
                       </size>
                      </property>
                      <property name="maximumSize">
@@ -2833,7 +4897,30 @@ border: 3px solid rgb(193, 193, 193);
                       </size>
                      </property>
                      <property name="styleSheet">
-                      <string notr="true"/>
+                      <string notr="true">/* Blauw */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(37, 99, 235, 255), 
+        stop:1 rgba(59, 130, 246, 255));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(96, 165, 250, 255), 
+        stop:0.5 rgba(59, 130, 246, 255), 
+        stop:1 rgba(37, 99, 235, 255));
+}
+
+QPushButton:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(29, 78, 216, 255), 
+        stop:0.5 rgba(30, 64, 175, 255), 
+        stop:1 rgba(23, 37, 84, 255));
+}</string>
                      </property>
                      <property name="text">
                       <string>APPLY</string>
@@ -2859,7 +4946,7 @@ border: 3px solid rgb(193, 193, 193);
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
-                      <height>40</height>
+                      <height>36</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -2872,7 +4959,30 @@ border: 3px solid rgb(193, 193, 193);
                      <bool>false</bool>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(171, 171, 171);</string>
+                     <string notr="true">QPushButton {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+    stop:0.0049505 rgba(200, 200, 200, 255), 
+    stop:1 rgba(240, 240, 240, 255));
+  color: black;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+QPushButton:hover {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(229, 231, 235, 255), 
+    stop:0.5 rgba(209, 213, 219, 255), 
+    stop:1 rgba(156, 163, 175, 255));
+}
+
+QPushButton:pressed {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(156, 163, 175, 255), 
+    stop:0.5 rgba(107, 114, 128, 255), 
+    stop:1 rgba(75, 85, 99, 255));
+}</string>
                     </property>
                     <property name="text">
                      <string>SAVE</string>
@@ -2888,7 +4998,7 @@ border: 3px solid rgb(193, 193, 193);
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
-                      <height>40</height>
+                      <height>36</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -2901,7 +5011,30 @@ border: 3px solid rgb(193, 193, 193);
                      <bool>false</bool>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(171, 171, 171);</string>
+                     <string notr="true">QPushButton {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+    stop:0.0049505 rgba(200, 200, 200, 255), 
+    stop:1 rgba(240, 240, 240, 255));
+  color: black;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+QPushButton:hover {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(229, 231, 235, 255), 
+    stop:0.5 rgba(209, 213, 219, 255), 
+    stop:1 rgba(156, 163, 175, 255));
+}
+
+QPushButton:pressed {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(156, 163, 175, 255), 
+    stop:0.5 rgba(107, 114, 128, 255), 
+    stop:1 rgba(75, 85, 99, 255));
+}</string>
                     </property>
                     <property name="text">
                      <string>LOAD</string>
@@ -2925,7 +5058,30 @@ border: 3px solid rgb(193, 193, 193);
                      <bool>false</bool>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">background-color: rgb(171, 171, 171);</string>
+                     <string notr="true">QPushButton {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+    stop:0.0049505 rgba(200, 200, 200, 255), 
+    stop:1 rgba(240, 240, 240, 255));
+  color: black;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+QPushButton:hover {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(229, 231, 235, 255), 
+    stop:0.5 rgba(209, 213, 219, 255), 
+    stop:1 rgba(156, 163, 175, 255));
+}
+
+QPushButton:pressed {
+  background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+    stop:0 rgba(156, 163, 175, 255), 
+    stop:0.5 rgba(107, 114, 128, 255), 
+    stop:1 rgba(75, 85, 99, 255));
+}</string>
                     </property>
                     <property name="text">
                      <string>ACTIVATE CONFIGURATION</string>
@@ -2954,7 +5110,7 @@ border: 3px solid rgb(193, 193, 193);
                     <property name="minimumSize">
                      <size>
                       <width>215</width>
-                      <height>40</height>
+                      <height>36</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -2964,17 +5120,50 @@ border: 3px solid rgb(193, 193, 193);
                      </size>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">
-#pushButton_AllowForce {
-    background-color: rgb(255, 0, 0);
-	color: rgb(255, 255, 255);
+                     <string notr="true">#pushButton_AllowForce {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(220, 38, 38, 255), 
+        stop:1 rgba(239, 68, 68, 255));
+    color: rgb(255, 255, 255);
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 8px 12px;
 }
 
+#pushButton_AllowForce:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(248, 113, 113, 255), 
+        stop:0.5 rgba(239, 68, 68, 255), 
+        stop:1 rgba(220, 38, 38, 255));
+}
+
+#pushButton_AllowForce:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(185, 28, 28, 255), 
+        stop:0.5 rgba(153, 27, 27, 255), 
+        stop:1 rgba(127, 29, 29, 255));
+}
 
 #pushButton_AllowForce:checked {
-    background-color: rgb(0, 255, 0); 
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+        stop:0 rgba(34, 197, 94, 255), 
+        stop:1 rgba(74, 222, 128, 255));
     color: black;
+}
 
+#pushButton_AllowForce:checked:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(134, 239, 172, 255), 
+        stop:0.5 rgba(74, 222, 128, 255), 
+        stop:1 rgba(34, 197, 94, 255));
+}
+
+#pushButton_AllowForce:checked:pressed {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+        stop:0 rgba(22, 163, 74, 255), 
+        stop:0.5 rgba(21, 128, 61, 255), 
+        stop:1 rgba(20, 83, 45, 255));
 }</string>
                     </property>
                     <property name="text">
@@ -3923,8 +6112,8 @@ border: 3px solid rgb(193, 193, 193);
                   <property name="geometry">
                    <rect>
                     <x>0</x>
-                    <y>-2</y>
-                    <width>1277</width>
+                    <y>0</y>
+                    <width>366</width>
                     <height>1119</height>
                    </rect>
                   </property>
@@ -5145,6 +7334,551 @@ QGroupBox::title {
       <zorder>headerWidget</zorder>
      </widget>
     </item>
+    <item row="0" column="1">
+     <widget class="QWidget" name="fullMenuWidget" native="true">
+      <property name="styleSheet">
+       <string notr="true">
+#fullMenuWidget {
+    background-color: #2d5a8c;
+    border-right: 1px solid #3d6ab3;
+}
+
+#fullMenuWidget QPushButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    text-align: left;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+#fullMenuWidget QPushButton:hover {
+    background-color: rgba(96, 165, 250, 0.3);
+    color: #ffffff;
+}
+
+#fullMenuWidget QPushButton:checked {
+    background-color: rgba(96, 165, 250, 0.4);
+    color: #ffffff;
+    border-left: 3px solid #60a5fa;
+}
+
+#logoText {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+}
+       </string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <property name="leftMargin">
+        <number>9</number>
+       </property>
+       <property name="topMargin">
+        <number>9</number>
+       </property>
+       <property name="rightMargin">
+        <number>9</number>
+       </property>
+       <property name="bottomMargin">
+        <number>9</number>
+       </property>
+       <item row="2" column="0">
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>838</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="pushButton_exit2">
+         <property name="font">
+          <font>
+           <family>Segoe UI,Arial,sans-serif</family>
+           <weight>62</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>EXIT</string>
+         </property>
+         <property name="icon">
+          <iconset resource="Resource.qrc">
+           <normaloff>:/icon/media/icon/close-window-64.ico</normaloff>
+           <normalon>:/icon/media/icon/close-window-64 blauw.ico</normalon>:/icon/media/icon/close-window-64.ico</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="autoExclusive">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <widget class="QLabel" name="logo2">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>40</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="pixmap">
+              <pixmap>icon/simulation.png</pixmap>
+             </property>
+             <property name="scaledContents">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="logoText">
+             <property name="font">
+              <font>
+               <family>Segoe UI,Arial,sans-serif</family>
+               <pointsize>-1</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Process Simulator</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_settingsPage2">
+           <property name="font">
+            <font>
+             <family>Segoe UI,Arial,sans-serif</family>
+             <weight>62</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>GENERAL SETTINGS</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_IOPage2">
+           <property name="font">
+            <font>
+             <family>Segoe UI,Arial,sans-serif</family>
+             <weight>62</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>I/O SETTINGS</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-12-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-12-32 blauw.ico</normalon>:/icon/media/icon/settings-12-32.ico</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_simPage2">
+           <property name="font">
+            <font>
+             <family>Segoe UI,Arial,sans-serif</family>
+             <weight>62</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>SIMULATION</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/play-6-32.ico</normaloff>
+             <normalon>:/icon/media/icon/play-6-32 blauw.ico</normalon>:/icon/media/icon/play-6-32.ico</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_simSettings2">
+           <property name="font">
+            <font>
+             <family>Segoe UI,Arial,sans-serif</family>
+             <weight>62</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>SIMULATION SETTINGS</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_generalControls2">
+           <property name="font">
+            <font>
+             <family>Segoe UI,Arial,sans-serif</family>
+             <weight>62</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>GENERAL CONTROLS</string>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</normaloff>
+             <normalon>:/icon/icon/controls-svgrepo-com.svg</normalon>:/icon/icon/controls-svgrepo-com_blue.svg</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QWidget" name="iconOnlyWidget" native="true">
+      <property name="styleSheet">
+       <string notr="true">
+#iconOnlyWidget {
+    background-color: #2d5a8c;
+    border-right: 1px solid #3d6ab3;
+}
+
+#iconOnlyWidget QPushButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 0px;
+    padding: 12px;
+    color: #ffffff;
+}
+
+#iconOnlyWidget QPushButton:hover {
+    background-color: rgba(59, 130, 246, 0.3);
+    border-left: 3px solid #60a5fa;
+}
+
+#iconOnlyWidget QPushButton:checked {
+    background-color: rgba(59, 130, 246, 0.4);
+    border-left: 3px solid #60a5fa;
+}
+       </string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="logo">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="pixmap">
+            <pixmap resource="Resource.qrc">:/icon/media/icon/simulation.png</pixmap>
+           </property>
+           <property name="scaledContents">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="pushButton_settingsPage">
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_IOPage">
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>40</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-12-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-12-32 blauw.ico</normalon>:/icon/media/icon/settings-12-32.ico</iconset>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_simPage">
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/play-6-32.ico</normaloff>
+             <normalon>:/icon/media/icon/play-6-32 blauw.ico</normalon>:/icon/media/icon/play-6-32.ico</iconset>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_simSettings">
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/media/icon/settings-5-32.ico</normaloff>
+             <normalon>:/icon/media/icon/settings-5-32 blauw.ico</normalon>:/icon/media/icon/settings-5-32.ico</iconset>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_generalControls">
+           <property name="maximumSize">
+            <size>
+             <width>60</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="Resource.qrc">
+             <normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</normaloff>:/icon/icon/controls-svgrepo-com_blue.svg</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>30</width>
+             <height>30</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="autoExclusive">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>890</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_Exit">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="Resource.qrc">
+           <normaloff>:/icon/media/icon/close-window-64.ico</normaloff>
+           <normalon>:/icon/media/icon/close-window-64 blauw.ico</normalon>:/icon/media/icon/close-window-64.ico</iconset>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <property name="autoExclusive">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QDockWidget" name="dockWidget_GeneralControls">
@@ -5238,7 +7972,7 @@ QGroupBox::title {
               <property name="styleSheet">
                <string notr="true">
 QPushButton {
-  background-color: #3b82f6;
+  background-color: #10b981;
   color: white;
   border: none;
   border-radius: 4px;
@@ -5246,10 +7980,10 @@ QPushButton {
   padding: 8px 12px;
 }
 QPushButton:hover {
-  background-color: #2563eb;
+  background-color: #059669;
 }
 QPushButton:pressed {
-  background-color: #1d4ed8;
+  background-color: #047857;
 }
               </string>
               </property>
@@ -5300,7 +8034,7 @@ QPushButton:pressed {
               <property name="styleSheet">
                <string notr="true">
 QPushButton {
-  background-color: #10b981;
+  background-color: #3b82f6;
   color: white;
   border: none;
   border-radius: 4px;
@@ -5308,10 +8042,10 @@ QPushButton {
   padding: 8px 12px;
 }
 QPushButton:hover {
-  background-color: #059669;
+  background-color: #2563eb;
 }
 QPushButton:pressed {
-  background-color: #047857;
+  background-color: #1d4ed8;
 }
               </string>
               </property>
@@ -6012,12 +8746,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>23</x>
-     <y>93</y>
+     <x>35</x>
+     <y>153</y>
     </hint>
     <hint type="destinationlabel">
-     <x>112</x>
-     <y>103</y>
+     <x>200</x>
+     <y>150</y>
     </hint>
    </hints>
   </connection>
@@ -6044,12 +8778,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>189</x>
-     <y>100</y>
+     <x>277</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
-     <x>36</x>
-     <y>100</y>
+     <x>48</x>
+     <y>153</y>
     </hint>
    </hints>
   </connection>
@@ -6060,8 +8794,8 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>268</x>
-     <y>1041</y>
+     <x>286</x>
+     <y>874</y>
     </hint>
     <hint type="destinationlabel">
      <x>220</x>
@@ -6076,8 +8810,8 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>28</x>
-     <y>1051</y>
+     <x>39</x>
+     <y>883</y>
     </hint>
     <hint type="destinationlabel">
      <x>45</x>
@@ -6092,12 +8826,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>14</x>
-     <y>131</y>
+     <x>26</x>
+     <y>195</y>
     </hint>
     <hint type="destinationlabel">
-     <x>146</x>
-     <y>134</y>
+     <x>234</x>
+     <y>194</y>
     </hint>
    </hints>
   </connection>
@@ -6108,12 +8842,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>192</x>
-     <y>141</y>
+     <x>280</x>
+     <y>194</y>
     </hint>
     <hint type="destinationlabel">
-     <x>36</x>
-     <y>131</y>
+     <x>48</x>
+     <y>195</y>
     </hint>
    </hints>
   </connection>
@@ -6150,34 +8884,18 @@ QSpinBox::up-button, QSpinBox::down-button {
    </hints>
   </connection>
   <connection>
-   <sender>controlerDropDown</sender>
-   <signal>currentIndexChanged(QString)</signal>
-   <receiver>regelingSimGui</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>499</x>
-     <y>113</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1022</x>
-     <y>559</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>pushButton_simSettings</sender>
    <signal>toggled(bool)</signal>
    <receiver>pushButton_simSettings2</receiver>
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>14</x>
-     <y>161</y>
+     <x>26</x>
+     <y>239</y>
     </hint>
     <hint type="destinationlabel">
-     <x>146</x>
-     <y>164</y>
+     <x>234</x>
+     <y>238</y>
     </hint>
    </hints>
   </connection>
@@ -6188,12 +8906,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>192</x>
-     <y>171</y>
+     <x>280</x>
+     <y>238</y>
     </hint>
     <hint type="destinationlabel">
-     <x>36</x>
-     <y>161</y>
+     <x>48</x>
+     <y>239</y>
     </hint>
    </hints>
   </connection>
@@ -6204,12 +8922,12 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>36</x>
-     <y>188</y>
+     <x>48</x>
+     <y>283</y>
     </hint>
     <hint type="destinationlabel">
-     <x>200</x>
-     <y>188</y>
+     <x>285</x>
+     <y>282</y>
     </hint>
    </hints>
   </connection>
@@ -6220,12 +8938,28 @@ QSpinBox::up-button, QSpinBox::down-button {
    <slot>setChecked(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>200</x>
-     <y>188</y>
+     <x>285</x>
+     <y>282</y>
     </hint>
     <hint type="destinationlabel">
-     <x>36</x>
-     <y>188</y>
+     <x>48</x>
+     <y>283</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>controlerDropDown</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>regelingSimGui</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>579</x>
+     <y>241</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1022</x>
+     <y>559</y>
     </hint>
    </hints>
   </connection>

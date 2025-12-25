@@ -197,6 +197,11 @@ class IOHandler:
         # General Controls - READ PLC inputs and write GUI commands
         self._read_plc_commands(plc, mainConfig, config, status, forced_values)
         self._write_gui_commands(plc, mainConfig, config, status, forced_values)
+        # Remove/disable the read logic for PIDtankValve controls
+        # Only call _write_pidvalve_controls in updateIO, not _read_pidvalve_controls
+        # (If you previously added _read_pidvalve_controls, remove or comment out that call)
+        # self._read_pidvalve_controls(plc, mainConfig, config, status, forced_values)
+        self._write_pidvalve_controls(plc, mainConfig, config, status, forced_values)
     
     def _update_indicators(self, plc, mainConfig, config, status, forced_values):
         """Update indicator status from PLC outputs."""
@@ -331,25 +336,47 @@ class IOHandler:
                 except Exception:
                     pass
     
-    def _write_gui_commands(self, plc, mainConfig, config, status, forced_values):
-        """Write GUI command values to PLC inputs."""
-        # Write GUI slider values to PLC inputs
-        for i in range(1, 4):
-            key = f"AIControl{i}"
-            attr = f"generalControl{i}Value"
-            if key not in forced_values and hasattr(config, key):
-                addr = getattr(config, key)
-                if addr:
-                    cache_key = key
-                    val = int(getattr(status, attr, 0))
-                    if self._last_sent_ai.get(cache_key) != val:
-                        plc.SetAI(addr["byte"], val)
-                        self._last_sent_ai[cache_key] = val
-        
-        # Write GUI commands to PLC inputs - continuously while pressed
-        for cmd in ['Start', 'Stop', 'Reset']:
-            key = f"DI{cmd}"
-            attr = f"general{cmd}Cmd"
+    def _read_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
+        # Read PIDValve buttons and radios from PLC
+        for name in [
+            'PidValveAuto', 'PidValveMan', 'PidValveStart', 'PidValveStop',
+            'PidTankValveAItemp', 'PidTankValveDItemp',
+            'PidTankValveAIlevel', 'PidTankValveDIlevel'
+        ]:
+            key = f"DI{name}"
+            attr = f"pid{name}Cmd"
+            if key in forced_values:
+                setattr(status, attr, bool(forced_values[key]))
+            elif (mainConfig.plcGuiControl == "plc") and hasattr(config, key):
+                try:
+                    addr = getattr(config, key)
+                    if addr:
+                        setattr(status, attr, plc.GetDI(addr["byte"], addr["bit"]))
+                except Exception:
+                    pass
+        # Read sliders
+        for name in ['PidTankTempSP', 'PidTankLevelSP']:
+            key = f"AI{name}"
+            attr = f"pid{name}Value"
+            if key in forced_values:
+                setattr(status, attr, int(forced_values[key]) if forced_values[key] is not None else 0)
+            elif (mainConfig.plcGuiControl == "plc") and hasattr(config, key):
+                try:
+                    addr = getattr(config, key)
+                    if addr:
+                        setattr(status, attr, int(plc.GetAI(addr["byte"])))
+                except Exception:
+                    pass
+
+    def _write_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
+        # Write GUI values to PLC inputs for PIDValve controls
+        for name in [
+            'PidValveAuto', 'PidValveMan', 'PidValveStart', 'PidValveStop',
+            'PidTankValveAItemp', 'PidTankValveDItemp',
+            'PidTankValveAIlevel', 'PidTankValveDIlevel'
+        ]:
+            key = f"DI{name}"
+            attr = f"pid{name}Cmd"
             if key not in forced_values and hasattr(config, key):
                 addr = getattr(config, key)
                 if addr:
@@ -359,7 +386,18 @@ class IOHandler:
                         if self._last_sent_di.get(cache_key) != desired:
                             plc.SetDI(addr["byte"], addr["bit"], desired)
                             self._last_sent_di[cache_key] = desired
-    
+        for name in ['PidTankTempSP', 'PidTankLevelSP']:
+            key = f"AI{name}"
+            attr = f"pid{name}Value"
+            if key not in forced_values and hasattr(config, key):
+                addr = getattr(config, key)
+                if addr:
+                    cache_key = key
+                    val = int(getattr(status, attr, 0))
+                    if self._last_sent_ai.get(cache_key) != val:
+                        plc.SetAI(addr["byte"], val)
+                        self._last_sent_ai[cache_key] = val
+
     def resetOutputs(self, mainConfig: Any, config: Any, status: Any) -> None:
         """
         Reset actuators when PLC connection is lost.

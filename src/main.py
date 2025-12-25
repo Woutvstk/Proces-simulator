@@ -147,7 +147,7 @@ if __name__ == "__main__":
                     validPlcConnection = bool(ok)
                     if not ok:
                         logger.warning("Connection failed")
-                
+
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
                 window.plc = protocolManager.get_active_protocol() if validPlcConnection else None

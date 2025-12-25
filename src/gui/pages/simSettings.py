@@ -381,14 +381,13 @@ class ProcessSettingsMixin:
                 self.mainConfig.plcGuiControl = "gui"
                 try:
                     self.pushButton_connect.setEnabled(False)
-                    # Removed unnecessary print
                 except:
                     pass
             else:
                 self.mainConfig.plcGuiControl = "plc"
                 try:
                     self.pushButton_connect.setEnabled(True)
-                    # Removed unnecessary print
+
                 except:
                     pass
 
@@ -397,7 +396,6 @@ class ProcessSettingsMixin:
                 if hasattr(self, 'plc') and self.plc:
                     try:
                         self.plc.disconnect()
-                        # Removed unnecessary print
                     except:
                         pass
                 self.validPlcConnection = False
@@ -473,7 +471,6 @@ class ProcessSettingsMixin:
                         table._save_row_data(row)
                     except AttributeError:
                         pass
-                    # Removed unnecessary print
 
             table.blockSignals(False)
 
@@ -481,8 +478,5 @@ class ProcessSettingsMixin:
             if hasattr(self, 'io_screen'):
                 self.io_screen.save_configuration()
 
-            # Removed unnecessary print
-
         except Exception as e:
-            # Removed unnecessary print
             table.blockSignals(False)

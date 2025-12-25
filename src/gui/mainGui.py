@@ -83,6 +83,13 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def __init__(self, mainConfig=None):
         super(MainWindow, self).__init__()
         self.setupUi(self)
+        # Set a smaller default window height
+        self.resize(self.width(), 800)
+        # Ensure fullscreen action is enabled if present
+        if hasattr(self, 'actionFullscreen'):
+            self.actionFullscreen.setEnabled(True)
+            self.actionFullscreen.setVisible(True)
+            self.actionFullscreen.triggered.connect(self.showFullScreen)
         
         # Store reference to main configuration BEFORE initializing mixins
         self.mainConfig = mainConfig
@@ -112,6 +119,11 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         # Initialize connection variables
         self.validPlcConnection = False
         self.plc = None
+
+        # Auto-retry connect timer
+        self.connect_retry_timer = QTimer()
+        self.connect_retry_timer.setInterval(8000)
+        self.connect_retry_timer.timeout.connect(self._auto_retry_connect)
 
         # Float window state
         self.floated_window = None
@@ -273,20 +285,29 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         if checked:
             # Connect request
             self.mainConfig.tryConnect = True
+            if not self.validPlcConnection:
+                self.connect_retry_timer.start()
         else:
             # Disconnect request
+            self.connect_retry_timer.stop()
             if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
                 try:
-                        self.iconOnlyWidget.setVisible(False)
-                        self.plc.disconnect()
-                        print("\nDisconnected from PLC")
+                    self.iconOnlyWidget.setVisible(False)
+                    self.plc.disconnect()
+                    print("\nDisconnected from PLC")
                 except Exception as e:
                     print(f"\nError disconnecting: {e}")
                     pass
-                
                 self.validPlcConnection = False
                 self.plc = None
                 self.update_connection_status_icon()
+
+    def _auto_retry_connect(self):
+        if self.pushButton_connect.isChecked() and not self.validPlcConnection:
+            print("Auto-retrying PLC connection...")
+            self.mainConfig.tryConnect = True
+        else:
+            self.connect_retry_timer.stop()
 
     def on_ip_changed(self, text):
         """Update IP with throttling"""

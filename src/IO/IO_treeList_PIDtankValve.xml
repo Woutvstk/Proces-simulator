@@ -32,27 +32,41 @@
         </Outputs>
     </GeneralControls>
     <PIDtankValve>
+        <!-- Sensors Inputs -->
         <Inputs>
             <Digital>
-                <!-- Digitale inputs (boolean) - PLC Inputs = Simulator Outputs -->
+                <!-- Tank Sensors (boolean) -->
                 <Signal description="Tank upper level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">LevelSensorHigh</Signal>
                 <Signal description="Tank lower level sensor" type="bool" range="0-1" io_prefix="I" status="FALSE">LevelSensorLow</Signal>
+                <!-- PID Valve Controls -->
+                <Signal description="PID Valve Auto Mode" type="bool" range="0-1" io_prefix="I" status="TRUE">PidValveAuto</Signal>
+                <Signal description="PID Valve Manual Mode" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveMan</Signal>
+                <Signal description="PID Valve Start" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveStart</Signal>
+                <Signal description="PID Valve Stop" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveStop</Signal>
+                <Signal description="Radio: AI Temp" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveAItemp</Signal>
+                <Signal description="Radio: DI Temp" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveDItemp</Signal>
+                <Signal description="Radio: AI Level" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveAIlevel</Signal>
+                <Signal description="Radio: DI Level" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveDIlevel</Signal>
             </Digital>
             <Analog>
-                <!-- Analoge inputs (word/int) - PLC Inputs = Simulator Outputs -->
+                <!-- Tank Sensors (analog) -->
                 <Signal description="Tank level measurement" type="int" range="0-27648" io_prefix="I" status="0">LevelSensor</Signal>
                 <Signal description="Temperature sensor" type="int" range="0-27648" io_prefix="I" status="0">TemperatureSensor</Signal>
+                <!-- PID Tank Setpoints -->
+                <Signal description="PID Tank Temp Setpoint" type="int" range="0-27648" io_prefix="I" status="0">PidTankTempSP</Signal>
+                <Signal description="PID Tank Level Setpoint" type="int" range="0-27648" io_prefix="I" status="0">PidTankLevelSP</Signal>
             </Analog>
         </Inputs>
+        <!-- Sensors Outputs -->
         <Outputs>
             <Digital>
-                <!-- Digitale outputs (boolean) - PLC Outputs = Simulator Inputs -->
+                <!-- Tank/Valve/Heater Controls (boolean) -->
                 <Signal description="Upper valve digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">ValveIn</Signal>
                 <Signal description="Lower valve digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">ValveOut</Signal>
                 <Signal description="Heater digital control (ON/OFF)" type="bool" range="0-1" io_prefix="Q" status="FALSE">Heater</Signal>
             </Digital>
-            <Analog>               
-                <!-- Analoge outputs (word/int) - PLC Outputs = Simulator Inputs -->
+            <Analog>
+                <!-- Tank/Valve/Heater Controls (analog) -->
                 <Signal description="Upper valve analog position (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">ValveInFraction</Signal>
                 <Signal description="Lower valve analog position (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">ValveOutFraction</Signal>
                 <Signal description="Heater analog power (0-100%)" type="int" range="0-27648" io_prefix="Q" status="0">HeaterFraction</Signal>
