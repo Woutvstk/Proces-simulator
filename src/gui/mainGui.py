@@ -6,7 +6,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget, QGraphicsOpacityEffect
 from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
 from PyQt5 import uic
 
@@ -213,38 +213,82 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     # Sidebar animation helpers
     def _setup_menu_animation(self):
         try:
+            # Width animation for the full menu widget
             self._menu_anim = QPropertyAnimation(self.fullMenuWidget, b"maximumWidth", self)
-            self._menu_anim.setDuration(600)
-            self._menu_anim.setEasingCurve(QEasingCurve.OutQuart)
+            self._menu_anim.setDuration(400)  # Slightly faster for better feel
+            self._menu_anim.setEasingCurve(QEasingCurve.InOutCubic)  # Smoother easing
             self._menu_anim.finished.connect(self._on_menu_anim_finished)
-        except Exception:
+            
+            # Create opacity effect for fullMenuWidget if not exists
+            if not hasattr(self, '_fullMenuOpacity'):
+                self._fullMenuOpacity = QGraphicsOpacityEffect(self.fullMenuWidget)
+                self.fullMenuWidget.setGraphicsEffect(self._fullMenuOpacity)
+            
+            # Create opacity animation
+            self._menu_opacity_anim = QPropertyAnimation(self._fullMenuOpacity, b"opacity", self)
+            self._menu_opacity_anim.setDuration(400)
+            self._menu_opacity_anim.setEasingCurve(QEasingCurve.InOutCubic)
+            
+        except Exception as e:
             self._menu_anim = None
+            self._menu_opacity_anim = None
 
     def toggle_menu(self, checked):
         try:
             if not hasattr(self, "_menu_anim") or self._menu_anim is None:
                 self._setup_menu_animation()
+            
             target_width = 240 if checked else 0
+            
             # Ensure full menu is visible during animation
             self.fullMenuWidget.setVisible(True)
-            # Hide icon-only immediately when opening; show only after close completes
+            
             if checked:
+                # Opening: hide icon-only immediately, fade in full menu
                 self.iconOnlyWidget.setVisible(False)
+                
+                # Start with opacity 0, animate to 1
+                if hasattr(self, '_menu_opacity_anim') and self._menu_opacity_anim:
+                    self._menu_opacity_anim.stop()
+                    self._menu_opacity_anim.setStartValue(0.0)
+                    self._menu_opacity_anim.setEndValue(1.0)
+                    self._menu_opacity_anim.start()
+            else:
+                # Closing: fade out full menu
+                if hasattr(self, '_menu_opacity_anim') and self._menu_opacity_anim:
+                    self._menu_opacity_anim.stop()
+                    self._menu_opacity_anim.setStartValue(1.0)
+                    self._menu_opacity_anim.setEndValue(0.0)
+                    self._menu_opacity_anim.start()
+            
+            # Width animation
             if hasattr(self, "_menu_anim") and self._menu_anim:
                 self._menu_anim.stop()
                 self._menu_anim.setStartValue(self.fullMenuWidget.maximumWidth())
                 self._menu_anim.setEndValue(target_width)
                 self._menu_anim.start()
-        except Exception:
+        except Exception as e:
             pass
 
     def _on_menu_anim_finished(self):
         try:
             expanded = self.fullMenuWidget.maximumWidth() > 0
-            # Toggle icon-only vs full menu visibility
-            self.iconOnlyWidget.setVisible(not expanded)
+            
+            if not expanded:
+                # Animation finished closing - now show icon-only sidebar
+                self.iconOnlyWidget.setVisible(True)
+                # Keep full menu widget in DOM but ensure opacity stays at 0
+                if hasattr(self, '_fullMenuOpacity') and self._fullMenuOpacity:
+                    self._fullMenuOpacity.setOpacity(0.0)
+            else:
+                # Animation finished opening - ensure full opacity
+                self.iconOnlyWidget.setVisible(False)
+                if hasattr(self, '_fullMenuOpacity') and self._fullMenuOpacity:
+                    self._fullMenuOpacity.setOpacity(1.0)
+                    
+            # Always keep fullMenuWidget visible (just opacity 0 when closed)
             self.fullMenuWidget.setVisible(True)
-        except Exception:
+        except Exception as e:
             pass
 
 
