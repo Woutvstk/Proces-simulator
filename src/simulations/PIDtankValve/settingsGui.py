@@ -240,6 +240,9 @@ class TankSimSettingsMixin:
                 # We need to bind it to the main window's widgets
                 self._connect_pidvalve_controls_to_main_window()
             
+            # Initialize PID control buttons (Start/Stop/Reset) following general controls pattern
+            self._init_pidvalve_control_buttons()
+            
             # Setup Auto/Manual button mutual exclusivity and mode switching
             auto_buttons = []
             man_buttons = []
@@ -309,6 +312,61 @@ class TankSimSettingsMixin:
                 )
         except Exception as e:
             print(f"Error connecting PID valve controls: {e}")
+
+    def _init_pidvalve_control_buttons(self):
+        """Initialize PID control buttons following the same pattern as general controls"""
+        try:
+            btn_start = getattr(self, 'pushButton_PidValveStart', None)
+            btn_stop = getattr(self, 'pushButton_PidValveStop', None)
+            btn_reset = getattr(self, 'pushButton_PidValveReset', None)
+
+            # Make buttons checkable for visual feedback
+            if btn_start:
+                btn_start.setCheckable(True)
+                btn_start.pressed.connect(lambda: self._on_pid_start_pressed())
+                btn_start.released.connect(lambda: self._on_pid_start_released())
+
+            if btn_stop:
+                btn_stop.setCheckable(True)
+                btn_stop.pressed.connect(lambda: self._on_pid_stop_pressed())
+                btn_stop.released.connect(lambda: self._on_pid_stop_released())
+
+            if btn_reset:
+                btn_reset.setCheckable(True)
+                btn_reset.pressed.connect(lambda: self._on_pid_reset_pressed())
+                btn_reset.released.connect(lambda: self._on_pid_reset_released())
+        except Exception as e:
+            print(f"Error initializing PID control buttons: {e}")
+
+    def _on_pid_start_pressed(self):
+        """Handle PID Start button press"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidStartCmd = True
+
+    def _on_pid_start_released(self):
+        """Handle PID Start button release"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidStartCmd = False
+
+    def _on_pid_stop_pressed(self):
+        """Handle PID Stop button press"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidStopCmd = True
+
+    def _on_pid_stop_released(self):
+        """Handle PID Stop button release"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidStopCmd = False
+
+    def _on_pid_reset_pressed(self):
+        """Handle PID Reset button press"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidResetCmd = True
+
+    def _on_pid_reset_released(self):
+        """Handle PID Reset button release"""
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
+            self.tanksim_status.pidResetCmd = False
 
     def _on_auto_mode_toggled(self, checked):
         """Handle Auto mode button toggle"""

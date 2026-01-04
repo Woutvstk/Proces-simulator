@@ -56,6 +56,8 @@ class status:
             "generalControl1Value", "generalControl2Value", "generalControl3Value",
             "indicator1", "indicator2", "indicator3", "indicator4",
             "analog1", "analog2", "analog3",
+            "pidStartCmd", "pidStopCmd", "pidResetCmd",
+            "temperatureSetpoint", "levelSetpoint",
         ]
 
         # General Controls - PLC Outputs reflected in status (written by: plc or force)
@@ -74,6 +76,15 @@ class status:
         self.analog1: int = 0
         self.analog2: int = 0
         self.analog3: int = 0
+
+        # PID Controls - commands to PLC (written by: gui)
+        self.pidStartCmd: bool = False
+        self.pidStopCmd: bool = False
+        self.pidResetCmd: bool = False
+
+        # PID Controls - setpoints (written by: gui or plc)
+        self.temperatureSetpoint: float = 50.0  # °C
+        self.levelSetpoint: float = 1000.0  # liters
 
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a CSV file"""
