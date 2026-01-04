@@ -30,6 +30,7 @@ class TankSimSettingsMixin:
         self._init_checkboxes()
         self._init_entry_fields()
         self._init_simulation_button()
+        self._init_pidvalve_mode_toggle()
 
         # Ensure correct tab index for analog/digital valve control on startup
         # If adjustableValveCheckBox is not checked, set index to 1 (digital)
@@ -230,6 +231,214 @@ class TankSimSettingsMixin:
         except AttributeError:
             pass
 
+    def _init_pidvalve_mode_toggle(self):
+        """Initialize PID valve Auto/Manual mode toggle buttons"""
+        try:
+            # Connect PID valve controls (sliders, buttons, etc.)
+            if hasattr(self, 'vat_widget') and self.vat_widget:
+                # The VatWidget has the connect_pidvalve_controls method
+                # We need to bind it to the main window's widgets
+                self._connect_pidvalve_controls_to_main_window()
+            
+            # Setup Auto/Manual button mutual exclusivity and mode switching
+            auto_buttons = []
+            man_buttons = []
+            
+            # Collect all Auto and Manual buttons (there may be duplicates)
+            for name in ['pushButton_PidValveAuto', 'pushButton_PidValveAuto_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.setCheckable(True)
+                    auto_buttons.append(btn)
+            
+            for name in ['pushButton_PidValveMan', 'pushButton_PidValveMan_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.setCheckable(True)
+                    man_buttons.append(btn)
+            
+            # Default to Auto mode (Manual = PLC mode disabled)
+            for btn in auto_buttons:
+                btn.setChecked(True)
+            for btn in man_buttons:
+                btn.setChecked(False)
+            
+            # Connect all Auto buttons
+            for btn in auto_buttons:
+                btn.toggled.connect(lambda checked, b=btn: self._on_auto_mode_toggled(checked))
+            
+            # Connect all Manual buttons
+            for btn in man_buttons:
+                btn.toggled.connect(lambda checked, b=btn: self._on_manual_mode_toggled(checked))
+            
+            # Initialize control widget states based on current mode
+            self._update_pidvalve_control_states()
+            
+        except Exception as e:
+            print(f"Error initializing PID valve mode toggle: {e}")
+
+    def _connect_pidvalve_controls_to_main_window(self):
+        """Connect PID valve sliders and labels at the main window level"""
+        try:
+            # Connect temperature setpoint slider to label
+            slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+            label_temp = getattr(self, 'label_PidTankTempSP', None)
+            if slider_temp and label_temp:
+                # Set range (0-100°C typical for tank temperature)
+                slider_temp.setMinimum(0)
+                slider_temp.setMaximum(100)
+                # Initial display
+                label_temp.setText(f"{slider_temp.value()}°C")
+                # Connect for live update
+                slider_temp.valueChanged.connect(
+                    lambda val: label_temp.setText(f"{val}°C")
+                )
+            
+            # Connect level setpoint slider to label
+            slider_level = getattr(self, 'slider_PidTankLevelSP', None)
+            label_level = getattr(self, 'label_PidTankLevelSP', None)
+            if slider_level and label_level:
+                # Set range (0-100%)
+                slider_level.setMinimum(0)
+                slider_level.setMaximum(100)
+                # Initial display
+                label_level.setText(f"{slider_level.value()}%")
+                # Connect for live update
+                slider_level.valueChanged.connect(
+                    lambda val: label_level.setText(f"{val}%")
+                )
+        except Exception as e:
+            print(f"Error connecting PID valve controls: {e}")
+
+    def _on_auto_mode_toggled(self, checked):
+        """Handle Auto mode button toggle"""
+        if not checked:
+            return  # Ignore unchecking
+        
+        try:
+            # Ensure all Manual buttons are unchecked
+            for name in ['pushButton_PidValveMan', 'pushButton_PidValveMan_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.blockSignals(True)
+                    btn.setChecked(False)
+                    btn.blockSignals(False)
+            
+            # Ensure all Auto buttons are checked
+            for name in ['pushButton_PidValveAuto', 'pushButton_PidValveAuto_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.blockSignals(True)
+                    btn.setChecked(True)
+                    btn.blockSignals(False)
+            
+            # Update control states (Auto = Manual GUI control enabled)
+            self._update_pidvalve_control_states()
+        except Exception as e:
+            print(f"Error in auto mode toggle: {e}")
+
+    def _on_manual_mode_toggled(self, checked):
+        """Handle Manual mode button toggle"""
+        if not checked:
+            return  # Ignore unchecking
+        
+        try:
+            # Ensure all Auto buttons are unchecked
+            for name in ['pushButton_PidValveAuto', 'pushButton_PidValveAuto_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.blockSignals(True)
+                    btn.setChecked(False)
+                    btn.blockSignals(False)
+            
+            # Ensure all Manual buttons are checked
+            for name in ['pushButton_PidValveMan', 'pushButton_PidValveMan_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.blockSignals(True)
+                    btn.setChecked(True)
+                    btn.blockSignals(False)
+            
+            # Update control states (Manual = PLC control, GUI disabled)
+            self._update_pidvalve_control_states()
+        except Exception as e:
+            print(f"Error in manual mode toggle: {e}")
+
+    def _update_pidvalve_control_states(self):
+        """Enable/disable PID control widgets based on Auto/Manual mode"""
+        try:
+            # Determine current mode: Auto = True means GUI controls enabled
+            is_auto_mode = False
+            auto_btn = getattr(self, 'pushButton_PidValveAuto', None)
+            if auto_btn:
+                is_auto_mode = auto_btn.isChecked()
+            
+            # List of control widgets that should be disabled in Manual (PLC) mode
+            control_widget_names = [
+                'slider_PidTankTempSP',
+                'slider_PidTankLevelSP',
+                'spinBox_PidTempKp',
+                'spinBox_PidTempKi', 
+                'spinBox_PidTempKd',
+                'spinBox_PidLevelKp',
+                'spinBox_PidLevelKi',
+                'spinBox_PidLevelKd',
+                'pushButton_PidValveStart',
+                'pushButton_PidValveStop',
+                'pushButton_PidValveReset',
+            ]
+            
+            # Enable controls in Auto mode, disable in Manual mode
+            for widget_name in control_widget_names:
+                widget = getattr(self, widget_name, None)
+                if widget:
+                    widget.setEnabled(is_auto_mode)
+            
+            # Update visual styling for mode indication
+            self._update_mode_button_styling(is_auto_mode)
+            
+        except Exception as e:
+            print(f"Error updating PID valve control states: {e}")
+
+    def _update_mode_button_styling(self, is_auto_mode):
+        """Update button styling to indicate active mode"""
+        try:
+            active_style = """
+                QPushButton {
+                    background-color: #10b981;
+                    color: white;
+                    font-weight: bold;
+                    border: 2px solid #059669;
+                }
+                QPushButton:hover {
+                    background-color: #059669;
+                }
+            """
+            inactive_style = """
+                QPushButton {
+                    background-color: #e5e7eb;
+                    color: #6b7280;
+                    border: 1px solid #cbd5e0;
+                }
+                QPushButton:hover {
+                    background-color: #d1d5db;
+                }
+            """
+            
+            # Apply styling to Auto buttons
+            for name in ['pushButton_PidValveAuto', 'pushButton_PidValveAuto_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.setStyleSheet(active_style if is_auto_mode else inactive_style)
+            
+            # Apply styling to Manual buttons
+            for name in ['pushButton_PidValveMan', 'pushButton_PidValveMan_2']:
+                btn = getattr(self, name, None)
+                if btn:
+                    btn.setStyleSheet(inactive_style if is_auto_mode else active_style)
+        except Exception as e:
+            print(f"Error updating mode button styling: {e}")
+
     # =========================================================================
     # UPDATE LOOP - Called from main timer
     # =========================================================================
@@ -396,12 +605,43 @@ class TankSimSettingsMixin:
 
         # If PLC is in control, do not overwrite runtime status, but still propagate UI config changes (max flows, power, etc.)
         gui_mode = (self.mainConfig.plcGuiControl == "gui")
+        
+        # Determine if Auto mode is active (controls enabled)
+        is_auto_mode = False
+        try:
+            auto_btn = getattr(self, 'pushButton_PidValveAuto', None)
+            if auto_btn:
+                is_auto_mode = auto_btn.isChecked()
+        except Exception:
+            is_auto_mode = True  # Default to Auto
 
         # Update PLCControl_PIDControl widget based on GUI mode
         if hasattr(self, 'vat_widget') and self.vat_widget:
             self.vat_widget.set_plc_pidcontrol_index(gui_mode)
 
-        if gui_mode:
+        if gui_mode and is_auto_mode:
+            # Only write GUI values when in GUI mode AND Auto mode (controls enabled)
+            
+            # Write PID temperature setpoint
+            try:
+                slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+                if slider_temp:
+                    self.tanksim_status.temperatureSetpoint = float(slider_temp.value())
+            except Exception:
+                pass
+            
+            # Write PID level setpoint
+            try:
+                slider_level = getattr(self, 'slider_PidTankLevelSP', None)
+                if slider_level:
+                    # Convert percentage to actual volume (liters)
+                    level_percent = float(slider_level.value())
+                    if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                        tank_volume = self.tanksim_config.tankVolume
+                        self.tanksim_status.levelSetpoint = (level_percent / 100.0) * tank_volume
+            except Exception:
+                pass
+            
             # Write valve positions
             self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
             self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
