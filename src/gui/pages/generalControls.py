@@ -282,6 +282,39 @@ class GeneralControlsMixin:
         except Exception:
             pass
 
+    # ----- Name sync helpers -----
+    def _refresh_general_control_labels_from_mapping(self):
+        """Update label texts to reflect any custom names stored in config mapping."""
+        try:
+            cfg = getattr(self, 'tanksim_config', None)
+            if cfg is None or not hasattr(cfg, 'reverse_io_mapping'):
+                return
+
+            label_map = {
+                'AIControl1': getattr(self, 'label_slider1', None),
+                'AIControl2': getattr(self, 'label_slider2', None),
+                'AIControl3': getattr(self, 'label_slider3', None),
+                'DQIndicator1': getattr(self, 'label_status1', None),
+                'DQIndicator2': getattr(self, 'label_status2', None),
+                'DQIndicator3': getattr(self, 'label_status3', None),
+                'DQIndicator4': getattr(self, 'label_status4', None),
+                'DIStart': getattr(self, 'pushButton_control1', None),
+                'DIStop': getattr(self, 'pushButton_control2', None),
+                'DIReset': getattr(self, 'pushButton_control3', None),
+                'AQAnalog1': getattr(self, 'label_value1', None),
+                'AQAnalog2': getattr(self, 'label_value2', None),
+                'AQAnalog3': getattr(self, 'label_value3', None),
+            }
+
+            for attr, label_widget in label_map.items():
+                if label_widget is None:
+                    continue
+                display_name = cfg.reverse_io_mapping.get(attr, label_widget.text().replace(":", "").strip())
+                suffix = ":" if label_widget.text().strip().endswith(":") else ""
+                label_widget.setText(f"{display_name}{suffix}")
+        except Exception:
+            pass
+
     def _write_general_controls_to_status(self):
         """Write General Controls GUI inputs (buttons + sliders) to status in GUI mode."""
         try:

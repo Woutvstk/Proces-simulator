@@ -43,6 +43,7 @@
                 <Signal description="PID Valve Manual Mode" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveMan</Signal>
                 <Signal description="PID Valve Start" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveStart</Signal>
                 <Signal description="PID Valve Stop" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveStop</Signal>
+                <Signal description="PID Valve Reset" type="bool" range="0-1" io_prefix="I" status="FALSE">PidValveReset</Signal>
                 <Signal description="Radio: AI Temp" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveAItemp</Signal>
                 <Signal description="Radio: DI Temp" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveDItemp</Signal>
                 <Signal description="Radio: AI Level" type="bool" range="0-1" io_prefix="I" status="FALSE">PidTankValveAIlevel</Signal>

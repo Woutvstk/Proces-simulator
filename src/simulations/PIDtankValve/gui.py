@@ -72,7 +72,7 @@ class VatWidget(QWidget):
         self.adjustableValveOutValue = 0
         self.waterColor = blue
         self.controler = "GUI"
-        self.maxVolume = 2.0
+        self.maxVolume = 200.0  # Tank capacity in liters
         self.levelSwitchMaxHeight = 90.0
         self.levelSwitchMinHeight = 10.0
         self.heaterPowerFraction = 0.0
@@ -241,16 +241,22 @@ class VatWidget(QWidget):
         """Fill the tank based on liquidVolume"""
         global liquidVolume
 
-        if liquidVolume/self.maxVolume >= self.levelSwitchMaxHeight:
+        # Calculate percentage (0-100%) - maxVolume is in liters
+        level_percentage = min(100.0, (liquidVolume / self.maxVolume) * 100.0) if self.maxVolume > 0 else 0
+
+        # Level switches trigger at percentage of tank
+        level_fraction = liquidVolume / self.maxVolume if self.maxVolume > 0 else 0
+        if level_fraction * 100.0 >= self.levelSwitchMaxHeight:
             self.setGroupColor("levelSwitchMax", green)
         else:
             self.setGroupColor("levelSwitchMax", red)
-        if liquidVolume/self.maxVolume >= self.levelSwitchMinHeight:
+        if level_fraction * 100.0 >= self.levelSwitchMinHeight:
             self.setGroupColor("levelSwitchMin", green)
         else:
             self.setGroupColor("levelSwitchMin", red)
 
-        realGUIHeight = liquidVolume/(self.maxVolume * 100) * self.maxheightGUI
+        # Calculate GUI height: percentage (0-100) mapped to max GUI height
+        realGUIHeight = min(self.maxheightGUI, (level_percentage / 100.0) * self.maxheightGUI)
         newY = self.lowestY - realGUIHeight
 
         if self.waterInVat is not None:
@@ -258,8 +264,7 @@ class VatWidget(QWidget):
             self.waterInVat.set("y", str(newY))
         self.setHightIndicator("levelIndicator", newY)
         self.setHightIndicator("levelValue", newY + 2)
-        self.setSVGText("levelValue", str(
-            int(liquidVolume/self.maxVolume)) + "%")
+        self.setSVGText("levelValue", str(int(level_percentage)) + "%")
 
     def setHightIndicator(self, itemId, hoogte):
         """Set the Y-position of an indicator"""
@@ -300,18 +305,9 @@ class VatWidget(QWidget):
                 item.text = value
 
     def connect_pidvalve_controls(self):
-        # Connect all new IO controls to the IO system
-        # Flip-flop logic for Auto/Manual
-        if hasattr(self, 'pushButton_PidValveAuto') and hasattr(self, 'pushButton_PidValveMan'):
-            self.pushButton_PidValveAuto.setCheckable(True)
-            self.pushButton_PidValveMan.setCheckable(True)
-            self.pushButton_PidValveAuto.setChecked(True)  # Default to Auto
-            self.pushButton_PidValveAuto.toggled.connect(
-                lambda checked: self.pushButton_PidValveMan.setChecked(not checked)
-            )
-            self.pushButton_PidValveMan.toggled.connect(
-                lambda checked: self.pushButton_PidValveAuto.setChecked(not checked)
-            )
+        """Connect PID valve control widgets (called from parent window setup)."""
+        # Note: Auto/Manual toggle buttons are initialized in settingsGui.py
+        # where they are accessible as part of MainWindow
         # Connect digital buttons
         for btn_name in [
             'pushButton_PidValveStart', 'pushButton_PidValveStop',
@@ -333,6 +329,317 @@ class VatWidget(QWidget):
         if slider_level and label_level:
             label_level.setText(str(slider_level.value()))
             slider_level.valueChanged.connect(lambda val: label_level.setText(str(val)))
+
+    def init_mainwindow_controls(self, mainwindow):
+        """Initialize all MainWindow controls (buttons, toggles) from gui.py.
+        
+        This centralizes all simulation screen logic in gui.py to maintain architecture.
+        Called from settingsGui.py with MainWindow reference.
+        
+        Args:
+            mainwindow: Reference to MainWindow object containing the buttons
+        """
+        self.mainwindow = mainwindow
+        self._init_pidvalve_mode_toggle()
+        self._init_valve_control_handlers()
+    
+    def _init_valve_control_handlers(self):
+        """Connect valve control widgets to event handlers for real-time SVG updates."""
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+        
+        try:
+            # Valve In Entry (analog control)
+            valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
+            if valve_in_entry and hasattr(valve_in_entry, 'textChanged'):
+                try:
+                    valve_in_entry.textChanged.connect(self._on_valve_in_entry_changed)
+                except Exception:
+                    pass
+            
+            # Valve Out Entry (analog control)
+            valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
+            if valve_out_entry and hasattr(valve_out_entry, 'textChanged'):
+                try:
+                    valve_out_entry.textChanged.connect(self._on_valve_out_entry_changed)
+                except Exception:
+                    pass
+            
+            # Valve In CheckBox (digital control)
+            valve_in_checkbox = getattr(self.mainwindow, 'valveInCheckBox', None)
+            if valve_in_checkbox and hasattr(valve_in_checkbox, 'stateChanged'):
+                try:
+                    valve_in_checkbox.stateChanged.connect(self._on_valve_in_checkbox_changed)
+                except Exception:
+                    pass
+            
+            # Valve Out CheckBox (digital control)
+            valve_out_checkbox = getattr(self.mainwindow, 'valveOutCheckBox', None)
+            if valve_out_checkbox and hasattr(valve_out_checkbox, 'stateChanged'):
+                try:
+                    valve_out_checkbox.stateChanged.connect(self._on_valve_out_checkbox_changed)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    
+    def _on_valve_in_entry_changed(self, text):
+        """Handle valve in entry text change - update SVG immediately."""
+        try:
+            value = int(text) if text else 0
+            self.adjustableValveInValue = max(0, min(100, value))
+            self.rebuild()
+        except (ValueError, AttributeError):
+            pass
+    
+    def _on_valve_out_entry_changed(self, text):
+        """Handle valve out entry text change - update SVG immediately."""
+        try:
+            value = int(text) if text else 0
+            self.adjustableValveOutValue = max(0, min(100, value))
+            self.rebuild()
+        except (ValueError, AttributeError):
+            pass
+    
+    def _on_valve_in_checkbox_changed(self, state):
+        """Handle valve in checkbox state change - digital control."""
+        try:
+            self.adjustableValveInValue = 100 if state else 0
+            self.rebuild()
+        except AttributeError:
+            pass
+    
+    def _on_valve_out_checkbox_changed(self, state):
+        """Handle valve out checkbox state change - digital control."""
+        try:
+            self.adjustableValveOutValue = 100 if state else 0
+            self.rebuild()
+        except AttributeError:
+            pass
+    
+    def _init_pidvalve_mode_toggle(self):
+        """Initialize Auto/Manual flip-flop toggle."""
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+            
+        try:
+            auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
+            man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
+            
+            if auto_btn:
+                auto_btn.setCheckable(True)
+                auto_btn.clicked.connect(self._toggle_auto_mode)
+            
+            if man_btn:
+                man_btn.setCheckable(True)
+                man_btn.clicked.connect(self._toggle_manual_mode)
+            
+            # Start with Auto active
+            if auto_btn:
+                auto_btn.setChecked(True)
+                auto_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                          stop:0 rgba(140, 140, 140, 255), 
+                                                          stop:1 rgba(120, 120, 120, 255));
+                        color: black;
+                        border: none;
+                        border-radius: 4px;
+                        font-weight: 600;
+                        padding: 8px 12px;
+                    }
+                """)
+            
+            if man_btn:
+                man_btn.setChecked(False)
+                man_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                          stop:0 rgba(200, 200, 200, 255), 
+                                                          stop:1 rgba(180, 180, 180, 255));
+                        color: black;
+                        border: none;
+                        border-radius: 4px;
+                        font-weight: 600;
+                        padding: 8px 12px;
+                    }
+                    QPushButton:hover {
+                        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                          stop:0 rgba(200, 200, 200, 255), 
+                                                          stop:0.5 rgba(180, 180, 180, 255), 
+                                                          stop:1 rgba(170, 170, 170, 255));
+                    }
+                    QPushButton:pressed {
+                        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                          stop:0 rgba(170, 170, 170, 255), 
+                                                          stop:0.5 rgba(140, 140, 140, 255), 
+                                                          stop:1 rgba(120, 120, 120, 255));
+                    }
+                """)
+        except Exception as e:
+            print(f"Error initializing PID valve mode toggle: {e}")
+    
+    def _toggle_auto_mode(self):
+        """Set Auto as active, Manual as inactive."""
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+            
+        auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
+        man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
+        
+        if auto_btn:
+            auto_btn.blockSignals(True)
+            auto_btn.setChecked(True)
+            auto_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                      stop:0 rgba(140, 140, 140, 255), 
+                                                      stop:1 rgba(120, 120, 120, 255));
+                    color: black;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    padding: 8px 12px;
+                }
+            """)
+            auto_btn.blockSignals(False)
+        
+        if man_btn:
+            man_btn.blockSignals(True)
+            man_btn.setChecked(False)
+            man_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                      stop:0 rgba(200, 200, 200, 255), 
+                                                      stop:1 rgba(180, 180, 180, 255));
+                    color: black;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    padding: 8px 12px;
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                      stop:0 rgba(200, 200, 200, 255), 
+                                                      stop:0.5 rgba(180, 180, 180, 255), 
+                                                      stop:1 rgba(170, 170, 170, 255));
+                }
+                QPushButton:pressed {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                      stop:0 rgba(170, 170, 170, 255), 
+                                                      stop:0.5 rgba(140, 140, 140, 255), 
+                                                      stop:1 rgba(120, 120, 120, 255));
+                }
+            """)
+            man_btn.blockSignals(False)
+        
+        # Update status
+        if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
+            self.mainwindow.tanksim_status.pidPidValveAutoCmd = True
+            self.mainwindow.tanksim_status.pidPidValveManCmd = False
+        
+        # Gray out control groupboxes in Auto mode
+        self._update_control_groupboxes(enabled=False)
+    
+    def _toggle_manual_mode(self):
+        """Set Manual as active, Auto as inactive."""
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+            
+        auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
+        man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
+        
+        if man_btn:
+            man_btn.blockSignals(True)
+            man_btn.setChecked(True)
+            man_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                      stop:0 rgba(140, 140, 140, 255), 
+                                                      stop:1 rgba(120, 120, 120, 255));
+                    color: black;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    padding: 8px 12px;
+                }
+            """)
+            man_btn.blockSignals(False)
+        
+        if auto_btn:
+            auto_btn.blockSignals(True)
+            auto_btn.setChecked(False)
+            auto_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
+                                                      stop:0 rgba(200, 200, 200, 255), 
+                                                      stop:1 rgba(180, 180, 180, 255));
+                    color: black;
+                    border: none;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    padding: 8px 12px;
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                      stop:0 rgba(200, 200, 200, 255), 
+                                                      stop:0.5 rgba(180, 180, 180, 255), 
+                                                      stop:1 rgba(170, 170, 170, 255));
+                }
+                QPushButton:pressed {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, 
+                                                      stop:0 rgba(170, 170, 170, 255), 
+                                                      stop:0.5 rgba(140, 140, 140, 255), 
+                                                      stop:1 rgba(120, 120, 120, 255));
+                }
+            """)
+            auto_btn.blockSignals(False)
+        
+        # Update status
+        if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
+            self.mainwindow.tanksim_status.pidPidValveAutoCmd = False
+            self.mainwindow.tanksim_status.pidPidValveManCmd = True
+        
+        # Enable control groupboxes in Manual mode (allows override of PLC)
+        self._update_control_groupboxes(enabled=True)
+    
+    def _update_control_groupboxes(self, enabled):
+        """Enable or disable control groupboxes based on Auto/Manual mode.
+        
+        Args:
+            enabled: True for Manual mode (controls enabled), False for Auto mode (grayed out)
+        """
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+        
+        try:
+            from PyQt5.QtWidgets import QGroupBox
+            
+            # Find and update groupBox_simControls
+            groupbox1 = self.mainwindow.findChild(QGroupBox, 'groupBox_simControls')
+            if groupbox1:
+                groupbox1.setEnabled(enabled)
+            
+            # Find and update groupBox_simControls2
+            groupbox2 = self.mainwindow.findChild(QGroupBox, 'groupBox_simControls2')
+            if groupbox2:
+                groupbox2.setEnabled(enabled)
+        except Exception:
+            pass
+    
+    def is_manual_mode(self):
+        """Check if currently in Manual mode.
+        
+        Returns:
+            bool: True if Manual mode is active, False if Auto mode
+        """
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return False
+        
+        man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
+        if man_btn:
+            return man_btn.isChecked()
+        return False
 
     def set_plc_pidcontrol_index(self, gui_mode: bool):
         """Set PLCControl_PIDControl index: 0 for PLC mode, 1 for GUI mode."""

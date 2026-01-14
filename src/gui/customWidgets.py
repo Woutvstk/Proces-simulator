@@ -463,12 +463,14 @@ class DroppableTableWidget(QTableWidget):
                 status_item.setBackground(Qt.yellow)
             else:
                 status_item.setBackground(QColor(200, 255, 200))
+                print(f"DEBUG: Set row {row} status to green: {display_text}")
         else:
             new_item = ReadOnlyTableWidgetItem(display_text)
             if self.is_row_forced(row):
                 new_item.setBackground(Qt.yellow)
             else:
                 new_item.setBackground(QColor(200, 255, 200))
+                print(f"DEBUG: Created new status item row {row} with green: {display_text}")
             self.setItem(row, 5, new_item)
 
     # =========================================================================
@@ -529,8 +531,10 @@ class DroppableTableWidget(QTableWidget):
                     
                     self.blockSignals(True)
                     self.setItem(row, 0, ReadOnlyTableWidgetItem(dropped_text))
+                    print(f"DEBUG dropEvent: dropped {dropped_text} at row {row}")
                     
                     if signal_data:
+                        print(f"DEBUG: signal_data found: {signal_data}")
                         data_type = signal_data.get('type', 'bool')
                         if 'type' in signal_data:
                             self.setItem(row, 1, ReadOnlyTableWidgetItem(data_type))
@@ -543,13 +547,30 @@ class DroppableTableWidget(QTableWidget):
                             self.setItem(row, 3, EditableTableWidgetItem(""))
                         self.setItem(row, 4, ReadOnlyTableWidgetItem(full_address))
                         if 'status' in signal_data:
-                            self.setItem(row, 5, ReadOnlyTableWidgetItem(signal_data['status']))
+                            print(f"DEBUG: Setting status with value: {signal_data['status']}")
+                            status_text = signal_data['status']
+                            status_item = ReadOnlyTableWidgetItem(status_text)
+                            status_item.setBackground(QColor(200, 255, 200))  # Light green
+                            self.setItem(row, 5, status_item)
+                            # Convert status text to value and call update to ensure consistency
+                            data_type = signal_data.get('type', 'bool')
+                            if data_type == 'bool':
+                                value = status_text.upper() == 'TRUE'
+                            else:
+                                try:
+                                    value = int(status_text)
+                                except:
+                                    value = 0
+                            # Call update_status_column to ensure the color is properly set
+                            print(f"DEBUG: Calling update_status_column for row {row}")
+                            self.update_status_column(row, value)
                         if 'description' in signal_data:
                             self.setItem(row, 6, ReadOnlyTableWidgetItem(signal_data['description']))
                         if 'range' in signal_data:
                             self.setItem(row, 7, ReadOnlyTableWidgetItem(signal_data['range']))
                         self._save_row_data(row)
                     else:
+                        print(f"DEBUG: No signal_data found")
                         self._save_row_data(row)
                     
                     self.blockSignals(False)

@@ -15,6 +15,7 @@ class delayHandlerClass:
     def queueAdd(self, newStatus: statusClass, config: configurationClass):
         status = copy.deepcopy(newStatus)
         status.timeStamp = time.time()
+        # Calculate history size based on MAX delay to accommodate all delays
         self.historySize = max(config.liquidVolumeTimeDelay,
                                config.liquidTempTimeDelay)/config.simulationInterval
         # only write to list if at least one delay > 0
@@ -32,6 +33,8 @@ class delayHandlerClass:
         """
         Returns the most recent (newest) stored value of the requested attribute
         that is still older than the configured delay time.
+        
+        Each attribute uses its own delay time, independent of other attributes.
         """
         # Map attribute to config delay
         delayMap = {
@@ -44,16 +47,29 @@ class delayHandlerClass:
         if attrName not in delayMap:
             raise ValueError(f"Unknown delayed attribute: {attrName}")
 
-        if self.historySize > 0:
-            delayInSeconds = delayMap[attrName]
-            delayInIndex = delayInSeconds/config.simulationInterval
-            delayedStatusIndex = int((self.lastWriteIndex -
-                                      delayInIndex+1) % self.historySize)
+        # If NO delays at all, return current value
+        if config.liquidVolumeTimeDelay <= 0 and config.liquidTempTimeDelay <= 0:
+            return getattr(status, attrName)
+        
+        # Get the specific delay for this attribute
+        delayInSeconds = delayMap[attrName]
+        
+        # If this specific attribute has no delay, return current value
+        if delayInSeconds <= 0:
+            return getattr(status, attrName)
+        
+        # History exists and this attribute has a delay
+        if len(self.statusHistory) > 0:
+            # Calculate how many indices back we need to go for this specific attribute's delay
+            delayInIndex = delayInSeconds / config.simulationInterval
+            
+            # Find the delayed status index (oldest value still within delay window)
+            delayedStatusIndex = int((self.lastWriteIndex - delayInIndex + 1) % self.historySize)
+            
             if len(self.statusHistory) > delayedStatusIndex:
                 return getattr(self.statusHistory[delayedStatusIndex], attrName)
             else:
-                return 0
-        # all delays are 0
+                return getattr(status, attrName)
         else:
             return getattr(status, attrName)
 
@@ -129,12 +145,9 @@ class simulation:
                 print(
                     f" doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
 
-            # calculate new liquidVolume
-            status.liquidVolume = min(
-                status.liquidVolume + status.flowRateIn * self._timeSinceLastRun, config.tankVolume)
-
-            status.liquidVolume = max(
-                status.liquidVolume - status.flowRateOut * self._timeSinceLastRun, 0)
+            # calculate new liquidVolume (net flow with proper clamping)
+            net_flow = (status.flowRateIn - status.flowRateOut) * self._timeSinceLastRun
+            status.liquidVolume = max(0, min(config.tankVolume, status.liquidVolume + net_flow))
 
             # check if digital liquid level sensors are triggered
             status.digitalLevelSensorHighTriggered = (

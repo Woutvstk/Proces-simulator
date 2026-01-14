@@ -20,6 +20,7 @@ from .pages.generalSettings import ProcessSettingsMixin
 from .pages.ioConfigPage import IOConfigMixin
 from .pages.generalControls import GeneralControlsMixin
 from .pages.simPage import SimPageMixin
+from .tooltipManager import setup_tooltip_manager
 # Tank simulation settings mixin from simulations package
 from simulations.PIDtankValve.settingsGui import TankSimSettingsMixin
 
@@ -200,6 +201,12 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         # Initialize GUI mode
         QTimer.singleShot(100, self._initialize_gui_mode)
 
+        # Initialize tooltip manager for dynamic tooltips
+        try:
+            self.tooltip_manager = setup_tooltip_manager(self)
+        except Exception as e:
+            pass
+
         # Kick off updates and connection icon after init
         try:
             self.update_connection_status_icon()
@@ -290,6 +297,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self._update_general_controls_ui()
         # Update connection status icon (handles timeout detection)
         self.update_connection_status_icon()
+        # Update dynamic tooltips based on current state
+        if hasattr(self, 'tooltip_manager'):
+            self.tooltip_manager.update_disabled_button_tooltips()
 
 
     def update_connection_status_icon(self):

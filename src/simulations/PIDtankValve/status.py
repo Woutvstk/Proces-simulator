@@ -86,6 +86,20 @@ class status:
         self.temperatureSetpoint: float = 50.0  # °C
         self.levelSetpoint: float = 1000.0  # liters
 
+        # PID Valve Controls - commands from GUI (written by: gui)
+        self.pidPidValveStartCmd: bool = False
+        self.pidPidValveStopCmd: bool = False
+        self.pidPidValveResetCmd: bool = False
+        self.pidPidValveAutoCmd: bool = True
+        self.pidPidValveManCmd: bool = False
+        self.pidPidTankValveAItempCmd: bool = False
+        self.pidPidTankValveDItempCmd: bool = False
+        self.pidPidTankValveAIlevelCmd: bool = False
+        self.pidPidTankValveDIlevelCmd: bool = False
+        # PID Valve Controls - setpoint values (written by: gui)
+        self.pidPidTankTempSPValue: int = 0
+        self.pidPidTankLevelSPValue: int = 0
+
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a CSV file"""
         print(f"Exporting status to: {exportFileName}")

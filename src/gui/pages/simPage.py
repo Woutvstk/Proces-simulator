@@ -12,10 +12,21 @@ class SimPageMixin:
             self.pushButton_settingsPage.toggled.connect(lambda checked: self._nav_settings(checked, "settings"))
             self.pushButton_IOPage.toggled.connect(lambda checked: self._nav_io(checked, "io"))
             self.pushButton_simPage.toggled.connect(lambda checked: self._nav_sim(checked, "sim"))
+            
+            # Connect simulation-specific settings buttons
             try:
-                self.pushButton_simSettings.toggled.connect(self.go_to_sim_settings)
+                self.pushButton_SimulationSettingsSingleTank.clicked.connect(self.toggle_single_tank_settings)
             except AttributeError:
                 pass
+            try:
+                self.pushButton_SimulationSettingsDualTank.clicked.connect(self.toggle_dual_tank_settings)
+            except AttributeError:
+                pass
+            try:
+                self.pushButton_SimulationSettingsConveyor.clicked.connect(self.toggle_conveyor_settings)
+            except AttributeError:
+                pass
+            
             try:
                 self.pushButton_generalControls.toggled.connect(self.go_to_general_controls)
             except AttributeError:
@@ -31,10 +42,6 @@ class SimPageMixin:
                 pass
             try:
                 self.pushButton_simPage2.toggled.connect(lambda checked: self._nav_sim(checked, "sim"))
-            except AttributeError:
-                pass
-            try:
-                self.pushButton_simSettings2.toggled.connect(self.go_to_sim_settings)
             except AttributeError:
                 pass
             try:
@@ -218,6 +225,24 @@ class SimPageMixin:
         """Start a specific simulation and refresh IO tree."""
         self.current_sim_page = sim_index
         self.MainScreen.setCurrentIndex(sim_index)
+        
+        # Reset stacked widgets to index 0 (simulation view, not settings)
+        try:
+            if sim_index == 0:  # Single Tank
+                widget = getattr(self, 'ContentStackedWidgetsSingleTank', None)
+                if widget:
+                    widget.setCurrentIndex(0)
+            elif sim_index == 1:  # Dual Tank
+                widget = getattr(self, 'ContentStackedWidgetDualTank', None)
+                if widget:
+                    widget.setCurrentIndex(0)
+            elif sim_index == 2:  # Conveyor
+                widget = getattr(self, 'ContentStackedWidgetConveyor', None)
+                if widget:
+                    widget.setCurrentIndex(0)
+        except Exception as e:
+            logger.error(f"Error resetting stacked widget index: {e}")
+        
         try:
             sim_map = {0: "PIDtankValve", 1: "conveyor", 2: "conveyor"}
             sim_name = sim_map.get(sim_index)
@@ -343,27 +368,35 @@ class SimPageMixin:
             self.floated_window.deleteLater()
             self.floated_window = None
 
-    def go_to_sim_settings(self, checked):
-        """Navigate to simulation settings page (ActiveSimSettings page)."""
-        if checked:
-            if not self._maybe_confirm_leave_io():
-                try:
-                    self.pushButton_simSettings.blockSignals(True)
-                    self.pushButton_simSettings.setChecked(False)
-                    self.pushButton_simSettings.blockSignals(False)
-                    self.pushButton_simSettings2.blockSignals(True)
-                    self.pushButton_simSettings2.setChecked(False)
-                    self.pushButton_simSettings2.blockSignals(False)
-                except Exception:
-                    pass
-                return
-            self.MainScreen.setCurrentIndex(6)
-            if hasattr(self, 'stackedWidget_SimSettings'):
-                if self.current_sim_page == 0 or self.current_sim_page == 1:
-                    self.stackedWidget_SimSettings.setCurrentIndex(1)
-                elif self.current_sim_page == 2:
-                    self.stackedWidget_SimSettings.setCurrentIndex(2)
-                else:
-                    self.stackedWidget_SimSettings.setCurrentIndex(0)
-            # Auto-close sidebar when navigating
-            self._auto_close_sidebar()
+    def toggle_single_tank_settings(self):
+        """Toggle ContentStackedWidgetsSingleTank between index 0 and 1."""
+        try:
+            widget = getattr(self, 'ContentStackedWidgetsSingleTank', None)
+            if widget:
+                current_index = widget.currentIndex()
+                new_index = 1 if current_index == 0 else 0
+                widget.setCurrentIndex(new_index)
+        except Exception as e:
+            logger.error(f"Error toggling single tank settings: {e}")
+    
+    def toggle_dual_tank_settings(self):
+        """Toggle ContentStackedWidgetDualTank between index 0 and 1."""
+        try:
+            widget = getattr(self, 'ContentStackedWidgetDualTank', None)
+            if widget:
+                current_index = widget.currentIndex()
+                new_index = 1 if current_index == 0 else 0
+                widget.setCurrentIndex(new_index)
+        except Exception as e:
+            logger.error(f"Error toggling dual tank settings: {e}")
+    
+    def toggle_conveyor_settings(self):
+        """Toggle ContentStackedWidgetConveyor between index 0 and 1."""
+        try:
+            widget = getattr(self, 'ContentStackedWidgetConveyor', None)
+            if widget:
+                current_index = widget.currentIndex()
+                new_index = 1 if current_index == 0 else 0
+                widget.setCurrentIndex(new_index)
+        except Exception as e:
+            logger.error(f"Error toggling conveyor settings: {e}")

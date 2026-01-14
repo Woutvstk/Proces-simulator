@@ -10,3 +10,4 @@ psutil==7.1.3
 pywin32==311
 wmi==v1.5.1
 PyQt5==v5.15.11
+matplotlib==3.8.4

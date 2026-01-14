@@ -133,10 +133,7 @@ class ProcessSettingsMixin:
     def _init_checkboxes(self):
         """Connect all checkboxes"""
         try:
-            self.adjustableValveCheckBox.toggled.connect(
-                self.on_config_changed)
-            self.adjustableHeatingCoilCheckBox.toggled.connect(
-                self.on_config_changed)
+            # Only level and temp checkboxes (valve and heating removed)
             self.levelSwitchesCheckBox.toggled.connect(
                 self.on_config_changed)
             self.analogValueTempCheckBox.toggled.connect(
@@ -159,7 +156,6 @@ class ProcessSettingsMixin:
             ]
             self.entryGroupPower = [
                 self.powerHeatingCoilEntry,
-                self.powerHeatingCoilEntry1,
                 self.powerHeatingCoilEntry2
             ]
 
@@ -178,16 +174,6 @@ class ProcessSettingsMixin:
             self.pushButton_startSimulation.toggled.connect(
                 self.toggle_simulation)
             self.pushButton_startSimulation.setText("START SIMULATION")
-            self.pushButton_startSimulation.setStyleSheet("""
-                QPushButton {
-                    background-color: #44FF44;
-                    color: black;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #00CC00;
-                }
-            """)
         except AttributeError:
             pass
 
@@ -258,26 +244,17 @@ class ProcessSettingsMixin:
             except AttributeError:
                 pass
 
-            # Valve positions (Klep standen)
-            if self.vat_widget.adjustableValve:
-                try:
-                    self.vat_widget.adjustableValveInValue = min(100, int(
-                        self.valveInEntry.text() or 0))
-                except (ValueError, AttributeError):
-                    self.vat_widget.adjustableValveInValue = 0
-                try:
-                    self.vat_widget.adjustableValveOutValue = min(100, int(
-                        self.valveOutEntry.text() or 0))
-                except (ValueError, AttributeError):
-                    self.vat_widget.adjustableValveOutValue = 0
-            else:
-                try:
-                    top_checked = self.valveInCheckBox.isChecked()
-                    bottom_checked = self.valveOutCheckBox.isChecked()
-                    self.vat_widget.adjustableValveInValue = 100 if top_checked else 0
-                    self.vat_widget.adjustableValveOutValue = 100 if bottom_checked else 0
-                except AttributeError:
-                    pass
+            # Valve positions (always analog now)
+            try:
+                self.vat_widget.adjustableValveInValue = min(100, int(
+                    self.valveInEntry.text() or 0))
+            except (ValueError, AttributeError):
+                self.vat_widget.adjustableValveInValue = 0
+            try:
+                self.vat_widget.adjustableValveOutValue = min(100, int(
+                    self.valveOutEntry.text() or 0))
+            except (ValueError, AttributeError):
+                self.vat_widget.adjustableValveOutValue = 0
 
         except Exception as e:
             pass  # Silently ignore during init or minor update issues
@@ -344,29 +321,9 @@ class ProcessSettingsMixin:
         if checked:
             self.start_simulation()
             self.pushButton_startSimulation.setText("STOP SIMULATION")
-            self.pushButton_startSimulation.setStyleSheet("""
-                QPushButton {
-                    background-color: #FF4444;
-                    color: white;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #CC0000;
-                }
-            """)
         else:
             self.stop_simulation()
             self.pushButton_startSimulation.setText("START SIMULATION")
-            self.pushButton_startSimulation.setStyleSheet("""
-                QPushButton {
-                    background-color: #44FF44;
-                    color: black;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #00CC00;
-                }
-            """)
 
     def on_controller_changed(self):
         """Callback when controller dropdown changes"""

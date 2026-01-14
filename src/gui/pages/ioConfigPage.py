@@ -122,6 +122,7 @@ class DroppableTableWidget(QTableWidget):
         
         # Handle name changes (column 0)
         if col == 0:
+            old_name = self.row_data.get(row, {}).get(0, "")
             # Validate name: no empty, trim whitespace
             name = item.text().strip()
             if not name:
@@ -137,6 +138,13 @@ class DroppableTableWidget(QTableWidget):
             # Mark IO configuration as dirty
             if hasattr(self, 'parent') and hasattr(self.parent(), '_io_config_dirty'):
                 self.parent()._io_config_dirty = True
+            # Propagate rename to main window so labels/tree stay in sync
+            try:
+                mw = getattr(self, 'io_screen', None).main_window if getattr(self, 'io_screen', None) else None
+                if mw and hasattr(mw, "handle_io_signal_rename"):
+                    mw.handle_io_signal_rename(old_name, name)
+            except Exception:
+                pass
             return
         
         if col not in [2, 3]:
@@ -570,7 +578,8 @@ class DroppableTableWidget(QTableWidget):
                         try:
                             json_bytes = event.mimeData().data("application/json")
                             signal_data = json.loads(bytes(json_bytes).decode('utf-8'))
-                        except Exception:                            pass
+                        except Exception:
+                            signal_data = None
                     
                     self.blockSignals(True)
                     self.setItem(row, 0, EditableTableWidgetItem(dropped_text))
@@ -587,14 +596,36 @@ class DroppableTableWidget(QTableWidget):
                         else:
                             self.setItem(row, 3, EditableTableWidgetItem(""))
                         self.setItem(row, 4, ReadOnlyTableWidgetItem(full_address))
-                        if 'status' in signal_data:
-                            self.setItem(row, 5, ReadOnlyTableWidgetItem(signal_data['status']))
+                        # Always create a status item with green background
+                        status_text = signal_data.get('status', 'FALSE')
+                        status_item = ReadOnlyTableWidgetItem(status_text)
+                        status_item.setBackground(QColor(200, 255, 200))
+                        self.setItem(row, 5, status_item)
+                        try:
+                            if data_type == 'bool':
+                                value = status_text.strip().upper() == 'TRUE'
+                            else:
+                                value = int(status_text)
+                        except Exception:
+                            value = 0
+                        self.update_status_column(row, value)
+                        # Guarantee color even if update_status_column replaced the item
+                        status_item = self.item(row, 5)
+                        if status_item:
+                            status_item.setBackground(QColor(200, 255, 200))
                         if 'description' in signal_data:
                             self.setItem(row, 6, ReadOnlyTableWidgetItem(signal_data['description']))
                         if 'range' in signal_data:
                             self.setItem(row, 7, ReadOnlyTableWidgetItem(signal_data['range']))
                         self._save_row_data(row)
                     else:
+                        # No signal_data (e.g., plain text) – still ensure status column gets default green
+                        data_type_item = self.item(row, 1)
+                        data_type = data_type_item.text() if data_type_item else 'bool'
+                        self.update_status_column(row, False if data_type == 'bool' else 0)
+                        status_item = self.item(row, 5)
+                        if status_item:
+                            status_item.setBackground(QColor(200, 255, 200))
                         self._save_row_data(row)
                     
                     self.blockSignals(False)
@@ -858,7 +889,7 @@ class IOScreen:
         tank_dir = root_dir.parent 
         tank_dir.mkdir(exist_ok=True)
 
-        self.config_file = tank_dir / "tankSim" / "io_configuration.json"
+        self.config_file = tank_dir / "IO" / "IO_configuration.json"
         table = self.main_window.tableWidget_IO
             
         config_data = {
@@ -1100,6 +1131,13 @@ class IOConfigMixin:
             
             self.treeWidget_IO.expandAll()
             logger.info(f"IO tree loaded successfully from {active_sim}")
+
+            # Refresh labels if custom names exist
+            try:
+                if hasattr(self, '_refresh_general_control_labels_from_mapping'):
+                    self._refresh_general_control_labels_from_mapping()
+            except Exception:
+                pass
             
         except Exception as e:
             logger.error(f"Error loading IO tree: {e}", exc_info=True)
@@ -1258,6 +1296,13 @@ class IOConfigMixin:
                 'offsets': self.io_screen.byte_offsets.copy(),
                 'signals': []
             }
+
+            # Persist custom signal name overrides (e.g., Control/Indicator aliases)
+            try:
+                if hasattr(self, 'tanksim_config') and hasattr(self.tanksim_config, 'custom_signal_names'):
+                    config_data['custom_signal_names'] = self.tanksim_config.custom_signal_names.copy()
+            except Exception:
+                pass
             
             for row in range(table.rowCount()):
                 name_item = table.item(row, 0)
@@ -1300,6 +1345,20 @@ class IOConfigMixin:
             if 'signals' not in config_data:
                 QMessageBox.warning(self, "Invalid File", "Invalid configuration")
                 return
+
+            # Restore custom signal names into mapping before applying table data
+            if hasattr(self, 'tanksim_config') and 'custom_signal_names' in config_data:
+                for attr, custom_name in config_data['custom_signal_names'].items():
+                    # Find all existing keys pointing to this attr and add alias
+                    if hasattr(self.tanksim_config, 'io_signal_mapping'):
+                        for default_name, attr_name in list(self.tanksim_config.io_signal_mapping.items()):
+                            if attr_name == attr:
+                                self.tanksim_config.io_signal_mapping[custom_name] = attr
+                                if hasattr(self.tanksim_config, 'reverse_io_mapping'):
+                                    self.tanksim_config.reverse_io_mapping[attr] = custom_name
+                        # Persist in config
+                        if hasattr(self.tanksim_config, 'custom_signal_names'):
+                            self.tanksim_config.custom_signal_names[attr] = custom_name
             
             reply = QMessageBox.question(
                 self, "Confirm Load",
@@ -1357,11 +1416,15 @@ class IOConfigMixin:
                 QMessageBox.warning(self, "Error", "TankSim config unavailable")
                 return
             
-            project_root = Path(__file__).resolve().parent.parent
-            io_config_path = project_root / "tankSim" / "io_configuration.json"
+            # __file__ is in src/gui/pages/ioConfigPage.py
+            # .parent = src/gui/pages
+            # .parent.parent = src/gui
+            # .parent.parent.parent = src
+            project_root = Path(__file__).resolve().parent.parent.parent
+            io_config_path = project_root / "IO" / "IO_configuration.json"
             
             if not io_config_path.exists():
-                QMessageBox.warning(self, "File Not Found", f"Config file not found")
+                QMessageBox.warning(self, "File Not Found", f"Config file not found: {io_config_path}")
                 return
             
             reply = QMessageBox.question(
@@ -1627,6 +1690,29 @@ class IOConfigMixin:
                         value = int(getattr(status, 'analog2', 0))
                     elif attr_name == "AQAnalog3":
                         value = int(getattr(status, 'analog3', 0))
+                    # PID Valve Controls - Specific handling for known PID controls
+                    elif attr_name == "DIPidValveStart":
+                        value = bool(getattr(status, 'pidPidValveStartCmd', False))
+                    elif attr_name == "DIPidValveStop":
+                        value = bool(getattr(status, 'pidPidValveStopCmd', False))
+                    elif attr_name == "DIPidValveReset":
+                        value = bool(getattr(status, 'pidPidValveResetCmd', False))
+                    elif attr_name == "DIPidValveAuto":
+                        value = bool(getattr(status, 'pidPidValveAutoCmd', True))
+                    elif attr_name == "DIPidValveMan":
+                        value = bool(getattr(status, 'pidPidValveManCmd', False))
+                    elif attr_name == "DIPidTankValveAItemp":
+                        value = bool(getattr(status, 'pidPidTankValveAItempCmd', False))
+                    elif attr_name == "DIPidTankValveDItemp":
+                        value = bool(getattr(status, 'pidPidTankValveDItempCmd', False))
+                    elif attr_name == "DIPidTankValveAIlevel":
+                        value = bool(getattr(status, 'pidPidTankValveAIlevelCmd', False))
+                    elif attr_name == "DIPidTankValveDIlevel":
+                        value = bool(getattr(status, 'pidPidTankValveDIlevelCmd', False))
+                    elif attr_name == "AIPidTankTempSP":
+                        value = int(getattr(status, 'pidPidTankTempSPValue', 0))
+                    elif attr_name == "AIPidTankLevelSP":
+                        value = int(getattr(status, 'pidPidTankLevelSPValue', 0))
                     # PID Controls and other dynamic signals - Try to get value from dynamic attributes created by handler
                     # Handler creates attributes like pidPidValveStartCmd for digital, pidPidTankTempSPValue for analog
                     elif attr_name.startswith("DI") or attr_name.startswith("AI"):
@@ -1640,21 +1726,20 @@ class IOConfigMixin:
                         value = getattr(status, attr_to_check, None)
                         
                         if value is None:
-                            # Try specific hardcoded fallbacks for known attributes
-                            if attr_name == "DIPidValveStart":
-                                value = bool(getattr(status, 'pidStartCmd', False))
-                            elif attr_name == "DIPidValveStop":
-                                value = bool(getattr(status, 'pidStopCmd', False))
-                            elif attr_name == "DIPidValveAuto":
-                                value = bool(getattr(status, 'pidPidValveAutoCmd', False))
-                            elif attr_name == "DIPidValveMan":
-                                value = bool(getattr(status, 'pidPidValveManCmd', False))
-                            else:
-                                # Default value: False for bool, 0 for int
-                                # This ensures the status column gets updated with green background
-                                value = False if data_type == 'bool' else 0
+                            # Default value: False for bool, 0 for int
+                            # This ensures the status column gets updated with green background
+                            value = False if data_type == 'bool' else 0
                     else:
-                        continue
+                        # For any other signal types (DQ, AQ not matched above), use default values
+                        type_item = table.item(row, 1)
+                        data_type = type_item.text() if type_item else 'bool'
+                        value = False if data_type == 'bool' else 0
+                
+                # Ensure value is always set before updating status column
+                if value is None:
+                    type_item = table.item(row, 1)
+                    data_type = type_item.text() if type_item else 'bool'
+                    value = False if data_type == 'bool' else 0
                 
                 table.update_status_column(row, value)
                 
@@ -1701,6 +1786,78 @@ class IOConfigMixin:
                 forced_values[attr_name] = int(forced_value)
         
         return forced_values
+
+    # ----- Rename propagation from General Controls or table -----
+    def handle_io_signal_rename(self, canonical: str, old_display: str, new_display: str):
+        """Synchronize renamed signals across tree, table and config mapping.
+
+        canonical: stable mapping key (e.g., Control1, Start)
+        old_display: previous shown name
+        new_display: new shown name
+        """
+        if not canonical or not new_display or old_display == new_display:
+            return
+
+        # Update tree widget text (match either old_display or canonical)
+        try:
+            def _rename_tree_item(item):
+                if item.text(0) in (old_display, canonical):
+                    item.setText(0, new_display)
+                for i in range(item.childCount()):
+                    _rename_tree_item(item.child(i))
+            if hasattr(self, 'treeWidget_IO') and self.treeWidget_IO:
+                tree = self.treeWidget_IO
+                for i in range(tree.topLevelItemCount()):
+                    _rename_tree_item(tree.topLevelItem(i))
+                
+                # Update signal_data dictionary to maintain drag-and-drop functionality
+                if hasattr(tree, 'signal_data'):
+                    if old_display in tree.signal_data:
+                        tree.signal_data[new_display] = tree.signal_data[old_display]
+                        del tree.signal_data[old_display]
+                    elif canonical in tree.signal_data:
+                        tree.signal_data[new_display] = tree.signal_data[canonical]
+                        # Keep canonical as well for compatibility
+        except Exception:
+            pass
+
+        # Update table entries
+        try:
+            if hasattr(self, 'tableWidget_IO') and self.tableWidget_IO:
+                table = self.tableWidget_IO
+                table.blockSignals(True)
+                for row in range(table.rowCount()):
+                    item = table.item(row, 0)
+                    if item and item.text() in (old_display, canonical):
+                        item.setText(new_display)
+                        table._save_row_data(row)
+                table.blockSignals(False)
+        except Exception:
+            pass
+
+        # Update config mapping and reverse mapping
+        try:
+            cfg = getattr(self, 'tanksim_config', None)
+            if cfg and hasattr(cfg, 'io_signal_mapping'):
+                if canonical in cfg.io_signal_mapping:
+                    attr = cfg.io_signal_mapping[canonical]
+                    # Keep canonical mapping, add alias
+                    cfg.io_signal_mapping[new_display] = attr
+                    if hasattr(cfg, 'reverse_io_mapping'):
+                        cfg.reverse_io_mapping[attr] = new_display
+                    if hasattr(cfg, 'custom_signal_names'):
+                        cfg.custom_signal_names[attr] = new_display
+            # Mark dirty so user is prompted to apply
+            self._mark_io_dirty()
+        except Exception:
+            pass
+
+        # Refresh General Controls labels if they depend on this signal
+        try:
+            if hasattr(self, '_refresh_general_control_labels_from_mapping'):
+                self._refresh_general_control_labels_from_mapping()
+        except Exception:
+            pass
 
     # ----- Dirty-state helper -----
     def _mark_io_dirty(self):

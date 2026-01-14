@@ -42,6 +42,23 @@ class configuration:
         self.AQAnalog2 = {"byte": 14}
         self.AQAnalog3 = {"byte": 16}
 
+        # PID Valve Controls - DIGITAL (PLC Inputs)
+        self.DIPidValveStart = {"byte": 2, "bit": 0}
+        self.DIPidValveStop = {"byte": 2, "bit": 1}
+        self.DIPidValveReset = {"byte": 2, "bit": 2}
+        self.DIPidValveAuto = {"byte": 2, "bit": 3}
+        self.DIPidValveMan = {"byte": 2, "bit": 4}
+        self.DIPidTankValveAItemp = {"byte": 2, "bit": 5}
+        self.DIPidTankValveDItemp = {"byte": 2, "bit": 6}
+        self.DIPidTankValveAIlevel = {"byte": 2, "bit": 7}
+        self.DIPidTankValveDIlevel = {"byte": 3, "bit": 0}
+        # PID Valve Controls - ANALOG (PLC Inputs)
+        self.AIPidTankTempSP = {"byte": 18}
+        self.AIPidTankLevelSP = {"byte": 20}
+
+        # Custom signal name overrides (persisted via IO save/load)
+        self.custom_signal_names: dict[str, str] = {}
+
         # Mapping of signal names from io_config.json to configuration attributes
         self.io_signal_mapping = {
             # INPUTS FOR SIMULATOR (= PLC OUTPUTS)
@@ -83,6 +100,19 @@ class configuration:
             "Analog1": "AQAnalog1",
             "Analog2": "AQAnalog2",
             "Analog3": "AQAnalog3",
+
+            # PID Valve Controls - PLC Inputs => Simulator Outputs
+            "PidValveStart": "DIPidValveStart",
+            "PidValveStop": "DIPidValveStop",
+            "PidValveReset": "DIPidValveReset",
+            "PidValveAuto": "DIPidValveAuto",
+            "PidValveMan": "DIPidValveMan",
+            "PidTankValveAItemp": "DIPidTankValveAItemp",
+            "PidTankValveDItemp": "DIPidTankValveDItemp",
+            "PidTankValveAIlevel": "DIPidTankValveAIlevel",
+            "PidTankValveDIlevel": "DIPidTankValveDIlevel",
+            "PidTankTempSP": "AIPidTankTempSP",
+            "PidTankLevelSP": "AIPidTankLevelSP",
         }
 
         # Reverse mapping: attribute name -> signal name (for status display)

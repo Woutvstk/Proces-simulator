@@ -82,6 +82,9 @@ else:
 # Initialize Qt Application
 app = QApplication(sys.argv)
 
+# Set tooltip delay to 1.75 seconds
+os.environ['QT_TOOLTIP_DELAY'] = '1750'
+
 # Load QSS style sheet
 style_path = src_dir / "gui" / "media" / "style.qss"
 if style_path.exists():
@@ -178,13 +181,24 @@ if __name__ == "__main__":
                             # Get forced values from GUI
                             forced_values = window.get_forced_io_values()
                             
+                            # Check if Manual mode is active (GUI controls valves/heater)
+                            manual_mode = False
+                            try:
+                                if hasattr(window, 'vat_widget') and window.vat_widget:
+                                    manual_mode = window.vat_widget.is_manual_mode()
+                            except Exception:
+                                manual_mode = False
+                            
                             # Update IO with force support
+                            # In Manual mode, don't read valve/heater from PLC (GUI controls them)
+                            # But still write sensor values to PLC
                             ioHandler.updateIO(
                                 protocolManager.get_active_protocol(),
                                 mainConfig,
                                 active_config,
                                 active_status,
-                                forced_values=forced_values)
+                                forced_values=forced_values,
+                                manual_mode=manual_mode)
                     
                     except Exception as e:
                         if not connectionLostLogged:
@@ -202,13 +216,23 @@ if __name__ == "__main__":
                     ioHandler.resetOutputs(
                         mainConfig, active_config, active_status)
                 
+                # Write GUI values to status BEFORE simulation runs (Manual mode must update valves first)
+                try:
+                    if hasattr(window, 'write_gui_values_to_status'):
+                        window.write_gui_values_to_status()
+                except Exception as e:
+                    logger.error(f"Error in write_gui_values_to_status: {e}", exc_info=True)
+                
                 # Update process values (Run simulation)
                 # Using the simulation manager's update method
                 dt = time.time() - timeLastUpdate
                 simulationManager.update_simulation(dt)
                 
-                # Update GUI display with new process values
-                window.update_tanksim_display()
+                # Update GUI display with new simulation results
+                try:
+                    window.update_tanksim_display()
+                except Exception as e:
+                    logger.error(f"Error in update_tanksim_display: {e}", exc_info=True)
                 
                 timeLastUpdate = time.time()
         
