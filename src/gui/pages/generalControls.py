@@ -1,5 +1,6 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QDockWidget, QPushButton
+from PyQt5.QtCore import Qt, QObject
+from PyQt5.QtWidgets import QWidget, QDockWidget, QPushButton, QInputDialog
+from IO.buttonPulseManager import get_button_pulse_manager
 
 
 class GeneralControlsMixin:
@@ -74,6 +75,7 @@ class GeneralControlsMixin:
         try:
             self._init_general_controls_sliders()
             self._init_general_controls_buttons()
+            self._install_general_control_renamers()
         except Exception:
             pass
         
@@ -102,49 +104,132 @@ class GeneralControlsMixin:
             pass
 
     def _init_general_controls_buttons(self):
-        """Initialize Start/Stop/Reset button event handlers."""
+        """Initialize Start/Stop/Reset button event handlers with pulse manager."""
         try:
+            button_manager = get_button_pulse_manager(pulse_duration_ms=200)
+            
             btn_start = getattr(self, 'pushButton_control1', None)
             btn_stop = getattr(self, 'pushButton_control2', None)
             btn_reset = getattr(self, 'pushButton_control3', None)
 
+            # Get status object or use None (will be set later)
+            status_obj = getattr(self, 'tanksim_status', None)
+
             if btn_start:
-                btn_start.pressed.connect(lambda: self._on_start_pressed())
-                btn_start.released.connect(lambda: self._on_start_released())
+                button_manager.register_button('GeneralStart', status_obj, 'generalStartCmd')
+                btn_start.pressed.connect(lambda: button_manager.on_button_pressed('GeneralStart'))
+                btn_start.released.connect(lambda: button_manager.on_button_released('GeneralStart'))
+                print("[DEBUG INIT] Connected pushButton_control1 (Start) with pulse manager")
 
             if btn_stop:
-                btn_stop.pressed.connect(lambda: self._on_stop_pressed())
-                btn_stop.released.connect(lambda: self._on_stop_released())
+                button_manager.register_button('GeneralStop', status_obj, 'generalStopCmd')
+                btn_stop.pressed.connect(lambda: button_manager.on_button_pressed('GeneralStop'))
+                btn_stop.released.connect(lambda: button_manager.on_button_released('GeneralStop'))
+                print("[DEBUG INIT] Connected pushButton_control2 (Stop) with pulse manager")
 
             if btn_reset:
-                btn_reset.pressed.connect(lambda: self._on_reset_pressed())
-                btn_reset.released.connect(lambda: self._on_reset_released())
+                button_manager.register_button('GeneralReset', status_obj, 'generalResetCmd')
+                btn_reset.pressed.connect(lambda: button_manager.on_button_pressed('GeneralReset'))
+                btn_reset.released.connect(lambda: button_manager.on_button_released('GeneralReset'))
+                print("[DEBUG INIT] Connected pushButton_control3 (Reset) with pulse manager")
+            
+            # Store reference to update status objects later
+            self._button_manager = button_manager
+        except Exception as e:
+            print(f"[DEBUG INIT] Exception in _init_general_controls_buttons: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # ------------------------------------------------------------------
+    # Rename support (double-click labels/buttons)
+    # ------------------------------------------------------------------
+    def _install_general_control_renamers(self):
+        """Attach event filters to labels/buttons to allow rename via double-click."""
+        try:
+            self._gc_rename_targets = {
+                getattr(self, 'label_slider1', None): 'Control1',
+                getattr(self, 'label_slider2', None): 'Control2',
+                getattr(self, 'label_slider3', None): 'Control3',
+                getattr(self, 'pushButton_control1', None): 'Start',
+                getattr(self, 'pushButton_control2', None): 'Stop',
+                getattr(self, 'pushButton_control3', None): 'Reset',
+                getattr(self, 'label_status1', None): 'Indicator1',
+                getattr(self, 'label_status2', None): 'Indicator2',
+                getattr(self, 'label_status3', None): 'Indicator3',
+                getattr(self, 'label_status4', None): 'Indicator4',
+                getattr(self, 'label_value1', None): 'Analog1',
+                getattr(self, 'label_value2', None): 'Analog2',
+                getattr(self, 'label_value3', None): 'Analog3',
+            }
+
+            for widget, canonical in list(self._gc_rename_targets.items()):
+                if widget is None:
+                    self._gc_rename_targets.pop(widget, None)
+                    continue
+                widget.installEventFilter(self)
         except Exception:
             pass
 
+    def eventFilter(self, obj, event):
+        try:
+            # Only handle registered rename targets
+            if hasattr(self, '_gc_rename_targets') and obj in self._gc_rename_targets:
+                if event.type() == event.MouseButtonDblClick:
+                    canonical = self._gc_rename_targets[obj]
+                    old_text = obj.text().replace(':', '').strip() if hasattr(obj, 'text') else ''
+                    new_text, ok = QInputDialog.getText(self, "Rename control", "Nieuwe naam:", text=old_text)
+                    if not ok or not new_text.strip():
+                        return True
+                    new_text = new_text.strip()
+
+                    # Update label/button text (keep colon if present)
+                    suffix = ':' if hasattr(obj, 'text') and obj.text().strip().endswith(':') else ''
+                    if hasattr(obj, 'setText'):
+                        obj.setText(f"{new_text}{suffix}")
+
+                    # Propagate to IO mapping so table/tree/labels stay in sync
+                    try:
+                        if hasattr(self, 'handle_io_signal_rename'):
+                            # canonical used as stable key; old_display is previous text without colon
+                            self.handle_io_signal_rename(canonical, old_text, new_text)
+                    except Exception:
+                        pass
+
+                    # Mark dirty
+                    try:
+                        if hasattr(self, '_mark_io_dirty'):
+                            self._mark_io_dirty()
+                    except Exception:
+                        pass
+                    return True
+        except Exception:
+            pass
+        # Fallback to base implementation
+        return QObject.eventFilter(self, obj, event)
+
     def _on_start_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalStartCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_start_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalStartCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_stop_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalStopCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_stop_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalStopCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_reset_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalResetCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_reset_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.generalResetCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
     
     def _auto_close_sidebar(self):
         """Auto-close the sidebar after navigation (same as SimPageMixin)"""

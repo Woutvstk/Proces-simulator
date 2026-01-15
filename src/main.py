@@ -37,6 +37,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress verbose Snap7 logging to prevent freezing on connection loss
+logging.getLogger('snap7.client').setLevel(logging.WARNING)
+logging.getLogger('snap7.common').setLevel(logging.WARNING)
+
 # ============================================================================
 # INITIALIZATION
 # ============================================================================
@@ -99,11 +103,25 @@ window = MainWindow(mainConfig)
 window.tanksim_config = active_config
 window.tanksim_status = active_status
 
+# Update button managers with the status object now that it's available
+try:
+    if hasattr(window, 'update_button_manager_status'):
+        window.update_button_manager_status()
+    if hasattr(window, '_button_manager'):
+        window._button_manager.set_button_status_obj('GeneralStart', active_status)
+        window._button_manager.set_button_status_obj('GeneralStop', active_status)
+        window._button_manager.set_button_status_obj('GeneralReset', active_status)
+except Exception as e:
+    logger.error(f"Error updating button managers: {e}")
+
 window.show()
 
 # Remember start time
 startTime = time.time()
 validPlcConnection: bool = False
+lastConnectionLossTime = 0  # Track when connection was last lost
+CONNECTION_LOSS_COOLDOWN = 2.0  # Wait 2 seconds before trying to recover
+connectionErrorOccurred = False  # Flag to prevent reconnection loop after error
 
 
 # ============================================================================
@@ -124,6 +142,7 @@ if __name__ == "__main__":
             if mainConfig.tryConnect:
                 validPlcConnection = False
                 connectionLostLogged = False
+                connectionErrorOccurred = False  # Reset error flag on new connection attempt
                 mainConfig.tryConnect = False
                 print(f"\nAttempting connection to PLC...")
                 print(f"   IP: {mainConfig.plcIpAdress}")
@@ -150,6 +169,13 @@ if __name__ == "__main__":
                     validPlcConnection = bool(ok)
                     if not ok:
                         logger.warning("Connection failed")
+                        # Auto-uncheck connect button on connection failure
+                        try:
+                            window.pushButton_connect.blockSignals(True)
+                            window.pushButton_connect.setChecked(False)
+                            window.pushButton_connect.blockSignals(False)
+                        except Exception:
+                            pass
 
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
@@ -161,17 +187,31 @@ if __name__ == "__main__":
             if (time.time() - timeLastUpdate) > active_config.simulationInterval:
                 
                 # Get process control from PLC or GUI
-                if validPlcConnection:
+                # Only try to use connection if: valid AND no error has occurred
+                if validPlcConnection and not connectionErrorOccurred:
                     try:
                         # Check if connection is still alive
                         if not protocolManager.is_connected():
                             if not connectionLostLogged:
                                 print("\nConnection lost to the PLC!")
                                 connectionLostLogged = True
+                                lastConnectionLossTime = time.time()
                             validPlcConnection = False
                             window.validPlcConnection = False
                             window.plc = None
+                            # Auto-uncheck connect button when connection is lost
+                            try:
+                                window.pushButton_connect.blockSignals(True)
+                                window.pushButton_connect.setChecked(False)
+                                window.pushButton_connect.blockSignals(False)
+                            except Exception:
+                                pass
                             window.update_connection_status_icon()
+                            # Disconnect the protocol to clean up
+                            try:
+                                protocolManager.disconnect()
+                            except:
+                                pass
                             ioHandler.resetOutputs(
                                 mainConfig, active_config, active_status)
                         else:
@@ -201,20 +241,45 @@ if __name__ == "__main__":
                                 manual_mode=manual_mode)
                     
                     except Exception as e:
+                        # Set error flag immediately to prevent further attempts
+                        connectionErrorOccurred = True
                         if not connectionLostLogged:
-                            print(f"\nPLC communication error: {e}")
-                            logger.error(f"PLC communication error: {e}")
+                            error_msg = str(e)
+                            # Only log non-timeout errors (timeouts happen repeatedly and spam logs)
+                            if 'timed out' not in error_msg.lower():
+                                print(f"\nPLC communication error: {e}")
+                                logger.error(f"PLC communication error: {e}")
                             connectionLostLogged = True
+                            lastConnectionLossTime = time.time()
                         validPlcConnection = False
                         window.validPlcConnection = False
                         window.plc = None
+                        # Auto-uncheck connect button on communication error
+                        try:
+                            window.pushButton_connect.blockSignals(True)
+                            window.pushButton_connect.setChecked(False)
+                            window.pushButton_connect.blockSignals(False)
+                        except Exception:
+                            pass
                         window.update_connection_status_icon()
+                        # Immediately disconnect to clean up the broken connection
+                        try:
+                            protocolManager.disconnect()
+                        except:
+                            pass
                         ioHandler.resetOutputs(
                             mainConfig, active_config, active_status)
                 else:
                     # If control is PLC but no PLC connection, pretend PLC outputs are all 0
                     ioHandler.resetOutputs(
                         mainConfig, active_config, active_status)
+                
+                # Update button pulse timers
+                try:
+                    if hasattr(window, '_button_pulse_manager'):
+                        window._button_pulse_manager.update()
+                except Exception as e:
+                    logger.error(f"Error updating button pulse manager: {e}", exc_info=True)
                 
                 # Write GUI values to status BEFORE simulation runs (Manual mode must update valves first)
                 try:

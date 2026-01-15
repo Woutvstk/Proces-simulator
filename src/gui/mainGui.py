@@ -148,11 +148,6 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.validPlcConnection = False
         self.plc = None
 
-        # Auto-retry connect timer
-        self.connect_retry_timer = QTimer()
-        self.connect_retry_timer.setInterval(8000)
-        self.connect_retry_timer.timeout.connect(self._auto_retry_connect)
-
         # Float window state
         self.floated_window = None
         self.current_sim_page = None
@@ -218,6 +213,11 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         if hasattr(self, 'mainConfig') and self.mainConfig:
             self.mainConfig.plcGuiControl = "gui"
             self.mainConfig.plcProtocol = "GUI"
+            # Disable connect button in GUI mode
+            try:
+                self.pushButton_connect.setEnabled(False)
+            except AttributeError:
+                pass
         else:
             QTimer.singleShot(100, self._initialize_gui_mode)
 
@@ -239,6 +239,17 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                     QMessageBox.Yes | QMessageBox.No,
                     QMessageBox.No,
                 )
+                if reply == QMessageBox.No:
+                    # User wants to reload - trigger reload
+                    try:
+                        # Find the IO config page and trigger reload
+                        if hasattr(io_page, 'reload_io_config'):
+                            io_page.reload_io_config()
+                        # Return True to allow navigation after reload
+                        return True
+                    except Exception as e:
+                        print(f"Auto-reload failed: {e}")
+                        return False
                 return reply == QMessageBox.Yes
             return True
         except Exception:
@@ -297,10 +308,21 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self._update_general_controls_ui()
         # Update connection status icon (handles timeout detection)
         self.update_connection_status_icon()
+        # Update connect button state based on protocol
+        self._update_connect_button_state()
         # Update dynamic tooltips based on current state
         if hasattr(self, 'tooltip_manager'):
             self.tooltip_manager.update_disabled_button_tooltips()
 
+    def _update_connect_button_state(self):
+        """Update connect button enabled/disabled state based on protocol"""
+        try:
+            if hasattr(self, 'mainConfig') and self.mainConfig:
+                # Disable button if protocol is GUI, enable otherwise
+                is_gui_mode = (self.mainConfig.plcProtocol == "GUI")
+                self.pushButton_connect.setEnabled(not is_gui_mode)
+        except AttributeError:
+            pass
 
     def update_connection_status_icon(self):
         """Update connection status icon"""
@@ -321,17 +343,14 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         except Exception:            pass
 
     def on_connect_toggled(self, checked):
-        """Handle connect button"""
+        """Handle connect button - try once only"""
         if not self.mainConfig:
             return
         if checked:
-            # Connect request
+            # Connect request - try once only
             self.mainConfig.tryConnect = True
-            if not self.validPlcConnection:
-                self.connect_retry_timer.start()
         else:
             # Disconnect request
-            self.connect_retry_timer.stop()
             if self.validPlcConnection and hasattr(self, 'plc') and self.plc:
                 try:
                     self.iconOnlyWidget.setVisible(False)
@@ -343,13 +362,6 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 self.validPlcConnection = False
                 self.plc = None
                 self.update_connection_status_icon()
-
-    def _auto_retry_connect(self):
-        if self.pushButton_connect.isChecked() and not self.validPlcConnection:
-            print("Auto-retrying PLC connection...")
-            self.mainConfig.tryConnect = True
-        else:
-            self.connect_retry_timer.stop()
 
     def on_ip_changed(self, text):
         """Update IP with throttling"""

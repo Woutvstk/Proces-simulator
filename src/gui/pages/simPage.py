@@ -69,6 +69,8 @@ class SimPageMixin:
 
     def _nav_settings(self, checked, source):
         if checked:
+            # Auto-reload IO config before leaving current page
+            self._auto_reload_before_page_change()
             self.go_to_settings(True)
             # Auto-close sidebar when navigating
             self._auto_close_sidebar()
@@ -76,19 +78,49 @@ class SimPageMixin:
     def go_to_io(self, checked):
         """Navigate to I/O page."""
         if checked:
+            # Auto-reload IO config before leaving current page
+            self._auto_reload_before_page_change()
             self.MainScreen.setCurrentIndex(4)
+            # Trigger automatic configuration reload when entering IO page
+            # This ensures all communication uses the latest tag addresses
+            try:
+                io_page = self.findChild(QWidget, "IOPage")
+                if io_page and hasattr(io_page, '_auto_reload_io_config'):
+                    # Auto-reload without confirmation dialog
+                    io_page._auto_reload_io_config()
+            except Exception:
+                pass
 
     def _nav_io(self, checked, source):
         if checked:
+            # Auto-reload IO config before leaving current page
+            self._auto_reload_before_page_change()
             self.go_to_io(True)
             # Auto-close sidebar when navigating
             self._auto_close_sidebar()
 
     def _nav_sim(self, checked, source):
         if checked:
+            # Auto-reload IO config before leaving current page
+            self._auto_reload_before_page_change()
             self.go_to_sim_or_selection(True)
             # Auto-close sidebar when navigating
             self._auto_close_sidebar()
+    
+    def _auto_reload_before_page_change(self):
+        """
+        Automatically reload IO configuration before leaving a page.
+        This ensures all pages have the latest tag addresses when they're accessed.
+        """
+        try:
+            # Find the IO config page
+            from PyQt5.QtWidgets import QWidget
+            io_page = self.findChild(QWidget, "IOPage")
+            if io_page and hasattr(io_page, '_auto_reload_io_config'):
+                # Silent auto-reload without user confirmation
+                io_page._auto_reload_io_config()
+        except Exception:
+            pass  # Silently fail if auto-reload not available
     
     def _auto_close_sidebar(self):
         """Auto-close the sidebar after navigation"""

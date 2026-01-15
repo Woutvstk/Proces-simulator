@@ -43,12 +43,12 @@ class plcSimS7:
     PORT_TRY_LIMIT = 3 
     
     # Wait time for server startup verification
-    MAX_SERVER_START_WAIT = 0.3
-    POLL_INTERVAL = 0.2 
+    MAX_SERVER_START_WAIT = 2.0
+    POLL_INTERVAL = 0.05 
 
     # --- Initialization ---
 
-    def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 1024):
+    def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 1024, network_adapter: str = "auto"):
         """
         Initialize the PLC client with IP, rack, slot, and TCP port.
 
@@ -57,6 +57,7 @@ class plcSimS7:
         rack (int): Rack number of the PLC
         slot (int): Slot number of the PLC
         tcpport (int): TCP port for the connection (default: 1024, will be dynamically set by NetToPLCSim)
+        network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
         # Snap7 connects to the NetToPLCSim proxy, which is always local
         self.ip = "127.0.0.1" 
@@ -64,13 +65,14 @@ class plcSimS7:
         self.slot = slot
         # Initial port, will be updated by _start_server with the actual listening port
         self.tcpport = plcSimS7.START_PORT 
+        self.network_adapter = network_adapter
         self.client = snap7.client.Client()
         self._server_process = None
         self.actual_server_port = None 
 
     # --- Internal Server Management Methods ---
 
-    def _is_server_listening(self, port: int, timeout: float = 0.5) -> bool:
+    def _is_server_listening(self, port: int, timeout: float = 0.05) -> bool:
         """Checks if a service is listening on the specified port."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(timeout)
@@ -186,16 +188,36 @@ class plcSimS7:
                     self._server_process = None
                     return False
 
-                # Check all ports in the configured range
+                # Check all ports in parallel using threading for speed
+                import threading
+                found_port = None
+                lock = threading.Lock()
+                
+                def check_port_threaded(port):
+                    nonlocal found_port
+                    if self._is_server_listening(port, timeout=0.05):
+                        with lock:
+                            if found_port is None:  # Only set if not already found
+                                found_port = port
+                
+                # Start threads for all ports
+                threads = []
                 for offset in range(self.PORT_TRY_LIMIT):
-                    current_port_to_check = self.START_PORT + offset
-                    
-                    if self._is_server_listening(current_port_to_check, timeout=0.1): 
-                        # Port found!
-                        self.tcpport = current_port_to_check
-                        self.actual_server_port = current_port_to_check
-                        print(f"NetToPLCSim server running on port {current_port_to_check} after {time.time() - start_time:.2f}s.")
-                        return True
+                    current_port = self.START_PORT + offset
+                    t = threading.Thread(target=check_port_threaded, args=(current_port,), daemon=True)
+                    threads.append(t)
+                    t.start()
+                
+                # Wait for all threads with timeout
+                for t in threads:
+                    t.join(timeout=0.1)
+                
+                # Check if we found a port
+                if found_port is not None:
+                    self.tcpport = found_port
+                    self.actual_server_port = found_port
+                    print(f"NetToPLCSim server running on port {found_port} after {time.time() - start_time:.2f}s.")
+                    return True
                 
                 time.sleep(self.POLL_INTERVAL)
 

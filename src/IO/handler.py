@@ -30,6 +30,7 @@ class IOHandler:
         self._conflict_warned = set()
         self._last_sent_di = {}
         self._last_sent_ai = {}
+        self._first_update = True  # Track first update to force initial analog writes
     
     def mapValue(self, oldMin: int, oldMax: int, newMin: int, newMax: int, old: float) -> float:
         """
@@ -199,11 +200,19 @@ class IOHandler:
         self._write_digital_sensors(plc, mainConfig, config, status, forced_values)
         self._write_analog_sensors(plc, mainConfig, config, status, forced_values)
         
-        # General Controls - READ PLC inputs
+        # IMPORTANT: Write General Controls commands to PLC BEFORE reading them back
+        # This ensures GUI/forced values override PLC outputs
+        self._write_general_controls_commands(plc, mainConfig, config, status, forced_values)
+        
+        # General Controls - READ PLC inputs (Start, Stop, Reset, Sliders)
         self._read_plc_commands(plc, mainConfig, config, status, forced_values)
         
         # PIDtankValve controls
         self._write_pidvalve_controls(plc, mainConfig, config, status, forced_values)
+        
+        # Reset first_update flag after first successful update
+        if self._first_update:
+            self._first_update = False
     
     def _update_indicators(self, plc, mainConfig, config, status, forced_values):
         """Update indicator status from PLC outputs."""
@@ -251,7 +260,8 @@ class IOHandler:
                                                getattr(config, 'DIStop', None), 
                                                getattr(config, 'DIReset', None)]):
                 key = "DILevelSensorHigh"
-                if self._last_sent_di.get(key) != value:
+                # On first update, force write even if value seems unchanged
+                if self._first_update or self._last_sent_di.get(key) != value:
                     plc.SetDI(addr["byte"], addr["bit"], value)
                     self._last_sent_di[key] = value
         
@@ -268,7 +278,8 @@ class IOHandler:
                                                getattr(config, 'DIStop', None),
                                                getattr(config, 'DIReset', None)]):
                 key = "DILevelSensorLow"
-                if self._last_sent_di.get(key) != value:
+                # On first update, force write even if value seems unchanged
+                if self._first_update or self._last_sent_di.get(key) != value:
                     plc.SetDI(addr["byte"], addr["bit"], value)
                     self._last_sent_di[key] = value
     
@@ -287,7 +298,8 @@ class IOHandler:
             addr = config.AILevelSensor
             if addr:
                 key = "AILevelSensor"
-                if self._last_sent_ai.get(key) != value:
+                # On first update, force write even if value seems unchanged
+                if self._first_update or self._last_sent_ai.get(key) != value:
                     plc.SetAI(addr["byte"], value)
                     self._last_sent_ai[key] = value
         
@@ -304,9 +316,65 @@ class IOHandler:
             addr = config.AITemperatureSensor
             if addr:
                 key = "AITemperatureSensor"
-                if self._last_sent_ai.get(key) != value:
+                # On first update, force write even if value seems unchanged
+                if self._first_update or self._last_sent_ai.get(key) != value:
                     plc.SetAI(addr["byte"], value)
                     self._last_sent_ai[key] = value
+    
+    
+    def _write_general_controls_commands(self, plc, mainConfig, config, status, forced_values):
+        """Write General Controls (Start/Stop/Reset buttons and sliders) to PLC inputs."""
+        
+        # Write digital command buttons (Start, Stop, Reset) to PLC inputs
+        for cmd in ['Start', 'Stop', 'Reset']:
+            key = f"DI{cmd}"
+            attr = f"general{cmd}Cmd"
+            
+            # Determine value to write
+            if key in forced_values:
+                desired = bool(forced_values[key])
+            elif hasattr(status, attr):
+                desired = bool(getattr(status, attr, False))
+            else:
+                continue
+            
+            # Write to PLC if address is configured
+            if self._is_enabled(config, key) and hasattr(config, key):
+                addr = getattr(config, key)
+                if addr:
+                    cache_key = key
+                    if cmd == 'Start':
+                        # Always send Start to guarantee a detectable pulse (no cache suppression)
+                        plc.SetDI(addr["byte"], addr["bit"], desired)
+                        self._last_sent_di[cache_key] = desired
+                    else:
+                        # On first update, force write even if value seems unchanged
+                        if self._first_update or self._last_sent_di.get(cache_key) != desired:
+                            plc.SetDI(addr["byte"], addr["bit"], desired)
+                            self._last_sent_di[cache_key] = desired
+        
+        # Write analog control sliders (Control1, Control2, Control3) to PLC inputs
+        for i in range(1, 4):
+            key = f"AIControl{i}"
+            attr = f"generalControl{i}Value"
+            
+            # Determine value to write
+            if key in forced_values:
+                value = int(forced_values[key]) if forced_values[key] is not None else 0
+            elif hasattr(status, attr):
+                value = int(getattr(status, attr, 0))
+            else:
+                continue
+            
+            # Write to PLC if address is configured
+            if self._is_enabled(config, key) and hasattr(config, key):
+                addr = getattr(config, key)
+                if addr:
+                    cache_key = key
+                    # On first update, force write even if value seems unchanged
+                    if self._first_update or self._last_sent_ai.get(cache_key) != value:
+                        plc.SetAI(addr["byte"], value)
+                        self._last_sent_ai[cache_key] = value
     
     def _read_plc_commands(self, plc, mainConfig, config, status, forced_values):
         """Read command buttons and sliders from PLC."""
@@ -341,7 +409,8 @@ class IOHandler:
     def _read_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
         # Read PIDValve buttons and radios from PLC
         for name in [
-            'PidValveAuto', 'PidValveMan', 'PidValveStart', 'PidValveStop',
+            'PidValveStart', 'PidValveStop', 'PidValveReset',
+            'PidValveAuto', 'PidValveMan',
             'PidTankValveAItemp', 'PidTankValveDItemp',
             'PidTankValveAIlevel', 'PidTankValveDIlevel'
         ]:
@@ -371,34 +440,69 @@ class IOHandler:
                     pass
 
     def _write_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
-        # Write GUI values to PLC inputs for PIDValve controls
+        """Write GUI values to PLC inputs for PIDValve controls (Start/Stop/Reset, Mode, SP)."""
+        
+        # Write digital command buttons (Start, Stop, Reset, Auto, Man, Temp increment, Level increment)
         for name in [
-            'PidValveAuto', 'PidValveMan', 'PidValveStart', 'PidValveStop',
+            'PidValveStart', 'PidValveStop', 'PidValveReset',
+            'PidValveAuto', 'PidValveMan',
             'PidTankValveAItemp', 'PidTankValveDItemp',
             'PidTankValveAIlevel', 'PidTankValveDIlevel'
         ]:
             key = f"DI{name}"
             attr = f"pid{name}Cmd"
-            if key not in forced_values and hasattr(config, key):
+            
+            # Determine value to write
+            if key in forced_values:
+                desired = bool(forced_values[key])
+            elif hasattr(config, key) and hasattr(status, attr):
+                desired = bool(getattr(status, attr, False))
+            else:
+                continue
+            
+            # Write to PLC if address is configured
+            is_enabled = self._is_enabled(config, key)
+            has_attr = hasattr(config, key)
+            if is_enabled and has_attr:
                 addr = getattr(config, key)
                 if addr:
-                    desired = bool(getattr(status, attr, False))
-                    if self._ton_ready(key, desired):
+                    # On first update, bypass TON and force write initial state
+                    # This ensures PLC control mode (Auto/Manual) is set immediately on startup
+                    ton_ready = self._first_update or self._ton_ready(key, desired)
+                    if ton_ready:
                         cache_key = key
-                        if self._last_sent_di.get(cache_key) != desired:
+                        # On first update, force write even if value seems unchanged
+                        if self._first_update or self._last_sent_di.get(cache_key) != desired:
                             plc.SetDI(addr["byte"], addr["bit"], desired)
                             self._last_sent_di[cache_key] = desired
+            else:
+                pass
+        
+        # Write analog setpoint sliders (TempSP, LevelSP) to PLC inputs
         for name in ['PidTankTempSP', 'PidTankLevelSP']:
             key = f"AI{name}"
             attr = f"pid{name}Value"
-            if key not in forced_values and hasattr(config, key):
+            
+            # Determine value to write
+            if key in forced_values:
+                value = int(forced_values[key]) if forced_values[key] is not None else 0
+            elif hasattr(config, key) and hasattr(status, attr):
+                value = int(getattr(status, attr, 0))
+            else:
+                continue
+            
+            # Write to PLC if address is configured
+            is_enabled = self._is_enabled(config, key)
+            has_attr = hasattr(config, key)
+            if is_enabled and has_attr:
                 addr = getattr(config, key)
                 if addr:
                     cache_key = key
-                    val = int(getattr(status, attr, 0))
-                    if self._last_sent_ai.get(cache_key) != val:
-                        plc.SetAI(addr["byte"], val)
-                        self._last_sent_ai[cache_key] = val
+                    if self._last_sent_ai.get(cache_key) != value:
+                        plc.SetAI(addr["byte"], value)
+                        self._last_sent_ai[cache_key] = value
+            else:
+                pass
 
     def resetOutputs(self, mainConfig: Any, config: Any, status: Any) -> None:
         """

@@ -11,7 +11,7 @@ class logoS7:
     """
     analogMax = 32767  # Max value for signed 16-bit integer
 
-    def __init__(self, ip: str, tsapLogo: int, tsapServer: int, tcpport: int = 102):
+    def __init__(self, ip: str, tsapLogo: int, tsapServer: int, tcpport: int = 102, network_adapter: str = "auto"):
         """
         Initialize the LOGO client with IP, TSAP parameters and TCP port.
 
@@ -20,12 +20,14 @@ class logoS7:
         tsapLogo (int): TSAP address of the LOGO PLC
         tsapServer (int): TSAP address of the local server
         tcpport (int): TCP port for the connection (default: 102)
+        network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
         try:
             self.ip = ip
             self.tsapLogo = tsapLogo
             self.tsapServer = tsapServer
             self.tcpport = tcpport
+            self.network_adapter = network_adapter
             self.logo = snap7.logo.Logo()
             
         except Exception as e:

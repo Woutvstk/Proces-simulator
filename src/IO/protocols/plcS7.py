@@ -6,7 +6,7 @@ class plcS7:
     """Class for communication with a Siemens S7 PLC using Snap7."""
     analogMax = 32767  # Max value for signed 16-bit integer
 
-    def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102):
+    def __init__(self, ip: str, rack: int, slot: int, tcpport: int = 102, network_adapter: str = "auto"):
         """
         Initialize the PLC client with IP, rack, slot, and TCP port.
 
@@ -15,11 +15,13 @@ class plcS7:
         rack (int): Rack number of the PLC
         slot (int): Slot number of the PLC
         tcpport (int): TCP port for the connection (default: 102)
+        network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
         self.ip = ip
         self.rack = rack
         self.slot = slot
         self.tcpport = tcpport
+        self.network_adapter = network_adapter
         self.client = snap7.client.Client()
 
     def connect(self, instance_name: str | None = None) -> bool:

@@ -44,6 +44,10 @@ class configuration:
         self.tsapLogo: int = 0x0300  # CLIENT(sim) SIDE
         self.tsapServer: int = 0x0200  # LOGO SIDE
         
+        # Network adapter selection for PLC discovery
+        # "auto" = check all adapters, or specific adapter name = use only that adapter
+        self.selectedNetworkAdapter: str = "auto"
+        
         # Set True by gui, set False by main
         self.tryConnect: bool = False
         
@@ -51,7 +55,7 @@ class configuration:
         self.importExportVariableList = [
             "plcGuiControl", "plcProtocol",
             "plcIpAdress", "plcPort", "plcRack", "plcSlot", 
-            "tsapLogo", "tsapServer"
+            "tsapLogo", "tsapServer", "selectedNetworkAdapter"
         ]
     
     def saveToFile(self, exportFileName: str, createFile: bool = False) -> bool:

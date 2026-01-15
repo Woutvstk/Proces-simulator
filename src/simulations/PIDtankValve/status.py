@@ -92,9 +92,9 @@ class status:
         self.pidPidValveResetCmd: bool = False
         self.pidPidValveAutoCmd: bool = True
         self.pidPidValveManCmd: bool = False
-        self.pidPidTankValveAItempCmd: bool = False
+        self.pidPidTankValveAItempCmd: bool = True  # Default: Analog temperature
         self.pidPidTankValveDItempCmd: bool = False
-        self.pidPidTankValveAIlevelCmd: bool = False
+        self.pidPidTankValveAIlevelCmd: bool = True  # Default: Analog level
         self.pidPidTankValveDIlevelCmd: bool = False
         # PID Valve Controls - setpoint values (written by: gui)
         self.pidPidTankTempSPValue: int = 0

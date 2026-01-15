@@ -297,18 +297,58 @@ class DroppableTableWidget(QTableWidget):
     # Force Functionality
     # =========================================================================
     def mouseDoubleClickEvent(self, event):
-        """Dubbelklik op status kolom om force menu te tonen"""
+        """Handle double clicks for force menu (status col) and rename (name col)."""
         item = self.itemAt(event.pos())
-        
-        if not item or item.column() != 5:
+        if not item:
+            super().mouseDoubleClickEvent(event)
+            return
+
+        col = item.column()
+        row = item.row()
+
+        # Rename when double-clicking the Name column (col 0)
+        if col == 0:
+            old_name = item.text().strip()
+            if not old_name:
+                super().mouseDoubleClickEvent(event)
+                return
+
+            new_name, ok = QInputDialog.getText(self, "Rename signal", "New name:", text=old_name)
+            if not ok or not new_name.strip():
+                super().mouseDoubleClickEvent(event)
+                return
+
+            new_name = new_name.strip()
+            self.blockSignals(True)
+            item.setText(new_name)
+            self._save_row_data(row)
+            self.blockSignals(False)
+
+            # Propagate rename to main window (tree/labels)
+            try:
+                mw = getattr(self, 'io_screen', None).main_window if getattr(self, 'io_screen', None) else None
+                if mw and hasattr(mw, "handle_io_signal_rename"):
+                    mw.handle_io_signal_rename(old_name, old_name, new_name)
+            except Exception:
+                pass
+
+            # Mark dirty
+            try:
+                if self.io_screen and hasattr(self.io_screen, 'main_window') and hasattr(self.io_screen.main_window, '_mark_io_dirty'):
+                    self.io_screen.main_window._mark_io_dirty()
+            except Exception:
+                pass
+            event.accept()
+            return
+
+        # Force dialog on Status column (col 5)
+        if col != 5:
             super().mouseDoubleClickEvent(event)
             return
         
         if not self.force_enabled:
             super().mouseDoubleClickEvent(event)
             return
-        
-        row = item.row()
         
         name_item = self.item(row, 0)
         type_item = self.item(row, 1)
@@ -343,45 +383,77 @@ class DroppableTableWidget(QTableWidget):
         """)
         
         if row in self.forced_rows:
-            remove_action = QAction(f"🔓 Remove Force from '{signal_name}'", self)
+            remove_action = QAction(f"[U] Remove Force from '{signal_name}'", self)
             remove_action.triggered.connect(lambda: self.remove_force(row))
             menu.addAction(remove_action)
         else:
             if data_type == 'bool':
-                force_true = QAction(f"🔒 Force '{signal_name}' = TRUE", self)
+                force_true = QAction(f"[F] Force '{signal_name}' = TRUE", self)
                 force_true.triggered.connect(lambda: self.apply_force(row, True))
                 menu.addAction(force_true)
                 
-                force_false = QAction(f"🔒 Force '{signal_name}' = FALSE", self)
+                force_false = QAction(f"[F] Force '{signal_name}' = FALSE", self)
                 force_false.triggered.connect(lambda: self.apply_force(row, False))
                 menu.addAction(force_false)
             else:
-                force_value = QAction(f"🔒 Force '{signal_name}' to value...", self)
+                force_value = QAction(f"[F] Force '{signal_name}' to value...", self)
                 force_value.triggered.connect(lambda: self.apply_force_analog(row, signal_name))
                 menu.addAction(force_value)
         
         menu.exec_(position)
     
     def set_force_mode(self, enabled):
-        """Enable or disable force mode"""
+        """Enable or disable force mode with visual feedback"""
         self.force_enabled = enabled
         
-        if not enabled:
-            self.forced_rows.clear()
+        if enabled:
+            # Change header text to indicate force mode is active
+            header_item = self.horizontalHeaderItem(5)
+            if header_item:
+                # Add indicator to header text
+                header_item.setText("Status [*]")  # Add lightning bolt to show active
+                header_item.setToolTip("Status column - Double-click a row to force/change values")
+                
+                # Set header background to light blue
+                from PyQt5.QtGui import QBrush
+                brush = QBrush(QColor(173, 216, 230))  # Light blue
+                header_item.setBackground(brush)
+            
+            # Add green tint to all Status column cells to show they're available for forcing
             for row in range(self.rowCount()):
-                for col in range(self.columnCount()):
-                    item = self.item(row, col)
-                    if item:
-                        item.setBackground(Qt.white)
+                item = self.item(row, 5)
+                if item:
+                    # Light green background to indicate available for forcing
+                    brush = QBrush(QColor(200, 255, 200))  # Light green
+                    item.setBackground(brush)
+        else:
+            # Disable force mode - reset colors and clear forced values
+            self.forced_rows.clear()
+            
+            # Reset header
+            header_item = self.horizontalHeaderItem(5)
+            if header_item:
+                header_item.setText("Status")  # Remove indicator
+                header_item.setBackground(Qt.white)
+                header_item.setToolTip("")
+            
+            # Reset only Status column (column 5) to blue when force mode disabled
+            for row in range(self.rowCount()):
+                item = self.item(row, 5)
+                if item:
+                    item.setBackground(QColor(200, 230, 245))  # Blue
+            
+            # Refresh the table display
+            self.viewport().update()
 
     def apply_force(self, row, value):
         """Apply force to a signal"""
         self.forced_rows[row] = {"value": value}
         
-        for col in range(self.columnCount()):
-            item = self.item(row, col)
-            if item:
-                item.setBackground(Qt.yellow)
+        # Only highlight the Status cell (column 5), not the entire row
+        item = self.item(row, 5)
+        if item:
+            item.setBackground(Qt.yellow)
 
     def apply_force_analog(self, row, signal_name):
         """Apply force to an analog signal with dialog"""
@@ -398,7 +470,7 @@ class DroppableTableWidget(QTableWidget):
         status_item = self.item(row, 5)
         if status_item and status_item.text():
             try:
-                text = status_item.text().replace("🔒 ", "")
+                text = status_item.text().replace("[F] ", "")
                 current_value = int(text)
             except ValueError:
                 current_value = 0
@@ -421,10 +493,14 @@ class DroppableTableWidget(QTableWidget):
         if row in self.forced_rows:
             del self.forced_rows[row]
             
-            for col in range(self.columnCount()):
-                item = self.item(row, col)
-                if item:
-                    item.setBackground(Qt.white)
+            # Only reset the Status cell (column 5)
+            item = self.item(row, 5)
+            if item:
+                # Restore green if force mode is still enabled, blue if disabled
+                if self.force_enabled:
+                    item.setBackground(QColor(200, 255, 200))  # Light green
+                else:
+                    item.setBackground(QColor(200, 230, 245))  # Blue
 
     def get_forced_value(self, row):
         """Get forced value for a row, or None if not forced"""
@@ -454,23 +530,29 @@ class DroppableTableWidget(QTableWidget):
             display_text = str(value)
         
         if self.is_row_forced(row):
-            display_text = f"[LOCKED] {display_text}"
+            display_text = f"[F] {display_text}"  # Lock icon instead of [LOCKED]
         
         if status_item:
             status_item.setText(display_text)
             
             if self.is_row_forced(row):
                 status_item.setBackground(Qt.yellow)
+            elif self.force_enabled:
+                # In force mode but not forced - use green to show available for forcing
+                status_item.setBackground(QColor(200, 255, 200))  # Light green
             else:
-                status_item.setBackground(QColor(200, 255, 200))
-                print(f"DEBUG: Set row {row} status to green: {display_text}")
+                # Normal display - use blue
+                status_item.setBackground(QColor(200, 230, 245))
         else:
             new_item = ReadOnlyTableWidgetItem(display_text)
             if self.is_row_forced(row):
                 new_item.setBackground(Qt.yellow)
+            elif self.force_enabled:
+                # In force mode but not forced - use green to show available for forcing
+                new_item.setBackground(QColor(200, 255, 200))  # Light green
             else:
-                new_item.setBackground(QColor(200, 255, 200))
-                print(f"DEBUG: Created new status item row {row} with green: {display_text}")
+                # Normal display - use blue
+                new_item.setBackground(QColor(200, 230, 245))  # Blue
             self.setItem(row, 5, new_item)
 
     # =========================================================================
@@ -550,7 +632,7 @@ class DroppableTableWidget(QTableWidget):
                             print(f"DEBUG: Setting status with value: {signal_data['status']}")
                             status_text = signal_data['status']
                             status_item = ReadOnlyTableWidgetItem(status_text)
-                            status_item.setBackground(QColor(200, 255, 200))  # Light green
+                            status_item.setBackground(QColor(200, 230, 245))  # Blue
                             self.setItem(row, 5, status_item)
                             # Convert status text to value and call update to ensure consistency
                             data_type = signal_data.get('type', 'bool')
@@ -598,16 +680,58 @@ class DroppableTableWidget(QTableWidget):
                 row_content[col] = item.text() if item else ""
             rows_data.append(row_content)
         
+        def parse_address(addr):
+            """Parse an address string (e.g., 'I0.5', 'IW10', 'Q2.3') into sortable components.
+            Returns: (prefix_char, number, bit_or_empty)
+            Examples: 'I0.5' -> ('I', 0, 5), 'IW10' -> ('I', 10, -1), 'Q2' -> ('Q', 2, -1)
+            """
+            if not addr:
+                return ('Z', float('inf'), -1)  # Sort empty to end
+            
+            addr = addr.strip()
+            # Try to match patterns like I0.5, IW10, Q2.3, etc.
+            import re
+            
+            # Pattern 1: Digital address with bit (I0.5, Q2.3, etc.)
+            match = re.match(r'^([DIQA])(\d+)\.(\d+)$', addr)
+            if match:
+                prefix, byte_num, bit_num = match.groups()
+                return (prefix, int(byte_num), int(bit_num))
+            
+            # Pattern 2: Word address (IW10, QW5, AW20, etc.)
+            match = re.match(r'^([DIQA])W(\d+)$', addr)
+            if match:
+                prefix, word_num = match.groups()
+                return (prefix, int(word_num), -1)  # -1 indicates word, not bit
+            
+            # Pattern 3: Just byte number (I0, Q2, etc.)
+            match = re.match(r'^([DIQA])(\d+)$', addr)
+            if match:
+                prefix, byte_num = match.groups()
+                return (prefix, int(byte_num), -1)
+            
+            # Fallback: treat as string
+            return (addr[0] if addr else 'Z', float('inf'), -1)
+        
         def sort_key(row_dict):
             val = row_dict.get(column, "")
             if not val:
-                return (1, "")
+                return (1, "", 0, -1)  # Empty rows sort last
             
+            # Try numeric sort first (for columns 2, 3 - byte/bit numbers)
             try:
                 num_val = float(val)
-                return (0, num_val, "")
+                return (0, "", num_val, -1)
             except (ValueError, TypeError):
-                return (0, float('inf'), val)
+                pass
+            
+            # For address column (column 4), use smart address parsing
+            if column == 4:
+                prefix, num, bit = parse_address(val)
+                return (0, prefix, num, bit)
+            
+            # Otherwise treat as string
+            return (0, "", float('inf'), val)
         
         rows_data.sort(key=sort_key, reverse=False)
         

@@ -43,18 +43,18 @@ class configuration:
         self.AQAnalog3 = {"byte": 16}
 
         # PID Valve Controls - DIGITAL (PLC Inputs)
-        self.DIPidValveStart = {"byte": 2, "bit": 0}
-        self.DIPidValveStop = {"byte": 2, "bit": 1}
-        self.DIPidValveReset = {"byte": 2, "bit": 2}
-        self.DIPidValveAuto = {"byte": 2, "bit": 3}
-        self.DIPidValveMan = {"byte": 2, "bit": 4}
-        self.DIPidTankValveAItemp = {"byte": 2, "bit": 5}
-        self.DIPidTankValveDItemp = {"byte": 2, "bit": 6}
-        self.DIPidTankValveAIlevel = {"byte": 2, "bit": 7}
-        self.DIPidTankValveDIlevel = {"byte": 3, "bit": 0}
+        self.DIPidValveStart = {"byte": 0, "bit": 5}
+        self.DIPidValveStop = {"byte": 0, "bit": 6}
+        self.DIPidValveReset = {"byte": 0, "bit": 7}
+        self.DIPidValveAuto = {"byte": 1, "bit": 0}
+        self.DIPidValveMan = {"byte": 1, "bit": 1}
+        self.DIPidTankValveAItemp = {"byte": 1, "bit": 2}
+        self.DIPidTankValveDItemp = {"byte": 1, "bit": 3}
+        self.DIPidTankValveAIlevel = {"byte": 1, "bit": 4}
+        self.DIPidTankValveDIlevel = {"byte": 1, "bit": 5}
         # PID Valve Controls - ANALOG (PLC Inputs)
-        self.AIPidTankTempSP = {"byte": 18}
-        self.AIPidTankLevelSP = {"byte": 20}
+        self.AIPidTankTempSP = {"byte": 12}
+        self.AIPidTankLevelSP = {"byte": 14}
 
         # Custom signal name overrides (persisted via IO save/load)
         self.custom_signal_names: dict[str, str] = {}
@@ -190,36 +190,46 @@ class configuration:
             # Reset enabled signals; will be repopulated based on file content
             self.enabled_attrs.clear()
 
+            # Build lookup that includes custom signal names (aliases)
+            name_to_attr = dict(self.io_signal_mapping)
+            try:
+                if hasattr(self, "custom_signal_names"):
+                    for attr, custom_name in self.custom_signal_names.items():
+                        if custom_name:
+                            name_to_attr[custom_name] = attr
+            except Exception:
+                pass
+
             for signal in config_data['signals']:
                 signal_name = signal.get('name', '')
                 signal_type = signal.get('type', '')
-                address = signal.get('address', '')
+                
+                # Use byte and bit directly from JSON (preferred source)
+                byte_str = signal.get('byte', '')
+                bit_str = signal.get('bit', '')
 
-                if signal_name in self.io_signal_mapping:
-                    attr_name = self.io_signal_mapping[signal_name]
+                if signal_name in name_to_attr:
+                    attr_name = name_to_attr[signal_name]
 
-                    if '.' in address:
-                        parts = address.split('.')
-                        byte_part = parts[0][1:]
-                        bit_part = parts[1]
-
-                        try:
-                            byte_val = int(byte_part)
-                            bit_val = int(bit_part)
-                            setattr(self, attr_name, {
-                                    "byte": byte_val, "bit": bit_val})
+                    try:
+                        # Try to use byte/bit from JSON first
+                        byte_val = int(byte_str) if byte_str else None
+                        
+                        if byte_val is not None:
+                            # Check if this is a digital signal (has bit info)
+                            if bit_str:
+                                bit_val = int(bit_str)
+                                setattr(self, attr_name, {"byte": byte_val, "bit": bit_val})
+                            else:
+                                # Analog signal (word/int address, no bit)
+                                setattr(self, attr_name, {"byte": byte_val})
+                            
                             self.enabled_attrs.add(attr_name)
-                        except ValueError:
-                            print(f"Cannot parse address: {address}")
-
-                    elif 'W' in address:
-                        byte_part = address.split('W')[1]
-                        try:
-                            byte_val = int(byte_part)
-                            setattr(self, attr_name, {"byte": byte_val})
-                            self.enabled_attrs.add(attr_name)
-                        except ValueError:
-                            pass
+                        else:
+                            print(f"Cannot parse byte value for signal '{signal_name}'")
+                            
+                    except (ValueError, TypeError) as e:
+                        print(f"Cannot parse address for signal '{signal_name}': {e}")
 
             self.update_io_range()
 

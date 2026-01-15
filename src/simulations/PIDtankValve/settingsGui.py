@@ -8,7 +8,7 @@
 import sys
 import logging
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QStackedWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QStackedWidget, QButtonGroup
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ if str(src_dir) not in sys.path:
 
 from simulations.PIDtankValve.gui import VatWidget
 from gui.trendGraphWindow import TrendGraphManager
+from IO.buttonPulseManager import get_button_pulse_manager
 
 
 class TankSimSettingsMixin:
@@ -29,12 +30,14 @@ class TankSimSettingsMixin:
 
     def init_tanksim_settings_page(self):
         """Initialize all tank simulation page components"""
+        print("[DEBUG INIT] init_tanksim_settings_page() called")
         self._init_vat_widget()
         self._init_color_dropdown()
         self._init_checkboxes()
         self._init_entry_fields()
         self._init_simulation_button()
         self._init_pidvalve_mode_toggle()
+        self._init_pidvalve_control_buttons()  # ADD THIS LINE
         self._init_trend_graphs()
 
         # Always use analog valve control now (digital removed)
@@ -234,6 +237,10 @@ class TankSimSettingsMixin:
                 if hasattr(self, 'tanksim_config') and self.tanksim_config:
                     self.tanksim_config.tankVolume = liters
                 
+                # Update trend manager with new tank volume
+                if hasattr(self, 'trend_manager') and self.trend_manager:
+                    self.trend_manager.set_config(tank_volume_max=liters)
+                
                 # Update vat_widget maxVolume (in absolute liters)
                 if hasattr(self, 'vat_widget') and self.vat_widget:
                     self.vat_widget.maxVolume = liters
@@ -285,91 +292,137 @@ class TankSimSettingsMixin:
     def _init_pidvalve_control_buttons(self):
         """Initialize PID valve control buttons with press/release handlers."""
         try:
+            print("[DEBUG INIT] Starting _init_pidvalve_control_buttons")
+            self._button_pulse_manager = get_button_pulse_manager(pulse_duration_ms=200)
+            button_manager = self._button_pulse_manager
+            
+            # Get status object or use None (will be set later)
+            status_obj = getattr(self, 'tanksim_status', None)
+            
             # Start button
             btn_start = getattr(self, 'pushButton_PidValveStart', None)
             if btn_start:
-                btn_start.pressed.connect(self._on_pid_start_pressed)
-                btn_start.released.connect(self._on_pid_start_released)
+                button_manager.register_button('PidValveStart', status_obj, 'pidPidValveStartCmd')
+                btn_start.pressed.connect(lambda: button_manager.on_button_pressed('PidValveStart'))
+                btn_start.released.connect(lambda: button_manager.on_button_released('PidValveStart'))
+                print("[DEBUG INIT] Connected pushButton_PidValveStart with pulse manager")
+            else:
+                print("[DEBUG INIT] pushButton_PidValveStart NOT FOUND")
             
             # Stop button
             btn_stop = getattr(self, 'pushButton_PidValveStop', None)
             if btn_stop:
-                btn_stop.pressed.connect(self._on_pid_stop_pressed)
-                btn_stop.released.connect(self._on_pid_stop_released)
+                button_manager.register_button('PidValveStop', status_obj, 'pidPidValveStopCmd')
+                btn_stop.pressed.connect(lambda: button_manager.on_button_pressed('PidValveStop'))
+                btn_stop.released.connect(lambda: button_manager.on_button_released('PidValveStop'))
+                print("[DEBUG INIT] Connected pushButton_PidValveStop with pulse manager")
+            else:
+                print("[DEBUG INIT] pushButton_PidValveStop NOT FOUND")
             
             # Reset button
             btn_reset = getattr(self, 'pushButton_PidValveReset', None)
             if btn_reset:
-                btn_reset.pressed.connect(self._on_pid_reset_pressed)
-                btn_reset.released.connect(self._on_pid_reset_released)
+                button_manager.register_button('PidValveReset', status_obj, 'pidPidValveResetCmd')
+                btn_reset.pressed.connect(lambda: button_manager.on_button_pressed('PidValveReset'))
+                btn_reset.released.connect(lambda: button_manager.on_button_released('PidValveReset'))
+                print("[DEBUG INIT] Connected pushButton_PidValveReset with pulse manager")
+            else:
+                print("[DEBUG INIT] pushButton_PidValveReset NOT FOUND")
             
-            # Radio buttons for temp control
+            # Radio buttons for temp control - create separate button group for mutual exclusivity
+            self._temp_button_group = QButtonGroup()
+            self._temp_button_group.setExclusive(True)
+            
             radio_ai_temp = getattr(self, 'radioButton_PidTankValveAItemp', None)
             if radio_ai_temp:
+                self._temp_button_group.addButton(radio_ai_temp)
                 radio_ai_temp.toggled.connect(lambda checked: self._on_radio_toggled('AItemp', checked))
+                radio_ai_temp.setChecked(True)  # Set analog as default
             
             radio_di_temp = getattr(self, 'radioButton_PidTankValveDItemp', None)
             if radio_di_temp:
+                self._temp_button_group.addButton(radio_di_temp)
                 radio_di_temp.toggled.connect(lambda checked: self._on_radio_toggled('DItemp', checked))
             
-            # Radio buttons for level control
+            # Radio buttons for level control - create separate button group for mutual exclusivity
+            self._level_button_group = QButtonGroup()
+            self._level_button_group.setExclusive(True)
+            
             radio_ai_level = getattr(self, 'radioButton_PidTankValveAIlevel', None)
             if radio_ai_level:
+                self._level_button_group.addButton(radio_ai_level)
                 radio_ai_level.toggled.connect(lambda checked: self._on_radio_toggled('AIlevel', checked))
+                radio_ai_level.setChecked(True)  # Set analog as default
             
             radio_di_level = getattr(self, 'radioButton_PidTankValveDIlevel', None)
             if radio_di_level:
+                self._level_button_group.addButton(radio_di_level)
                 radio_di_level.toggled.connect(lambda checked: self._on_radio_toggled('DIlevel', checked))
             
             # Sliders for setpoints with labels
             slider_temp = getattr(self, 'slider_PidTankTempSP', None)
             label_temp = getattr(self, 'label_PidTankTempSP', None)
+            
             if slider_temp:
                 slider_temp.setMinimum(0)
-                # Max will be set in update_tanksim_display based on boiling point
                 slider_temp.setMaximum(27648)
+                # Set initial value to 20°C (which is 5529 in the 0-27648 range: 0 to 100°C)
+                slider_temp.setValue(5529)
                 slider_temp.valueChanged.connect(self._on_temp_sp_changed)
-                # Update label on change
                 if label_temp:
-                    slider_temp.valueChanged.connect(lambda v: label_temp.setText(str(int(v))))
-                    label_temp.setText(str(int(slider_temp.value())))
+                    slider_temp.valueChanged.connect(lambda v: self._update_temp_label(label_temp, v))
+                    self._update_temp_label(label_temp, slider_temp.value())
             
             slider_level = getattr(self, 'slider_PidTankLevelSP', None)
             label_level = getattr(self, 'label_PidTankLevelSP', None)
+            
             if slider_level:
                 slider_level.setMinimum(0)
                 slider_level.setMaximum(27648)
                 slider_level.valueChanged.connect(self._on_level_sp_changed)
-                # Update label on change
                 if label_level:
-                    slider_level.valueChanged.connect(lambda v: label_level.setText(str(int(v))))
-                    label_level.setText(str(int(slider_level.value())))
+                    slider_level.valueChanged.connect(lambda v: self._update_level_label(label_level, v))
+                    self._update_level_label(label_level, slider_level.value())
+                
+                
+            print("[DEBUG INIT] Finished _init_pidvalve_control_buttons")
         except Exception as e:
-            pass
+            print(f"[DEBUG INIT] Exception in _init_pidvalve_control_buttons: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def update_button_manager_status(self):
+        """Update button pulse manager with current status object. Call when tanksim_status becomes available."""
+        if hasattr(self, '_button_pulse_manager') and self.tanksim_status is not None:
+            button_manager = self._button_pulse_manager
+            button_manager.set_button_status_obj('PidValveStart', self.tanksim_status)
+            button_manager.set_button_status_obj('PidValveStop', self.tanksim_status)
+            button_manager.set_button_status_obj('PidValveReset', self.tanksim_status)
+            print("[DEBUG INIT] Updated button manager status objects")
 
     def _on_pid_start_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveStartCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_pid_start_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveStartCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_pid_stop_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveStopCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_pid_stop_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveStopCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_pid_reset_pressed(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveResetCmd = True
+        """Deprecated - now handled by pulse manager."""
+        pass
 
     def _on_pid_reset_released(self):
-        if hasattr(self, 'tanksim_status') and self.tanksim_status:
-            self.tanksim_status.pidPidValveResetCmd = False
+        """Deprecated - now handled by pulse manager."""
+        pass
 
 
     def _on_radio_toggled(self, radio_type, checked):
@@ -379,11 +432,15 @@ class TankSimSettingsMixin:
         
         try:
             if hasattr(self, 'tanksim_status') and self.tanksim_status:
-                # Reset all radio states
-                self.tanksim_status.pidPidTankValveAItempCmd = False
-                self.tanksim_status.pidPidTankValveDItempCmd = False
-                self.tanksim_status.pidPidTankValveAIlevelCmd = False
-                self.tanksim_status.pidPidTankValveDIlevelCmd = False
+                # Reset only the group that this radio belongs to
+                if radio_type in ['AItemp', 'DItemp']:
+                    # Temperature group
+                    self.tanksim_status.pidPidTankValveAItempCmd = False
+                    self.tanksim_status.pidPidTankValveDItempCmd = False
+                elif radio_type in ['AIlevel', 'DIlevel']:
+                    # Level group
+                    self.tanksim_status.pidPidTankValveAIlevelCmd = False
+                    self.tanksim_status.pidPidTankValveDIlevelCmd = False
                 
                 # Set the selected one
                 if radio_type == 'AItemp':
@@ -402,16 +459,50 @@ class TankSimSettingsMixin:
         try:
             if hasattr(self, 'tanksim_status') and self.tanksim_status:
                 self.tanksim_status.pidPidTankTempSPValue = int(value)
-        except Exception:
+        except Exception as e:
             pass
+    
+    def _update_temp_label(self, label, analog_value):
+        """Update temperature label from analog slider value (0-27648)."""
+        try:
+            # Map analog 0-27648 to temperature 0..boilingTemp °C
+            boiling_temp = 100.0
+            if hasattr(self, 'boilingTempEntry'):
+                try:
+                    boiling_temp = float(self.boilingTempEntry.text() or 100.0)
+                except (ValueError, AttributeError):
+                    boiling_temp = 100.0
+            elif hasattr(self, 'tanksim_config') and self.tanksim_config:
+                boiling_temp = getattr(self.tanksim_config, 'liquidBoilingTemp', 100.0)
+            
+            # Map: analog 0-27648 → temp 0 to boiling_temp
+            temp_range = boiling_temp - 0
+            temp_celsius = 0 + (analog_value / 27648.0) * temp_range
+            label.setText(f"{int(round(temp_celsius))}°C")
+        except Exception as e:
+            label.setText("--")
     
     def _on_level_sp_changed(self, value):
         """Handle level setpoint slider change."""
         try:
             if hasattr(self, 'tanksim_status') and self.tanksim_status:
                 self.tanksim_status.pidPidTankLevelSPValue = int(value)
-        except Exception:
+        except Exception as e:
             pass
+    
+    def _update_level_label(self, label, analog_value):
+        """Update level label from analog slider value (0-27648 → 0-100%)."""
+        try:
+            if label is None:
+                return
+            # Map analog 0-27648 → percentage 0-100%
+            level_percent = (analog_value / 27648.0) * 100.0
+            label.setText(f"{int(round(level_percent))}%")
+        except Exception as e:
+            try:
+                label.setText("--")
+            except:
+                pass
 
     # =========================================================================
     # UPDATE LOOP - Called from main timer
@@ -569,11 +660,40 @@ class TankSimSettingsMixin:
         # Step 5: Rebuild SVG with new values
         self.vat_widget.rebuild()
         
-        # Step 6: Feed data to trend graphs if they're open
+        # Step 6: Gray out controls based on mode
+        # Gray out if: NOT in GUI mode AND NOT in manual mode (i.e., in PLC auto mode)
+        # Otherwise enable controls
+        try:
+            controls_enabled = gui_mode or manual_mode
+            if hasattr(self, 'vat_widget') and hasattr(self.vat_widget, '_update_control_groupboxes'):
+                self.vat_widget._update_control_groupboxes(enabled=controls_enabled)
+        except Exception as e:
+            logger.debug(f"Error updating control visibility: {e}")
+        
+        # Step 7: Feed data to trend graphs if they're open
         try:
             if hasattr(self, 'trend_manager'):
-                self.trend_manager.add_temperature(self.tanksim_status.liquidTemperature)
-                self.trend_manager.add_level(self.tanksim_status.liquidVolume)
+                # Add temperature data with heating power fraction
+                self.trend_manager.add_temperature(
+                    self.tanksim_status.liquidTemperature,
+                    self.tanksim_status.heaterPowerFraction
+                )
+                # Update temperature setpoint display
+                slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+                if slider_temp:
+                    # Convert analog value to temperature
+                    boiling_temp = getattr(self.tanksim_config, 'liquidBoilingTemp', 100.0) if hasattr(self, 'tanksim_config') else 100.0
+                    analog_value = slider_temp.value()
+                    temp_range = boiling_temp - (-50)
+                    temp_celsius = -50 + (analog_value / 27648.0) * temp_range
+                    self.trend_manager.set_temperature_setpoint(temp_celsius)
+                
+                # Add level data with valve positions
+                self.trend_manager.add_level(
+                    self.tanksim_status.liquidVolume,
+                    self.tanksim_status.valveInOpenFraction,
+                    self.tanksim_status.valveOutOpenFraction
+                )
         except Exception as e:
             logger.debug(f"Error updating trend graphs: {e}")
 
@@ -643,13 +763,18 @@ class TankSimSettingsMixin:
         # Update temp slider max based on boiling point from config
         try:
             slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+            label_temp = getattr(self, 'label_PidTankTempSP', None)
             if slider_temp and hasattr(self, 'tanksim_config') and self.tanksim_config:
                 # Get boiling point and convert to PLC analog range
                 boiling_temp = getattr(self.tanksim_config, 'liquidBoilingTemp', 100.0)
-                # Assuming temp range is -50 to 250°C mapped to 0-27648
-                # Formula: ((temp + 50) / 300) * 27648
-                max_analog = int(((boiling_temp + 50) / 300.0) * 27648)
-                slider_temp.setMaximum(max(1, min(27648, max_analog)))
+                # Temperature range: -50 to boiling_temp, mapped to 0-27648
+                # max_analog = ((boiling_temp - (-50)) / 300) * 27648 is WRONG
+                # Actually: max_analog should always be 27648 (max analog value)
+                # The range -50..boiling_temp is the USER range, not the analog range
+                slider_temp.setMaximum(27648)
+                # Update label display if slider is at a value
+                if label_temp:
+                    self._update_temp_label(label_temp, slider_temp.value())
         except Exception:
             pass
         
@@ -900,6 +1025,29 @@ class TankSimSettingsMixin:
         try:
             # Initialize trend graph manager
             self.trend_manager = TrendGraphManager()
+            
+            # Update trend manager with current configuration
+            # Try to get tank volume from GUI field first, fall back to config
+            tank_volume_liters = 200.0
+            try:
+                if hasattr(self, 'volumeEntry') and self.volumeEntry:
+                    volume_m3 = float(self.volumeEntry.text() or 0.2)
+                    tank_volume_liters = volume_m3 * 1000.0  # Convert m³ to liters
+                elif hasattr(self, 'tanksim_config') and self.tanksim_config:
+                    tank_volume_liters = self.tanksim_config.tankVolume
+            except (ValueError, AttributeError):
+                if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                    tank_volume_liters = self.tanksim_config.tankVolume
+            
+            boiling_temp = 100.0
+            if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                boiling_temp = getattr(self.tanksim_config, 'liquidBoilingTemp', 100.0)
+            
+            self.trend_manager.set_config(
+                tank_volume_max=tank_volume_liters,
+                temp_max=boiling_temp,
+                boiling_temp=boiling_temp
+            )
             
             # Connect temperature trend button
             if hasattr(self, 'pushButton_TempTrend'):

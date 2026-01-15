@@ -106,22 +106,22 @@ class ProcessSettingsMixin:
         try:
             self.controlerDropDown.clear()
             controllers = [
-                "GUI",
-                "logo!",
-                "PLC S7-1500/1200/400/300/ET 200SP",
-                "PLCSim S7-1500 advanced",
-                "PLCSim S7-1500/1200/400/300/ET 200SP"
+                "GUI (MIL)",
+                "logo! (HIL)",
+                "PLC S7-1500/1200/400/300/ET 200SP (HIL)",
+                "PLCSim S7-1500 advanced (SIL)",
+                "PLCSim S7-1500/1200/400/300/ET 200SP (SIL)"
             ]
 
             for controller in controllers:
                 self.controlerDropDown.addItem(controller)
 
-            self.controlerDropDown.setCurrentText("GUI")
-            self.controlerDropDown.currentIndexChanged.connect(
+            self.controlerDropDown.setCurrentText("GUI (MIL)")
+            self.controlerDropDown.currentTextChanged.connect(
                 self.on_controller_changed)
 
             # Disable connect button in GUI mode
-            initial_mode = self.controlerDropDown.currentText()
+            initial_mode = self._get_controller_name(self.controlerDropDown.currentText())
             if initial_mode == "GUI":
                 try:
                     self.pushButton_connect.setEnabled(False)
@@ -129,6 +129,12 @@ class ProcessSettingsMixin:
                     pass
         except AttributeError as e:
             pass
+
+    def _get_controller_name(self, controller_str):
+        """Extract base controller name from format 'name (MODE)'"""
+        if '(' in controller_str:
+            return controller_str[:controller_str.rfind('(')].strip()
+        return controller_str
 
     def _init_checkboxes(self):
         """Connect all checkboxes"""
@@ -220,13 +226,14 @@ class ProcessSettingsMixin:
 
             # Controller mode
             controller_mode = self.controlerDropDown.currentText()
+            controller_mode_name = self._get_controller_name(controller_mode)
             self.vat_widget.controler = controller_mode
 
             # Water color
             self.vat_widget.waterColor = self.colorDropDown.currentData()
 
             # UI Elements visibility
-            is_gui_mode = (controller_mode == "GUI")
+            is_gui_mode = (controller_mode_name == "GUI")
 
             try:
                 if is_gui_mode and self.vat_widget.adjustableValve:
@@ -328,13 +335,14 @@ class ProcessSettingsMixin:
     def on_controller_changed(self):
         """Callback when controller dropdown changes"""
         new_controller = self.controlerDropDown.currentText()
+        new_controller_name = self._get_controller_name(new_controller)
         self.vat_widget.controler = new_controller
 
         if hasattr(self, 'mainConfig') and self.mainConfig:
             old_protocol = self.mainConfig.plcProtocol
-            self.mainConfig.plcProtocol = new_controller
+            self.mainConfig.plcProtocol = new_controller_name
 
-            if new_controller == "GUI":
+            if new_controller_name == "GUI":
                 self.mainConfig.plcGuiControl = "gui"
                 try:
                     self.pushButton_connect.setEnabled(False)
@@ -349,7 +357,7 @@ class ProcessSettingsMixin:
                     pass
 
             # Disconnect if switching to GUI mode
-            if new_controller == "GUI" and hasattr(self, 'validPlcConnection') and self.validPlcConnection:
+            if new_controller_name == "GUI" and hasattr(self, 'validPlcConnection') and self.validPlcConnection:
                 if hasattr(self, 'plc') and self.plc:
                     try:
                         self.plc.disconnect()
@@ -366,9 +374,9 @@ class ProcessSettingsMixin:
                     pass
 
             # Update addresses if switching to/from LOGO!
-            if (old_protocol == "logo!" or new_controller == "logo!") and old_protocol != new_controller:
+            if (old_protocol == "logo!" or new_controller_name == "logo!") and old_protocol != new_controller_name:
                 self._update_addresses_for_controller_change(
-                    old_protocol, new_controller)
+                    old_protocol, new_controller_name)
 
         self.vat_widget.rebuild()
         

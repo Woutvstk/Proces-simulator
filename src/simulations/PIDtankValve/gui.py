@@ -206,8 +206,10 @@ class VatWidget(QWidget):
             self.levelSwitchMinHeight) + "%")
         self.setSVGText("levelSwitchMaxHeight", str(
             self.levelSwitchMaxHeight) + "%")
+        # Calculate actual power delivered to heating coil (0 to max)
+        actual_power = self.powerValue * self.heaterPowerFraction
         self.setSVGText("powerValue",
-                        str(self.powerValue) + "W")
+                        f"{actual_power:.1f}W")
         # Show tank water temperature with max 2 decimals
         try:
             self.setSVGText("tempVatValue", f"{float(tempVat):.2f}°C")
@@ -317,18 +319,6 @@ class VatWidget(QWidget):
             if btn:
                 btn.setCheckable(True)
                 # Optionally: connect to a slot to update IO state
-        # Connect sliders to labels
-        # Ensure slider value is always shown on label
-        slider_temp = getattr(self, 'slider_PidTankTempSP', None)
-        label_temp = getattr(self, 'label_PidTankTempSP', None)
-        if slider_temp and label_temp:
-            label_temp.setText(str(slider_temp.value()))
-            slider_temp.valueChanged.connect(lambda val: label_temp.setText(str(val)))
-        slider_level = getattr(self, 'slider_PidTankLevelSP', None)
-        label_level = getattr(self, 'label_PidTankLevelSP', None)
-        if slider_level and label_level:
-            label_level.setText(str(slider_level.value()))
-            slider_level.valueChanged.connect(lambda val: label_level.setText(str(val)))
 
     def init_mainwindow_controls(self, mainwindow):
         """Initialize all MainWindow controls (buttons, toggles) from gui.py.
@@ -476,8 +466,26 @@ class VatWidget(QWidget):
                                                           stop:1 rgba(120, 120, 120, 255));
                     }
                 """)
+            
+            # Gray out controls on startup if in Auto mode AND PLC control mode
+            # Use QTimer to delay the check until mainConfig is fully initialized
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(100, self._apply_startup_control_state)
         except Exception as e:
             print(f"Error initializing PID valve mode toggle: {e}")
+    
+    def _apply_startup_control_state(self):
+        """Apply control groupbox state after mainConfig is initialized."""
+        try:
+            gui_mode = (hasattr(self.mainwindow, 'mainConfig') and 
+                        self.mainwindow.mainConfig and 
+                        hasattr(self.mainwindow.mainConfig, 'plcGuiControl') and
+                        self.mainwindow.mainConfig.plcGuiControl == "gui")
+            if not gui_mode:
+                # In PLC control mode, gray out controls in Auto mode (default)
+                self._update_control_groupboxes(enabled=False)
+        except Exception as e:
+            print(f"Error applying startup control state: {e}")
     
     def _toggle_auto_mode(self):
         """Set Auto as active, Manual as inactive."""
@@ -538,8 +546,12 @@ class VatWidget(QWidget):
             self.mainwindow.tanksim_status.pidPidValveAutoCmd = True
             self.mainwindow.tanksim_status.pidPidValveManCmd = False
         
-        # Gray out control groupboxes in Auto mode
-        self._update_control_groupboxes(enabled=False)
+        # Gray out control groupboxes in Auto mode ONLY if in PLC control mode
+        gui_mode = (hasattr(self.mainwindow, 'mainConfig') and 
+                    self.mainwindow.mainConfig and 
+                    self.mainwindow.mainConfig.plcGuiControl == "gui")
+        if not gui_mode:
+            self._update_control_groupboxes(enabled=False)
     
     def _toggle_manual_mode(self):
         """Set Manual as active, Auto as inactive."""
@@ -600,8 +612,58 @@ class VatWidget(QWidget):
             self.mainwindow.tanksim_status.pidPidValveAutoCmd = False
             self.mainwindow.tanksim_status.pidPidValveManCmd = True
         
+        # IMPORTANT: Force write of manual control values to status on mode switch
+        # This ensures that if the user already set values in manual mode, they are immediately active
+        try:
+            self._write_manual_control_values_to_status()
+        except Exception:
+            pass
+        
         # Enable control groupboxes in Manual mode (allows override of PLC)
         self._update_control_groupboxes(enabled=True)
+    
+    def _write_manual_control_values_to_status(self):
+        """Write current manual control values (valve positions, heater) to status.
+        
+        Called when switching from Auto to Manual mode to ensure already-set manual
+        values are immediately active without requiring a user change.
+        """
+        if not hasattr(self, 'mainwindow') or self.mainwindow is None:
+            return
+        if not hasattr(self.mainwindow, 'tanksim_status') or self.mainwindow.tanksim_status is None:
+            return
+        
+        status = self.mainwindow.tanksim_status
+        
+        try:
+            # Write valve positions from VatWidget adjustable values
+            status.valveInOpenFraction = self.adjustableValveInValue / 100.0
+            status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+        except Exception:
+            pass
+        
+        try:
+            # Write heater power from slider (if available)
+            # Get the first visible heater power slider, or the first available one
+            slider_val = None
+            try:
+                for slider in getattr(self.mainwindow, '_heater_power_sliders', []):
+                    if slider is None:
+                        continue
+                    if slider.isVisible():
+                        slider_val = int(slider.value())
+                        break
+                if slider_val is None:
+                    first_slider = next((s for s in getattr(self.mainwindow, '_heater_power_sliders', []) if s is not None), None)
+                    if first_slider is not None:
+                        slider_val = int(first_slider.value())
+            except Exception:
+                pass
+            
+            if slider_val is not None:
+                status.heaterPowerFraction = max(0.0, min(1.0, slider_val / 100.0))
+        except Exception:
+            pass
     
     def _update_control_groupboxes(self, enabled):
         """Enable or disable control groupboxes based on Auto/Manual mode.

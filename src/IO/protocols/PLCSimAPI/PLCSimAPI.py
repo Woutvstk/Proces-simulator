@@ -13,12 +13,16 @@ class plcSimAPI:
     Simatic.Simulation.Runtime API (requires IronPython/Python .NET for clr import).
     """
 
-    def __init__(self):
+    def __init__(self, network_adapter: str = "auto"):
         """
         Initialize the PLC simulator manager and attempt to load the required DLL.
+        
+        Parameters:
+        network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
         self.manager = None
         self.simulation_instance = None
+        self.network_adapter = network_adapter
 
         try:
             # Determine the directory of the current script

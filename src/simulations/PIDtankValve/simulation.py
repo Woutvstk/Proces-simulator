@@ -156,15 +156,50 @@ class simulation:
                 status.liquidVolume >= config.digitalLevelSensorLowTriggerLevel)
 
             if (status.liquidVolume > 0):
-                # Calculate new liquid temperature
-                # Use an effective minimum volume to avoid extreme rates near empty tank
+                # Realistic thermal dynamics with non-linear response
+                # ========================================================
+                # This implements first-order thermal lag to simulate realistic
+                # process behavior with "sponginess" instead of linear response.
+                #
+                # The key insight: thermal response is exponential, not linear.
+                # We approach setpoint asymptotically, creating natural overshoot
+                # prevention and realistic transient behavior.
+                
+                # Use effective minimum volume to avoid extreme rates near empty tank
                 effective_volume = max(status.liquidVolume, 0.001)
-                status.liquidTemperature = min(
-                    status.liquidTemperature + config.heaterMaxPower * self.delayedHeaterPowerFraction / config.liquidSpecificHeatCapacity / config.liquidSpecificWeight / effective_volume * self._timeSinceLastRun,
-                    config.liquidBoilingTemp
-                )
+                
+                # Calculate thermal time constant (tau) in seconds
+                # Larger volumes and higher heat loss = longer response time
+                # This creates natural system damping
+                thermal_time_constant = (config.liquidSpecificHeatCapacity * 
+                                        config.liquidSpecificWeight * 
+                                        effective_volume) / config.tankHeatLoss
+                
+                # Calculate heat input rate (Joules/second = Watts)
+                heat_input_rate = config.heaterMaxPower * self.delayedHeaterPowerFraction
+                
+                # Calculate heat loss rate (proportional to temp difference)
+                # This creates exponential cooling behavior
+                temp_difference = status.liquidTemperature - config.ambientTemp
+                heat_loss_rate = config.tankHeatLoss * temp_difference
+                
+                # Net heat rate (Watts)
+                net_heat_rate = heat_input_rate - heat_loss_rate
+                
+                # Temperature change using exponential approach (first-order lag)
+                # This prevents overshoot and creates realistic "spongy" response
+                dT = (net_heat_rate / (config.liquidSpecificHeatCapacity * 
+                      config.liquidSpecificWeight * effective_volume)) * self._timeSinceLastRun
+                
+                # Apply first-order lag filter for smooth transitions
+                # The damping factor depends on thermal time constant
+                lag_factor = self._timeSinceLastRun / (thermal_time_constant + self._timeSinceLastRun)
+                dT_damped = dT * lag_factor
+                
+                # Update temperature with bounds
+                new_temp = status.liquidTemperature + dT_damped
                 status.liquidTemperature = max(
-                    status.liquidTemperature - config.tankHeatLoss * 1 / config.liquidSpecificHeatCapacity / config.liquidSpecificWeight / effective_volume * self._timeSinceLastRun,
+                    min(new_temp, config.liquidBoilingTemp),
                     config.ambientTemp
                 )
             else:
