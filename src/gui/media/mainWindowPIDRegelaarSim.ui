@@ -19,7 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>1250</width>
-    <height>855</height>
+    <height>850</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -1102,7 +1102,7 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
           <enum>QFrame::NoFrame</enum>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>4</number>
          </property>
          <widget class="QWidget" name="singleTankPage">
           <layout class="QVBoxLayout" name="verticalLayout_19">
@@ -2146,7 +2146,7 @@ QGroupBox::title {
                      <string notr="true"/>
                     </property>
                     <property name="currentIndex">
-                     <number>1</number>
+                     <number>0</number>
                     </property>
                     <widget class="QWidget" name="PLCControls">
                      <layout class="QVBoxLayout" name="verticalLayout_adjustableValve_2">
@@ -7630,7 +7630,7 @@ QWidget#OffsetMenu{
                            <string notr="true"/>
                           </property>
                           <property name="text">
-                           <string>2</string>
+                           <string>4</string>
                           </property>
                          </widget>
                         </item>
@@ -7702,7 +7702,7 @@ QWidget#OffsetMenu{
                            <string notr="true"/>
                           </property>
                           <property name="text">
-                           <string>2</string>
+                           <string>4</string>
                           </property>
                          </widget>
                         </item>

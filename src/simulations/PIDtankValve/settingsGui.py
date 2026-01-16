@@ -30,7 +30,7 @@ class TankSimSettingsMixin:
 
     def init_tanksim_settings_page(self):
         """Initialize all tank simulation page components"""
-        print("[DEBUG INIT] init_tanksim_settings_page() called")
+
         self._init_vat_widget()
         self._init_color_dropdown()
         self._init_checkboxes()
@@ -219,10 +219,11 @@ class TankSimSettingsMixin:
                 # Convert percentage (0..100) to fraction (0..1)
                 self.tanksim_status.heaterPowerFraction = value / 100.0
             
-            # Also update vat_widget for immediate SVG visual feedback
+            # Update vat_widget WITHOUT rebuild - let main loop handle rebuild
             if hasattr(self, 'vat_widget') and self.vat_widget is not None:
                 self.vat_widget.heaterPowerFraction = value / 100.0
-                self.vat_widget.rebuild()
+                # Mark as dirty but don't rebuild - rebuilds are expensive
+                self.vat_widget._needs_rebuild = True
         except Exception:
             pass
 
@@ -292,42 +293,38 @@ class TankSimSettingsMixin:
     def _init_pidvalve_control_buttons(self):
         """Initialize PID valve control buttons with press/release handlers."""
         try:
-            print("[DEBUG INIT] Starting _init_pidvalve_control_buttons")
             self._button_pulse_manager = get_button_pulse_manager(pulse_duration_ms=200)
             button_manager = self._button_pulse_manager
             
             # Get status object or use None (will be set later)
             status_obj = getattr(self, 'tanksim_status', None)
             
-            # Start button
+            # Start button - Uses pidPidValveStartCmd (separate from General Controls)
             btn_start = getattr(self, 'pushButton_PidValveStart', None)
             if btn_start:
-                button_manager.register_button('PidValveStart', status_obj, 'pidPidValveStartCmd')
-                btn_start.pressed.connect(lambda: button_manager.on_button_pressed('PidValveStart'))
-                btn_start.released.connect(lambda: button_manager.on_button_released('PidValveStart'))
-                print("[DEBUG INIT] Connected pushButton_PidValveStart with pulse manager")
+                button_manager.register_button('PidStart', status_obj, 'pidPidValveStartCmd')
+                btn_start.pressed.connect(lambda: button_manager.on_button_pressed('PidStart'))
+                btn_start.released.connect(lambda: button_manager.on_button_released('PidStart'))
             else:
-                print("[DEBUG INIT] pushButton_PidValveStart NOT FOUND")
+                pass
             
-            # Stop button
+            # Stop button - Uses pidPidValveStopCmd (separate from General Controls)
             btn_stop = getattr(self, 'pushButton_PidValveStop', None)
             if btn_stop:
-                button_manager.register_button('PidValveStop', status_obj, 'pidPidValveStopCmd')
-                btn_stop.pressed.connect(lambda: button_manager.on_button_pressed('PidValveStop'))
-                btn_stop.released.connect(lambda: button_manager.on_button_released('PidValveStop'))
-                print("[DEBUG INIT] Connected pushButton_PidValveStop with pulse manager")
+                button_manager.register_button('PidStop', status_obj, 'pidPidValveStopCmd')
+                btn_stop.pressed.connect(lambda: button_manager.on_button_pressed('PidStop'))
+                btn_stop.released.connect(lambda: button_manager.on_button_released('PidStop'))
             else:
-                print("[DEBUG INIT] pushButton_PidValveStop NOT FOUND")
+                pass
             
-            # Reset button
+            # Reset button - Uses pidPidValveResetCmd (separate from General Controls)
             btn_reset = getattr(self, 'pushButton_PidValveReset', None)
             if btn_reset:
-                button_manager.register_button('PidValveReset', status_obj, 'pidPidValveResetCmd')
-                btn_reset.pressed.connect(lambda: button_manager.on_button_pressed('PidValveReset'))
-                btn_reset.released.connect(lambda: button_manager.on_button_released('PidValveReset'))
-                print("[DEBUG INIT] Connected pushButton_PidValveReset with pulse manager")
+                button_manager.register_button('PidReset', status_obj, 'pidPidValveResetCmd')
+                btn_reset.pressed.connect(lambda: button_manager.on_button_pressed('PidReset'))
+                btn_reset.released.connect(lambda: button_manager.on_button_released('PidReset'))
             else:
-                print("[DEBUG INIT] pushButton_PidValveReset NOT FOUND")
+                pass
             
             # Radio buttons for temp control - create separate button group for mutual exclusivity
             self._temp_button_group = QButtonGroup()
@@ -383,22 +380,16 @@ class TankSimSettingsMixin:
                 if label_level:
                     slider_level.valueChanged.connect(lambda v: self._update_level_label(label_level, v))
                     self._update_level_label(label_level, slider_level.value())
-                
-                
-            print("[DEBUG INIT] Finished _init_pidvalve_control_buttons")
         except Exception as e:
-            print(f"[DEBUG INIT] Exception in _init_pidvalve_control_buttons: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Exception in _init_pidvalve_control_buttons: {e}")
 
     def update_button_manager_status(self):
         """Update button pulse manager with current status object. Call when tanksim_status becomes available."""
         if hasattr(self, '_button_pulse_manager') and self.tanksim_status is not None:
             button_manager = self._button_pulse_manager
-            button_manager.set_button_status_obj('PidValveStart', self.tanksim_status)
-            button_manager.set_button_status_obj('PidValveStop', self.tanksim_status)
-            button_manager.set_button_status_obj('PidValveReset', self.tanksim_status)
-            print("[DEBUG INIT] Updated button manager status objects")
+            button_manager.set_button_status_obj('PidStart', self.tanksim_status)
+            button_manager.set_button_status_obj('PidStop', self.tanksim_status)
+            button_manager.set_button_status_obj('PidReset', self.tanksim_status)
 
     def _on_pid_start_pressed(self):
         """Deprecated - now handled by pulse manager."""
@@ -681,11 +672,11 @@ class TankSimSettingsMixin:
                 # Update temperature setpoint display
                 slider_temp = getattr(self, 'slider_PidTankTempSP', None)
                 if slider_temp:
-                    # Convert analog value to temperature
+                    # Convert analog value to temperature (0-27648 → 0 to boilingTemp)
                     boiling_temp = getattr(self.tanksim_config, 'liquidBoilingTemp', 100.0) if hasattr(self, 'tanksim_config') else 100.0
                     analog_value = slider_temp.value()
-                    temp_range = boiling_temp - (-50)
-                    temp_celsius = -50 + (analog_value / 27648.0) * temp_range
+                    temp_range = boiling_temp - 0
+                    temp_celsius = 0 + (analog_value / 27648.0) * temp_range
                     self.trend_manager.set_temperature_setpoint(temp_celsius)
                 
                 # Add level data with valve positions

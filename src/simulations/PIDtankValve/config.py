@@ -62,17 +62,35 @@ class configuration:
         # Mapping of signal names from io_config.json to configuration attributes
         self.io_signal_mapping = {
             # INPUTS FOR SIMULATOR (= PLC OUTPUTS)
-            "ValveIn": "DQValveIn",
-            "UpperValve": "DQValveIn",
-            "ValveOut": "DQValveOut",
-            "LowerValve": "DQValveOut",
-            "Heater": "DQHeater",
-            "ValveInFraction": "AQValveInFraction",
-            "UpperValveFraction": "AQValveInFraction",
-            "ValveOutFraction": "AQValveOutFraction",
-            "LowerValveFraction": "AQValveOutFraction",
-            "HeaterFraction": "AQHeaterFraction",
-            "HeaterPower": "AQHeaterFraction",
+            "Sim_InletValveOnOff": "DQValveIn",
+            "Sim_OutletValveOnOff": "DQValveOut",
+            "Sim_HeaterOnOff": "DQHeater",
+            "Sim_InletValvePosition": "AQValveInFraction",
+            "Sim_OutletValvePosition": "AQValveOutFraction",
+            "Sim_HeaterPowerLevel": "AQHeaterFraction",
+
+            # OUTPUTS FROM SIMULATOR (= PLC INPUTS)
+            "Sim_WaterLevelHigh": "DILevelSensorHigh",
+            "Sim_WaterLevelLow": "DILevelSensorLow",
+            "Sim_WaterLevelMeasurement": "AILevelSensor",
+            "Sim_WaterTemperatureMeasurement": "AITemperatureSensor",
+
+            # PLC Controls Buttons
+            "Sim_StartButton": "DIPidValveStart",
+            "Sim_StopButton": "DIPidValveStop",
+            "Sim_ResetButton": "DIPidValveReset",
+
+            # Mode Switches
+            "Sim_AutomaticMode": "DIPidValveAuto",
+            "Sim_ManualMode": "DIPidValveMan",
+            "Sim_TemperatureAnalogControl": "DIPidTankValveAItemp",
+            "Sim_TemperatureDigitalControl": "DIPidTankValveDItemp",
+            "Sim_WaterLevelAnalogControl": "DIPidTankValveAIlevel",
+            "Sim_WaterLevelDigitalControl": "DIPidTankValveDIlevel",
+
+            # Setpoints
+            "Sim_TemperatureSetpoint": "AIPidTankTempSP",
+            "Sim_WaterLevelSetpoint": "AIPidTankLevelSP",
 
             # General Controls - PLC Inputs => Simulator Outputs
             "Start": "DIStart",
@@ -82,16 +100,6 @@ class configuration:
             "Control2": "AIControl2",
             "Control3": "AIControl3",
 
-            # OUTPUTS FROM SIMULATOR (= PLC INPUTS)
-            "LevelSensorHigh": "DILevelSensorHigh",
-            "TanklevelSensorHigh": "DILevelSensorHigh",
-            "LevelSensorLow": "DILevelSensorLow",
-            "TanklevelSensorLow": "DILevelSensorLow",
-            "LevelSensor": "AILevelSensor",
-            "TankLevel": "AILevelSensor",
-            "TemperatureSensor": "AITemperatureSensor",
-            "TankTemperature": "AITemperatureSensor",
-
             # General Controls - PLC Outputs => Simulator Inputs
             "Indicator1": "DQIndicator1",
             "Indicator2": "DQIndicator2",
@@ -100,19 +108,6 @@ class configuration:
             "Analog1": "AQAnalog1",
             "Analog2": "AQAnalog2",
             "Analog3": "AQAnalog3",
-
-            # PID Valve Controls - PLC Inputs => Simulator Outputs
-            "PidValveStart": "DIPidValveStart",
-            "PidValveStop": "DIPidValveStop",
-            "PidValveReset": "DIPidValveReset",
-            "PidValveAuto": "DIPidValveAuto",
-            "PidValveMan": "DIPidValveMan",
-            "PidTankValveAItemp": "DIPidTankValveAItemp",
-            "PidTankValveDItemp": "DIPidTankValveDItemp",
-            "PidTankValveAIlevel": "DIPidTankValveAIlevel",
-            "PidTankValveDIlevel": "DIPidTankValveDIlevel",
-            "PidTankTempSP": "AIPidTankTempSP",
-            "PidTankLevelSP": "AIPidTankLevelSP",
         }
 
         # Reverse mapping: attribute name -> signal name (for status display)

@@ -8,6 +8,7 @@ from pathlib import Path
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QDockWidget, QGraphicsOpacityEffect
 from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
+from PyQt5.QtGui import QIcon
 from PyQt5 import uic
 
 # ============================================================================
@@ -81,6 +82,12 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
     def __init__(self, mainConfig=None):
         super(MainWindow, self).__init__()
         self.setupUi(self)
+        
+        # Set window icon
+        icon_path = Path(__file__).parent / "media" / "icon" / "simulation.ico"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+        
         # Set a smaller default window height
         self.resize(self.width(), 800)
         # Remove maximum size constraint to enable maximize button
@@ -159,8 +166,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.pending_ip = None
 
         # Main update timer (start after pages init)
+        # Increased to 250ms to reduce GUI load - was causing excessive redraws
         self.timer = QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(250)
         self.timer.timeout.connect(self.update_all_values)
 
         # Connect button
@@ -171,6 +179,8 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             pass
 
         try:
+            # Set up IP address input mask - enforce XXX.XXX.XXX.XXX format with fixed dots
+            self.lineEdit_IPAddress.setInputMask("999.999.999.999")
             self.lineEdit_IPAddress.textChanged.connect(self.on_ip_changed)
         except AttributeError:
             pass
@@ -234,23 +244,22 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 from PyQt5.QtWidgets import QMessageBox
                 reply = QMessageBox.question(
                     self,
-                    "IO configuration not activated",
-                    "You have IO configuration changes that are not activated. Continue without reloading?",
+                    "Configuration Not Activated",
+                    "Current configuration has changes that are not activated.\n\nWould you like to reload and activate the configuration?",
                     QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No,
+                    QMessageBox.Yes,
                 )
-                if reply == QMessageBox.No:
-                    # User wants to reload - trigger reload
+                if reply == QMessageBox.Yes:
+                    # User wants to reload - trigger reload without confirmation
                     try:
-                        # Find the IO config page and trigger reload
-                        if hasattr(io_page, 'reload_io_config'):
-                            io_page.reload_io_config()
+                        # Call reload_io_config directly on self (MainWindow inherits IOConfigMixin)
+                        self.reload_io_config(skip_confirmation=True)
                         # Return True to allow navigation after reload
                         return True
                     except Exception as e:
-                        print(f"Auto-reload failed: {e}")
                         return False
-                return reply == QMessageBox.Yes
+                # User clicked No - block navigation to stay on IO page
+                return False
             return True
         except Exception:
             return True
@@ -292,27 +301,35 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
             # Update button checked state
             self.pushButton_menu.setChecked(self._menu_is_expanded)
             
-            print(f"Toggle menu: expanding={self._menu_is_expanded}, target_width={target_width}")
-            
         except Exception as e:
-            print(f"Toggle menu error: {e}")
+            pass
 
 
     def update_all_values(self):
         """Main update loop"""
+        # Stagger updates to reduce frame rate spikes
+        update_cycle = getattr(self, '_update_cycle', 0)
+        self._update_cycle = (update_cycle + 1) % 3
+        
+        # Every update: critical items
         self.update_tanksim_display()  
         self.write_gui_values_to_status() 
         self._write_general_controls_to_status()
-        self.update_io_status_display()
-        # Sync General Controls dock UI from status/PLC
-        self._update_general_controls_ui()
-        # Update connection status icon (handles timeout detection)
-        self.update_connection_status_icon()
-        # Update connect button state based on protocol
-        self._update_connect_button_state()
-        # Update dynamic tooltips based on current state
-        if hasattr(self, 'tooltip_manager'):
-            self.tooltip_manager.update_disabled_button_tooltips()
+        
+        # Every 2nd cycle (500ms): IO table updates
+        if self._update_cycle == 0:
+            self.update_io_status_display()
+        
+        # Every 3rd cycle (750ms): UI syncs
+        if self._update_cycle == 1:
+            self._update_general_controls_ui()
+        
+        # Every 3rd cycle: Icon and button updates
+        if self._update_cycle == 2:
+            self.update_connection_status_icon()
+            self._update_connect_button_state()
+            if hasattr(self, 'tooltip_manager'):
+                self.tooltip_manager.update_disabled_button_tooltips()
 
     def _update_connect_button_state(self):
         """Update connect button enabled/disabled state based on protocol"""
@@ -355,22 +372,42 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 try:
                     self.iconOnlyWidget.setVisible(False)
                     self.plc.disconnect()
-                    print("\nDisconnected from PLC")
                 except Exception as e:
-                    print(f"\nError disconnecting: {e}")
                     pass
                 self.validPlcConnection = False
                 self.plc = None
                 self.update_connection_status_icon()
 
     def on_ip_changed(self, text):
-        """Update IP with throttling"""
+        """Update IP with throttling and validation"""
         if not self.mainConfig:
             return
+        
+        # Validate IP format before accepting
+        if text and not self._is_valid_ip_format(text):
+            # Invalid format - don't update config yet, let user correct it
+            return
+        
         self.mainConfig.plcIpAdress = text
         self.pending_ip = text
         self.ip_change_timer.stop()
         self.ip_change_timer.start(500)
+    
+    def _is_valid_ip_format(self, ip_string: str) -> bool:
+        """Validate IP address format (XXX.XXX.XXX.XXX)"""
+        import re
+        if not ip_string:  # Allow empty
+            return True
+        # Pattern: 1-3 digits, dot, repeated 3 times, then 1-3 digits
+        pattern = r'^(\d{1,3})\.{1}(\d{1,3})\.{1}(\d{1,3})\.{1}(\d{1,3})$'
+        if not re.match(pattern, ip_string):
+            return False
+        # Also check that each octet is 0-255
+        octets = ip_string.split('.')
+        for octet in octets:
+            if int(octet) > 255:
+                return False
+        return True
 
     def _apply_ip_change(self):
         """Execute disconnect after throttle"""

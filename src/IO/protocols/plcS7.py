@@ -100,8 +100,8 @@ class plcS7:
                     self.client.eb_write(start=byte, size=1, data=buffer_DI)
                     return int(bool(value))
                 except Exception as e:
-                    print("Error:", e)
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -122,8 +122,8 @@ class plcS7:
                     data = self.client.ab_read(byte, 1)
                     return int(s7util.get_bool(data, 0, bit))
                 except Exception as e:
-                    print("Error:", e)
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -152,8 +152,8 @@ class plcS7:
                         start=startByte, size=2, data=buffer_AI)
                     return val_int
                 except Exception as e:
-                    print("Error:", e)
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -173,8 +173,8 @@ class plcS7:
                     data = self.client.ab_read(start=startByte, size=2)
                     return s7util.get_int(data, 0)
                 except Exception as e:
-                    print("Error:", e)
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -184,7 +184,7 @@ class plcS7:
 
         Parameters:
         byte (int): Byte index in the PLC output area (A/Q)
-        bit (int): Bit position (0–7) within the byte
+        bit (int): Bit position (0-7) within the byte
         value (int): 1/0 or True/False to set or clear the bit
 
         Returns:
@@ -202,8 +202,8 @@ class plcS7:
                     self.client.ab_write(start=byte, data=buffer_DO)
                     return int(bool(value))
                 except Exception as e:
-                    print(f"SetDO error: {e}")
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -237,8 +237,8 @@ class plcS7:
                     self.client.ab_write(start=startByte, data=buffer_AO)
                     return val_int
                 except Exception as e:
-                    print(f"SetAO error: {e}")
-                    return -1
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return -1
         return -1
 
@@ -261,8 +261,8 @@ class plcS7:
                         endByte - startByte + 1), data=bufferEmpty)
                     return True
                 except Exception as e:
-                    print("Error:", e)
-                    return False
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return False
         return False
 
@@ -283,10 +283,9 @@ class plcS7:
                     size = endByte - startByte + 1
                     bufferEmpty = bytearray(size)
                     self.client.ab_write(start=startByte, data=bufferEmpty)
-                    print(f"Output area reset: bytes {startByte}-{endByte}")
                     return True
                 except Exception as e:
-                    print(f"resetSendOutputs error: {e}")
-                    return False
+                    # Connection lost - raise to trigger immediate disconnect
+                    raise
             return False
         return False

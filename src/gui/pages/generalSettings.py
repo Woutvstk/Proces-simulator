@@ -74,6 +74,7 @@ class ProcessSettingsMixin:
             if initial_mode == "GUI":
                 try:
                     self.pushButton_connect.setEnabled(False)
+                    self.lineEdit_IPAddress.setEnabled(False)
                 except AttributeError:
                     pass
 
@@ -183,17 +184,39 @@ class ProcessSettingsMixin:
                 self.mainConfig.plcGuiControl = "gui"
                 try:
                     self.pushButton_connect.setEnabled(False)
+                    self.lineEdit_IPAddress.setEnabled(False)
                 except:
                     pass
             else:
                 self.mainConfig.plcGuiControl = "plc"
                 try:
                     self.pushButton_connect.setEnabled(True)
+                    self.lineEdit_IPAddress.setEnabled(True)
                 except:
                     pass
 
-            # Disconnect if switching to GUI mode
-            if new_controller_name == "GUI" and hasattr(self, 'validPlcConnection') and self.validPlcConnection:
+            # Auto-set IP based on protocol
+            if "PLCSim" in new_controller_name:
+                self.mainConfig.plcIpAdress = "127.0.0.1"
+                try:
+                    if hasattr(self, 'lineEdit_IPAddress'):
+                        self.lineEdit_IPAddress.blockSignals(True)
+                        self.lineEdit_IPAddress.setText("127.0.0.1")
+                        self.lineEdit_IPAddress.blockSignals(False)
+                except:
+                    pass
+            elif new_controller_name in ["plcS7", "logo!"]:
+                self.mainConfig.plcIpAdress = "192.168.0.1"
+                try:
+                    if hasattr(self, 'lineEdit_IPAddress'):
+                        self.lineEdit_IPAddress.blockSignals(True)
+                        self.lineEdit_IPAddress.setText("192.168.0.1")
+                        self.lineEdit_IPAddress.blockSignals(False)
+                except:
+                    pass
+
+            # Disconnect if connection is active and protocol is being changed
+            if hasattr(self, 'validPlcConnection') and self.validPlcConnection:
                 if hasattr(self, 'plc') and self.plc:
                     try:
                         self.plc.disconnect()

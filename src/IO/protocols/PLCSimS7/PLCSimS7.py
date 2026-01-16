@@ -361,8 +361,8 @@ class plcSimS7:
                     self.client.eb_write(start=byte, size=1, data=buffer_DI)
                     return int(bool(value))
                 except Exception as e:
-                    print(f"SetDI error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
 
@@ -383,8 +383,8 @@ class plcSimS7:
                     data = self.client.ab_read(byte, 1)
                     return int(s7util.get_bool(data, 0, bit))
                 except Exception as e:
-                    print(f"GetDO error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
 
@@ -416,8 +416,8 @@ class plcSimS7:
                     self.client.eb_write(start=startByte, size=2, data=buffer_AI)
                     return val_int
                 except Exception as e:
-                    print(f"SetAI error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
 
@@ -437,8 +437,8 @@ class plcSimS7:
                     data = self.client.ab_read(start=startByte, size=2)
                     return s7util.get_int(data, 0) # Get as signed integer
                 except Exception as e:
-                    print(f"GetAO error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
     
@@ -469,8 +469,8 @@ class plcSimS7:
                     self.client.ab_write(start=byte, data=buffer_DO)
                     return int(bool(value))
                 except Exception as e:
-                    print(f"SetDO error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
 
@@ -503,8 +503,8 @@ class plcSimS7:
                     self.client.ab_write(start=startByte, data=buffer_AO)
                     return val_int
                 except Exception as e:
-                    print(f"SetAO error: {e}")
-                    return -1
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return -1
         return -1
 
@@ -527,8 +527,8 @@ class plcSimS7:
                     self.client.eb_write(start=startByte, size=size, data=bufferEmpty)
                     return True
                 except Exception as e:
-                    print(f"resetSendInputs error: {e}")
-                    return False
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return False
         return False
     
@@ -552,8 +552,8 @@ class plcSimS7:
                     print(f"Output area reset: bytes {startByte}-{endByte}")
                     return True
                 except Exception as e:
-                    print(f"resetSendOutputs error: {e}")
-                    return False
+                    # Raise to allow upper layers to disconnect on error
+                    raise
             return False
         return False
 

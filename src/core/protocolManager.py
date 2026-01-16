@@ -252,6 +252,11 @@ class ProtocolManager:
                 from IO.protocols.PLCSimAPI.PLCSimAPI import plcSimAPI
                 return plcSimAPI(network_adapter=network_adapter)
             elif protocol_type == "PLCSim S7-1500/1200/400/300/ET 200SP":
+                # PLCSim protocols only work with local simulators - prevent connection to real PLC
+                ip_address = getattr(config, 'plcIpAdress', '')
+                if ip_address and ip_address != '127.0.0.1' and ip_address != 'localhost':
+                    logger.error(f"PLCSim protocol cannot connect to remote IP '{ip_address}'. PLCSim only works with local simulators (127.0.0.1).")
+                    return None
                 from IO.protocols.PLCSimS7 import plcSimS7
                 return plcSimS7(config.plcIpAdress, config.plcRack, config.plcSlot, network_adapter=network_adapter)
             else:

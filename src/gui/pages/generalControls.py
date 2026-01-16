@@ -1,6 +1,8 @@
 from PyQt5.QtCore import Qt, QObject
 from PyQt5.QtWidgets import QWidget, QDockWidget, QPushButton, QInputDialog
+from PyQt5.QtGui import QIcon
 from IO.buttonPulseManager import get_button_pulse_manager
+from pathlib import Path
 
 
 class GeneralControlsMixin:
@@ -83,7 +85,7 @@ class GeneralControlsMixin:
         # Removed: Always start docked and hidden, don't restore state
 
     def _init_general_controls_sliders(self):
-        """Set slider ranges to 0..32747 and bind labels to show live value."""
+        """Set slider ranges to 0..27648 and bind labels to show live value."""
         try:
             slider_label_pairs = [
                 (getattr(self, 'slider_control1', None), getattr(self, 'label_sliderValue1', None)),
@@ -93,7 +95,7 @@ class GeneralControlsMixin:
             for slider, label in slider_label_pairs:
                 if slider:
                     slider.setMinimum(0)
-                    slider.setMaximum(32747)
+                    slider.setMaximum(27648)
                     if label:
                         try:
                             label.setText(str(int(slider.value())))
@@ -119,24 +121,22 @@ class GeneralControlsMixin:
                 button_manager.register_button('GeneralStart', status_obj, 'generalStartCmd')
                 btn_start.pressed.connect(lambda: button_manager.on_button_pressed('GeneralStart'))
                 btn_start.released.connect(lambda: button_manager.on_button_released('GeneralStart'))
-                print("[DEBUG INIT] Connected pushButton_control1 (Start) with pulse manager")
 
             if btn_stop:
                 button_manager.register_button('GeneralStop', status_obj, 'generalStopCmd')
                 btn_stop.pressed.connect(lambda: button_manager.on_button_pressed('GeneralStop'))
                 btn_stop.released.connect(lambda: button_manager.on_button_released('GeneralStop'))
-                print("[DEBUG INIT] Connected pushButton_control2 (Stop) with pulse manager")
 
             if btn_reset:
                 button_manager.register_button('GeneralReset', status_obj, 'generalResetCmd')
                 btn_reset.pressed.connect(lambda: button_manager.on_button_pressed('GeneralReset'))
                 btn_reset.released.connect(lambda: button_manager.on_button_released('GeneralReset'))
-                print("[DEBUG INIT] Connected pushButton_control3 (Reset) with pulse manager")
+
             
             # Store reference to update status objects later
             self._button_manager = button_manager
         except Exception as e:
-            print(f"[DEBUG INIT] Exception in _init_general_controls_buttons: {e}")
+
             import traceback
             traceback.print_exc()
 
@@ -177,7 +177,25 @@ class GeneralControlsMixin:
                 if event.type() == event.MouseButtonDblClick:
                     canonical = self._gc_rename_targets[obj]
                     old_text = obj.text().replace(':', '').strip() if hasattr(obj, 'text') else ''
-                    new_text, ok = QInputDialog.getText(self, "Rename control", "Nieuwe naam:", text=old_text)
+                    
+                    # Create input dialog
+                    dialog = QInputDialog(self)
+                    dialog.setWindowTitle("Rename control")
+                    dialog.setLabelText("New name:")
+                    dialog.setTextValue(old_text)
+                    
+                    # Remove question mark button and set icon
+                    dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+                    try:
+                        icon_path = Path(__file__).parent.parent / "media" / "icon" / "simulation.ico"
+                        if icon_path.exists():
+                            dialog.setWindowIcon(QIcon(str(icon_path)))
+                    except Exception:
+                        pass
+                    
+                    ok = dialog.exec_()
+                    new_text = dialog.textValue()
+                    
                     if not ok or not new_text.strip():
                         return True
                     new_text = new_text.strip()

@@ -10,6 +10,9 @@ import time
 import logging
 from pathlib import Path
 
+# Suppress Qt warnings about invalid font sizes
+os.environ['QT_LOGGING_RULES'] = '*=false'
+
 # Add src to path for imports
 src_dir = Path(__file__).resolve().parent
 if str(src_dir) not in sys.path:
@@ -37,9 +40,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Suppress verbose Snap7 logging to prevent freezing on connection loss
-logging.getLogger('snap7.client').setLevel(logging.WARNING)
-logging.getLogger('snap7.common').setLevel(logging.WARNING)
+# Suppress Snap7 logging completely to prevent spam when connection is lost
+logging.getLogger('snap7.client').setLevel(logging.CRITICAL)
+logging.getLogger('snap7.common').setLevel(logging.CRITICAL)
 
 # ============================================================================
 # INITIALIZATION
@@ -80,6 +83,8 @@ io_config_path = src_dir / "IO" / "IO_configuration.json"
 if io_config_path.exists():
     active_config.load_io_config_from_file(io_config_path)
     logger.info(f"IO configuration loaded from: {io_config_path}")
+    # Start forced write period after loading config (500ms)
+    ioHandler.start_force_write_period()
 else:
     logger.warning(f"IO configuration not found: {io_config_path}")
 
@@ -94,10 +99,12 @@ style_path = src_dir / "gui" / "media" / "style.qss"
 if style_path.exists():
     with open(style_path, "r") as f:
         app.setStyleSheet(f.read())
-    logger.info("Style sheet loaded")
 
 # Initialize main window with mainConfig
 window = MainWindow(mainConfig)
+
+# Store ioHandler reference in mainConfig for GUI access
+mainConfig.ioHandler = ioHandler
 
 # Provide MainWindow access to tank simulation objects
 window.tanksim_config = active_config
@@ -138,15 +145,14 @@ if __name__ == "__main__":
         while not mainConfig.doExit:
             app.processEvents()
             
+            time.sleep(0.005)
+            
             # Check for connect command from GUI
             if mainConfig.tryConnect:
                 validPlcConnection = False
                 connectionLostLogged = False
                 connectionErrorOccurred = False  # Reset error flag on new connection attempt
                 mainConfig.tryConnect = False
-                print(f"\nAttempting connection to PLC...")
-                print(f"   IP: {mainConfig.plcIpAdress}")
-                print(f"   Protocol: {mainConfig.plcProtocol}")
                 # Clear GUI force overrides before connecting
                 try:
                     window.clear_all_forces()
@@ -176,6 +182,10 @@ if __name__ == "__main__":
                             window.pushButton_connect.blockSignals(False)
                         except Exception:
                             pass
+                    else:
+                        # Connection successful - start forced write period (500ms)
+                        ioHandler.start_force_write_period()
+                        logger.info("Connection established - starting 500ms IO initialization period")
 
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
@@ -183,8 +193,14 @@ if __name__ == "__main__":
                 window.update_connection_status_icon()
             
             # Process loop for simulation and data exchange
+            # PLCSim communication can be slower; throttle slightly
+            io_interval = active_config.simulationInterval
+            if mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
+                # Use a minimum interval of 200ms for PLCSim instead of 1s
+                io_interval = max(0.2, active_config.simulationInterval)
+            
             # Throttle calculations and data exchange
-            if (time.time() - timeLastUpdate) > active_config.simulationInterval:
+            if (time.time() - timeLastUpdate) > io_interval:
                 
                 # Get process control from PLC or GUI
                 # Only try to use connection if: valid AND no error has occurred
@@ -193,7 +209,7 @@ if __name__ == "__main__":
                         # Check if connection is still alive
                         if not protocolManager.is_connected():
                             if not connectionLostLogged:
-                                print("\nConnection lost to the PLC!")
+                                logger.warning("Connection lost to the PLC")
                                 connectionLostLogged = True
                                 lastConnectionLossTime = time.time()
                             validPlcConnection = False
@@ -232,28 +248,25 @@ if __name__ == "__main__":
                             # Update IO with force support
                             # In Manual mode, don't read valve/heater from PLC (GUI controls them)
                             # But still write sensor values to PLC
-                            ioHandler.updateIO(
-                                protocolManager.get_active_protocol(),
-                                mainConfig,
-                                active_config,
-                                active_status,
-                                forced_values=forced_values,
-                                manual_mode=manual_mode)
+                            try:
+                                ioHandler.updateIO(
+                                    protocolManager.get_active_protocol(),
+                                    mainConfig,
+                                    active_config,
+                                    active_status,
+                                    forced_values=forced_values,
+                                    manual_mode=manual_mode)
+                            except:
+                                # Any error during IO - immediately trigger disconnection
+                                raise
                     
                     except Exception as e:
                         # Set error flag immediately to prevent further attempts
                         connectionErrorOccurred = True
-                        if not connectionLostLogged:
-                            error_msg = str(e)
-                            # Only log non-timeout errors (timeouts happen repeatedly and spam logs)
-                            if 'timed out' not in error_msg.lower():
-                                print(f"\nPLC communication error: {e}")
-                                logger.error(f"PLC communication error: {e}")
-                            connectionLostLogged = True
-                            lastConnectionLossTime = time.time()
                         validPlcConnection = False
                         window.validPlcConnection = False
                         window.plc = None
+                        
                         # Auto-uncheck connect button on communication error
                         try:
                             window.pushButton_connect.blockSignals(True)
@@ -261,14 +274,21 @@ if __name__ == "__main__":
                             window.pushButton_connect.blockSignals(False)
                         except Exception:
                             pass
-                        window.update_connection_status_icon()
+                        
                         # Immediately disconnect to clean up the broken connection
                         try:
                             protocolManager.disconnect()
                         except:
                             pass
-                        ioHandler.resetOutputs(
-                            mainConfig, active_config, active_status)
+                        
+                        window.update_connection_status_icon()
+                        ioHandler.resetOutputs(mainConfig, active_config, active_status)
+                        
+                        # Log once
+                        if not connectionLostLogged:
+                            logger.warning("Connection lost to the PLC")
+                            connectionLostLogged = True
+                            lastConnectionLossTime = time.time()
                 else:
                     # If control is PLC but no PLC connection, pretend PLC outputs are all 0
                     ioHandler.resetOutputs(
@@ -307,7 +327,7 @@ if __name__ == "__main__":
         # Disconnect from PLC
         if validPlcConnection and protocolManager:
             protocolManager.disconnect()
-            print("Disconnected from PLC")
+            logger.info("Disconnected from PLC")
         
         # Kill any remaining NetToPLCSim processes
         try:
@@ -319,7 +339,7 @@ if __name__ == "__main__":
                 timeout=2
             )
             if result.returncode == 0:
-                print("Terminated NetToPLCSim.exe processes")
+                logger.info("Terminated NetToPLCSim.exe processes")
         except:
             pass
         
@@ -332,7 +352,7 @@ if __name__ == "__main__":
         # Cleanup
         if validPlcConnection and protocolManager:
             protocolManager.disconnect()
-            print("Disconnected from PLC")
+            logger.info("Disconnected from PLC (interrupt)")
         
         # Kill any remaining NetToPLCSim processes
         try:
@@ -350,5 +370,4 @@ if __name__ == "__main__":
     
     except Exception as e:
         logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
-        print(f"ERROR: {e}")
         sys.exit(1)
