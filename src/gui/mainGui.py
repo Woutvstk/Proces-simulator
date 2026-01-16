@@ -218,6 +218,18 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         except Exception:
             pass
         self.timer.start()
+
+    def set_simulation_status(self, status):
+        """Set the simulation status and update button managers"""
+        self.tanksim_status = status
+        try:
+            if hasattr(self, '_button_manager'):
+                self._button_manager.set_button_status_obj('GeneralStart', status)
+                self._button_manager.set_button_status_obj('GeneralStop', status)
+                self._button_manager.set_button_status_obj('GeneralReset', status)
+        except Exception:
+            pass
+
     def _initialize_gui_mode(self):
         """Initialize GUI mode after mainConfig is available"""
         if hasattr(self, 'mainConfig') and self.mainConfig:

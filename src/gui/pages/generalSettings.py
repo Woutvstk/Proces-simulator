@@ -233,7 +233,7 @@ class ProcessSettingsMixin:
                         self.lineEdit_IPAddress.blockSignals(False)
                 except:
                     pass
-            elif new_controller_name in ["plcS7", "logo!"]:
+            elif new_controller_name in ["PLC S7-1500/1200/400/300/ET 200SP", "logo!"]:
                 self.mainConfig.plcIpAdress = "192.168.0.1"
                 try:
                     if hasattr(self, 'lineEdit_IPAddress'):

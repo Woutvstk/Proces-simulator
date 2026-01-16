@@ -1,7 +1,6 @@
 ```
 /src/
-├── main.py                      # Legacy entry point (kept for compatibility)
-├── main_new.py                  # New architecture entry point
+├── main.py                      # entry point 
 ├── requirements.txt
 ├── core/                        # Core module - Central configuration and managers
 │   ├── __init__.py

@@ -113,18 +113,7 @@ mainConfig.ioHandler = ioHandler
 
 # Provide MainWindow access to tank simulation objects
 window.tanksim_config = active_config
-window.tanksim_status = active_status
-
-# Update button managers with the status object now that it's available
-try:
-    if hasattr(window, 'update_button_manager_status'):
-        window.update_button_manager_status()
-    if hasattr(window, '_button_manager'):
-        window._button_manager.set_button_status_obj('GeneralStart', active_status)
-        window._button_manager.set_button_status_obj('GeneralStop', active_status)
-        window._button_manager.set_button_status_obj('GeneralReset', active_status)
-except Exception as e:
-    logger.error(f"Error updating button managers: {e}")
+window.set_simulation_status(active_status)
 
 window.show()
 
