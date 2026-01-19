@@ -19,6 +19,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import json
+
 
 class status:
     def __init__(self):
@@ -120,29 +122,22 @@ class status:
         self.pidPidTankLevelSPValue: int = 0
 
     def saveToFile(self, exportFileName, createFile: bool = False):
-        """Save status to a CSV file"""
-        logger.info(f"Exporting status to: {exportFileName}")
-        openMode: str
-        if (createFile):
-            openMode = "w"
-        else:
-            openMode = "a"
+        """Save status to a JSON file"""
+        print(f"Exporting status to: {exportFileName}")
 
-        with open(exportFileName, openMode, newline="") as file:
-            writer = csv.writer(file)
-            if (createFile):
-                writer.writerow(["variable", "value"])
-            for variable in self.importExportVariableList:
-                writer.writerow([variable, getattr(self, variable)])
-            file.close
+        data = {}
+        for variable in self.importExportVariableList:
+            data[variable] = getattr(self, variable)
+
+        with open(exportFileName, "w") as file:
+            json.dump(data, file, indent=4)
 
     def loadFromFile(self, importFileName: str):
-        """Read status back from the CSV file"""
+        """Read status back from the JSON file"""
         with open(importFileName, "r") as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                for variable in self.importExportVariableList:
-                    if row["variable"] == variable:
-                        setattr(self, variable, type(
-                            getattr(self, variable))(row["value"]))
+            data = json.load(file)
 
+        for variable in self.importExportVariableList:
+            if variable in data:
+                current_type = type(getattr(self, variable))
+                setattr(self, variable, current_type(data[variable]))
