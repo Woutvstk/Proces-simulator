@@ -105,7 +105,7 @@ class VatWidget(QWidget):
         self.waterInVat = None
         self.originalY = 0.0
         self.originalHeight = 0.0
-        self.maxheightGUI = 80
+        self.maxheightGUI = 85
         self.lowestY = 0.0
 
         try:
