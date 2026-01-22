@@ -24,17 +24,17 @@ class configuration:
 
     def __init__(self):
         """Initialize configuration with default IO settings and process parameters."""
-        
+
         # ===== IO SETTINGS =====
         # These will be overwritten by load_io_config_from_file()
-        
+
         # PLC OUTPUTS (from PLC perspective = simulator inputs)
         # DIGITAL
         self.DQValveIn = {"byte": 0, "bit": 0}
         self.DQValveOut = {"byte": 0, "bit": 1}
         self.DQHeater = {"byte": 0, "bit": 2}
-        
-        # ANALOG 
+
+        # ANALOG
         self.AQValveInFraction = {"byte": 2}
         self.AQValveOutFraction = {"byte": 4}
         self.AQHeaterFraction = {"byte": 6}
@@ -43,7 +43,7 @@ class configuration:
         # DIGITAL
         self.DILevelSensorHigh = {"byte": 0, "bit": 0}
         self.DILevelSensorLow = {"byte": 0, "bit": 1}
-        
+
         # ANALOG
         self.AILevelSensor = {"byte": 2}
         self.AITemperatureSensor = {"byte": 4}
@@ -58,36 +58,40 @@ class configuration:
         self.DItemp = {"byte": 1, "bit": 3}
         self.AIlevel = {"byte": 1, "bit": 4}
         self.DIlevel = {"byte": 1, "bit": 5}
-        
+
         # PID Valve Controls - ANALOG (PLC Inputs)
         self.AITempSP = {"byte": 12}
         self.AILevelSP = {"byte": 14}
 
         # PLC Outputs - General Controls
-        # ANALOG 
+        # ANALOG
         self.AQGen_Analog1 = {"byte": 12}
         self.AQGen_Analog2 = {"byte": 14}
         self.AQgen_Analog3 = {"byte": 16}
-        
-        # DIGITAL 
+
+        # DIGITAL
         self.DQGen_Indicator1 = {"byte": 0, "bit": 5}
         self.DQGen_Indicator2 = {"byte": 0, "bit": 6}
         self.DQGen_Indicator3 = {"byte": 0, "bit": 7}
         self.DQGen_Indicator4 = {"byte": 1, "bit": 0}
 
         # PLC Inputs - General Controls
-        # DIGITAL 
+        # DIGITAL
         self.DIGen_Start = {"byte": 0, "bit": 2}
         self.DIGen_Stop = {"byte": 0, "bit": 3}
         self.DIGen_Reset = {"byte": 0, "bit": 4}
-        
-        # ANALOG 
+
+        # ANALOG
         self.AIGen_Control1 = {"byte": 6}
         self.AIGen_Control2 = {"byte": 8}
         self.AIGen_Control3 = {"byte": 10}
 
         # ===== SIGNAL MAPPINGS =====
-        
+
+        # Dictionary to store signal names from IO configuration window
+        # Maps attribute name (e.g., "DQValveOut") to signal name (e.g., "Sim_OutletValveOnOff")
+        self.signal_names: dict[str, str] = {}
+
         # Custom signal name overrides, links custom names for general controls
         self.custom_signal_names: dict[str, str] = {}
 
@@ -145,7 +149,7 @@ class configuration:
         # Reverse mapping: internal attribute names -> signal names (for status display)
         # Example: {"DQValveIn": "Sim_InletValveOnOff", ...}
         self.reverse_io_mapping = {
-            attr_name: signal_name 
+            attr_name: signal_name
             for signal_name, attr_name in self.io_signal_mapping.items()
         }
 
@@ -165,11 +169,11 @@ class configuration:
         self.valveInMaxFlow: float = 5.0  # liters/second
         self.valveOutMaxFlow: float = 2.0  # liters/second
         self.liquidVolumeTimeDelay: float = 0.0  # seconds
-        
+
         self.ambientTemp: float = 21.0  # °C
         self.digitalLevelSensorHighTriggerLevel: float = 0.9 * self.tankVolume  # liters
         self.digitalLevelSensorLowTriggerLevel: float = 0.1 * self.tankVolume  # liters
-        
+
         self.heaterMaxPower: float = 15000.0  # watts
         self.tankHeatLoss: float = 150.0  # watts
         self.liquidTempTimeDelay: float = 0.0  # seconds
@@ -180,16 +184,16 @@ class configuration:
         # Variables that can be imported/exported
         self.importExportVariableList = [
             "simulationInterval",
-            "tankVolume", 
-            "valveInMaxFlow", 
-            "valveOutMaxFlow", 
+            "tankVolume",
+            "valveInMaxFlow",
+            "valveOutMaxFlow",
             "ambientTemp",
-            "digitalLevelSensorHighTriggerLevel", 
+            "digitalLevelSensorHighTriggerLevel",
             "digitalLevelSensorLowTriggerLevel",
-            "heaterMaxPower", 
-            "tankHeatLoss", 
+            "heaterMaxPower",
+            "tankHeatLoss",
             "liquidSpecificHeatCapacity",
-            "liquidBoilingTemp", 
+            "liquidBoilingTemp",
             "liquidSpecificWeight"
         ]
 
@@ -197,7 +201,7 @@ class configuration:
         """
         Calculate the lowest and highest byte addresses used in IO definitions.
         Used for resetting communication protocol buffers.
-        
+
         Returns:
             Tuple of (lowest_byte, highest_byte)
         """
@@ -219,7 +223,7 @@ class configuration:
     def load_io_config_from_file(self, config_file_path: Path) -> None:
         """
         Load IO configuration from JSON file and update internal mappings.
-        
+
         Reads io_configuration.json and updates byte/bit addresses for all mapped signals.
         Only signals present in the JSON file will be enabled for communication.
 
@@ -236,10 +240,11 @@ class configuration:
 
             # Reset enabled signals - will be repopulated from file
             self.enabled_attrs.clear()
+            self.signal_names.clear()  # Reset signal names
 
             # Build lookup including custom signal name aliases
             name_to_attr = dict(self.io_signal_mapping)
-            
+
             # Add custom signal name overrides
             if hasattr(self, "custom_signal_names"):
                 for attr, custom_name in self.custom_signal_names.items():
@@ -259,29 +264,35 @@ class configuration:
 
                 try:
                     byte_val = int(byte_str) if byte_str else None
-                    
+
                     if byte_val is None:
-                        logger.warning(f"Cannot parse byte value for signal '{signal_name}'")
+                        logger.warning(
+                            f"Cannot parse byte value for signal '{signal_name}'")
                         continue
-                    
+
                     # Digital signal (has bit address)
                     if bit_str:
                         bit_val = int(bit_str)
-                        setattr(self, attr_name, {"byte": byte_val, "bit": bit_val})
+                        setattr(self, attr_name, {
+                                "byte": byte_val, "bit": bit_val})
                     else:
                         # Analog signal (word/int address, no bit)
                         setattr(self, attr_name, {"byte": byte_val})
-                    
+
                     self.enabled_attrs.add(attr_name)
-                    
+                    # Store signal name for later retrieval (e.g., for SVG tag labels)
+                    self.signal_names[attr_name] = signal_name
+
                 except (ValueError, TypeError) as e:
-                    logger.warning(f"Cannot parse address for signal '{signal_name}': {e}")
+                    logger.warning(
+                        f"Cannot parse address for signal '{signal_name}': {e}")
 
             # Update byte range after loading new configuration
             self.update_io_range()
 
         except FileNotFoundError:
-            logger.error(f"IO configuration file not found: {config_file_path}")
+            logger.error(
+                f"IO configuration file not found: {config_file_path}")
         except json.JSONDecodeError:
             logger.error(f"Invalid JSON in: {config_file_path}")
         except Exception as e:
@@ -290,7 +301,7 @@ class configuration:
     def get_signal_name_for_attribute(self, attr_name: str) -> str:
         """
         Get the user-facing signal name for an internal attribute name.
-        
+
         Used for status display and logging.
 
         Args:

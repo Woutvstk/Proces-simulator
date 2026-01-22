@@ -1,3 +1,6 @@
+from gui.customWidgets import ReadOnlyTableWidgetItem
+from simulations.conveyor.gui import ConveyorWidget
+from simulations.PIDtankValve.gui import VatWidget
 import sys
 from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
@@ -8,11 +11,8 @@ src_dir = Path(__file__).resolve().parent.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-from simulations.PIDtankValve.gui import VatWidget
-from simulations.conveyor.gui import ConveyorWidget
 
 # Import for address updates
-from gui.customWidgets import ReadOnlyTableWidgetItem
 
 
 class ProcessSettingsMixin:
@@ -93,7 +93,7 @@ class ProcessSettingsMixin:
         #             layout = QVBoxLayout(svg_container)
         #             layout.setContentsMargins(0, 0, 0, 0)
         #             layout.setSpacing(0)
-        #         
+        #
         #         layout.addWidget(self.transportband_widget, 1)
         # except Exception as e:
         #     pass  # Silently fail if widget container is missing
@@ -139,7 +139,8 @@ class ProcessSettingsMixin:
                 self.on_controller_changed)
 
             # Disable connect button in GUI mode
-            initial_mode = self._get_controller_name(self.controlerDropDown.currentText())
+            initial_mode = self._get_controller_name(
+                self.controlerDropDown.currentText())
             if initial_mode == "GUI":
                 try:
                     self.pushButton_connect.setEnabled(False)
@@ -220,7 +221,8 @@ class ProcessSettingsMixin:
             except Exception:
                 m3_val = 2.0
             total_volume_liters = max(0.0, m3_val * 1000.0)
-            self.vat_widget.maxVolume = total_volume_liters / 100.0 if total_volume_liters > 0 else 1.0
+            self.vat_widget.maxVolume = total_volume_liters / \
+                100.0 if total_volume_liters > 0 else 1.0
             self.vat_widget.levelSwitchMaxHeight = float(
                 self.levelSwitchMaxHeightEntry.text() or 2.0)
             self.vat_widget.levelSwitchMinHeight = float(
@@ -310,6 +312,7 @@ class ProcessSettingsMixin:
             from simulations.PIDtankValve import gui as gui_module
             gui_module.liquidVolume = self.tanksim_status.liquidVolume
             gui_module.tempVat = self.tanksim_status.liquidTemperature
+            gui_module.simRunning = self.tanksim_status.simRunning
 
         # Rebuild SVG
         self.vat_widget.rebuild()
@@ -397,7 +400,7 @@ class ProcessSettingsMixin:
                     old_protocol, new_controller_name)
 
         self.vat_widget.rebuild()
-        
+
         # Update PLC control widget index based on new mode
         gui_mode = (new_controller == "GUI")
         if hasattr(self.vat_widget, 'set_plc_pidcontrol_index'):

@@ -22,7 +22,7 @@
       "byte": "0",
       "bit": "1",
       "address": "I0.1",
-      "status": "TRUE",
+      "status": "FALSE",
       "description": "Water level is LOW (above threshold = true)",
       "range": "0-1"
     },
@@ -32,7 +32,7 @@
       "byte": "4",
       "bit": "",
       "address": "IW4",
-      "status": "6559",
+      "status": "6912",
       "description": "Current water level in tank (0-100%)",
       "range": "0-27648"
     },
@@ -42,7 +42,7 @@
       "byte": "6",
       "bit": "",
       "address": "IW6",
-      "status": "13824",
+      "status": "4608",
       "description": "Current water temperature (°C)",
       "range": "0-27648"
     },
@@ -72,7 +72,7 @@
       "byte": "0",
       "bit": "2",
       "address": "Q0.2",
-      "status": "TRUE",
+      "status": "FALSE",
       "description": "Heater - Heat the water (ON/OFF)",
       "range": "0-1"
     },
@@ -102,7 +102,7 @@
       "byte": "8",
       "bit": "",
       "address": "QW8",
-      "status": "27648",
+      "status": "0",
       "description": "Heater power level (0-100%)",
       "range": "0-27648"
     },
@@ -152,7 +152,7 @@
       "byte": "0",
       "bit": "6",
       "address": "I0.6",
-      "status": "TRUE",
+      "status": "FALSE",
       "description": "Mode: Manual (user adjusts valve and coil wattage)",
       "range": "0-1"
     },
@@ -162,7 +162,7 @@
       "byte": "0",
       "bit": "7",
       "address": "I0.7",
-      "status": "TRUE",
+      "status": "FALSE",
       "description": "General bit to tell the plc to use analog temperature controls",
       "range": "0-1"
     },
@@ -182,7 +182,7 @@
       "byte": "1",
       "bit": "1",
       "address": "I1.1",
-      "status": "TRUE",
+      "status": "FALSE",
       "description": "General bit to tell the plc to use analog valve controls",
       "range": "0-1"
     },
