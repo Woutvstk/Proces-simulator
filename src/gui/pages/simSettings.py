@@ -399,8 +399,7 @@ class ProcessSettingsMixin:
 
         self.vat_widget.rebuild()
 
-        # Update PLC control widget index based on new mode
-        gui_mode = (new_controller == "GUI")
+        gui_mode = (new_controller_name == "GUI")
         if hasattr(self.vat_widget, 'set_plc_pidcontrol_index'):
             self.vat_widget.set_plc_pidcontrol_index(gui_mode)
 

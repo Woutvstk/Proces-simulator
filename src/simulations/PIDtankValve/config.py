@@ -290,6 +290,17 @@ class configuration:
             # Update byte range after loading new configuration
             self.update_io_range()
 
+            # Provide aliases expected by IOHandler for general controls
+            try:
+                if hasattr(self, 'AIGen_Control1'):
+                    self.AIControl1 = self.AIGen_Control1
+                if hasattr(self, 'AIGen_Control2'):
+                    self.AIControl2 = self.AIGen_Control2
+                if hasattr(self, 'AIGen_Control3'):
+                    self.AIControl3 = self.AIGen_Control3
+            except Exception:
+                pass
+
         except FileNotFoundError:
             logger.error(
                 f"IO configuration file not found: {config_file_path}")
