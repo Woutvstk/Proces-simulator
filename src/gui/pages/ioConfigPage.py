@@ -2275,9 +2275,16 @@ class IOConfigMixin:
                     byte_num = attr_value["byte"]
                     bit_num = attr_value["bit"]
 
-                    # Use V for LOGO!, I/Q for other controllers
+                    # Format address based on controller type
                     if is_logo:
-                        address = f"V{byte_num}.{bit_num}"
+                        is_output = attr_name.startswith(("DQ", "AQ"))
+                        if is_output:
+                            # LOGO outputs: Q0.0 -> Q1, Q0.1 -> Q2, Q0.2 -> Q3, etc.
+                            channel = byte_num * 8 + bit_num + 1
+                            address = f"Q{channel}"
+                        else:
+                            # LOGO inputs: I0.0 -> V0.0, I0.1 -> V0.1, etc.
+                            address = f"V{byte_num}.{bit_num}"
                     else:
                         io_prefix = "Q" if attr_name.startswith(
                             ("DQ", "AQ")) else "I"
@@ -2292,9 +2299,16 @@ class IOConfigMixin:
                 else:
                     byte_num = attr_value["byte"]
 
-                    # Use VW for LOGO!, IW/QW for other controllers
+                    # Format word addresses based on controller type
                     if is_logo:
-                        address = f"VW{byte_num}"
+                        is_output = attr_name.startswith(("DQ", "AQ"))
+                        if is_output:
+                            # LOGO analog outputs: QW4 -> AQ3, QW6 -> AQ4, etc.
+                            channel = (byte_num // 2) + 1
+                            address = f"AQ{channel}"
+                        else:
+                            # LOGO analog inputs: IW4 -> VW4, IW6 -> VW6, etc.
+                            address = f"VW{byte_num}"
                     else:
                         io_prefix = "Q" if attr_name.startswith(
                             ("DQ", "AQ")) else "I"
