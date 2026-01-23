@@ -29,7 +29,7 @@ ORANGE = "#FFA500"
 BLUE = "#1100FF"
 GREEN = "#00FF00"
 
-# Global state variables (deprecated - kept for backwards compatibility)
+# Global state variables 
 heatingCoil = True
 liquidVolume = 0
 tempVat = 0
@@ -44,9 +44,7 @@ class SvgDisplay(QWidget):
         self.setMinimumSize(300, 350)
         self.setMaximumSize(1200, 1400)
 
-    def sizeHint(self):
-        return QSize(300, 350)
-
+    #ensures proper scaling of SVG within widget
     def paintEvent(self, event):
         painter = QPainter(self)
         svg_size = self.renderer.defaultSize()
@@ -103,9 +101,7 @@ class VatWidget(QWidget):
             # Try multiple paths to find SVGVat.svg (handles different architectures)
             possible_paths = [
                 Path(__file__).parent.parent.parent / "gui" / "media" / "SVGVat.svg",
-                Path(__file__).parent.parent / "guiCommon" / "media" / "SVGVat.svg",
                 Path(__file__).parent.parent.parent / "gui" / "media" / "icon" / "SVG vat.svg",
-                Path(__file__).parent.parent.parent / "guiCommon" / "media" / "SVGVat.svg",
             ]
             
             svg_path = None
@@ -166,6 +162,7 @@ class VatWidget(QWidget):
         red_val = int(round(255 * intensity))
         red_hex = f"#{red_val:02X}0000"
         self.setGroupColor("heatingCoil", red_hex)
+
         if self.levelSwitches:
             self.visibilityGroup("levelSwitchMax", "shown")
             self.visibilityGroup("levelSwitchMin", "shown")
@@ -180,17 +177,6 @@ class VatWidget(QWidget):
 
         # Always show analog valve indicators so PLC-driven values stay visible
         self.visibilityGroup("adjustableValve", "shown")
-        if not self.adjustableHeatingCoil:
-            self.visibilityGroup("adjustableHeatingCoil", "hidden")
-            if heatingCoil:
-                self.setGroupColor("heatingCoilValue", GREEN)
-            elif not heatingCoil:
-                self.setGroupColor("heatingCoilValue", RED)
-            else:
-                self.setGroupColor("heatingCoilValue", "#FFFFFF")
-        else:
-            # Keep visible even in PLC mode to reflect live heater power
-            self.visibilityGroup("adjustableHeatingCoil", "shown")
 
         if self.adjustableValveInValue == 0:
             self.ValveWidth("waterValveIn", 0)
@@ -334,7 +320,6 @@ class VatWidget(QWidget):
             btn = getattr(self, btn_name, None)
             if btn:
                 btn.setCheckable(True)
-                # Optionally: connect to a slot to update IO state
 
     def init_mainwindow_controls(self, mainwindow):
         """Initialize all MainWindow controls (buttons, toggles) from gui.py.

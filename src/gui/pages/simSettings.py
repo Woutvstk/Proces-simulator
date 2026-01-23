@@ -271,13 +271,11 @@ class ProcessSettingsMixin:
 
             # Valve positions (always analog now)
             try:
-                self.vat_widget.adjustableValveInValue = min(100, int(
-                    self.valveInEntry.text() or 0))
+                self.vat_widget.adjustableValveInValue = int(self.valveInEntry.text() or 0)
             except (ValueError, AttributeError):
                 self.vat_widget.adjustableValveInValue = 0
             try:
-                self.vat_widget.adjustableValveOutValue = min(100, int(
-                    self.valveOutEntry.text() or 0))
+                self.vat_widget.adjustableValveOutValue = int(self.valveOutEntry.text() or 0)
             except (ValueError, AttributeError):
                 self.vat_widget.adjustableValveOutValue = 0
 

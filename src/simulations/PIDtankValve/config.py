@@ -142,7 +142,7 @@ class configuration:
             "Analog3": "AQGen_Analog3",
         }
 
-        # Reverse mapping: internal attribute names -> signal names (for status display)
+        # Reverse mapping: internal attribute names -> signal names (for status display on gui)
         # Example: {"DQValveIn": "Sim_InletValveOnOff", ...}
         self.reverse_io_mapping = {
             attr_name: signal_name 
@@ -190,7 +190,9 @@ class configuration:
             "tankHeatLoss", 
             "liquidSpecificHeatCapacity",
             "liquidBoilingTemp", 
-            "liquidSpecificWeight"
+            "liquidSpecificWeight",
+            "liquidVolumeTimeDelay",
+            "liquidTempTimeDelay"
         ]
 
     def get_byte_range(self) -> tuple[int, int]:
@@ -299,4 +301,12 @@ class configuration:
         Returns:
             Signal name (e.g., "Sim_InletValveOnOff") or empty string if not found
         """
+        # Prefer custom names if provided
+        try:
+            if getattr(self, 'custom_signal_names', None):
+                custom = self.custom_signal_names.get(attr_name)
+                if custom:
+                    return custom
+        except Exception:
+            pass
         return self.reverse_io_mapping.get(attr_name, "")

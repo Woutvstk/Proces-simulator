@@ -184,10 +184,9 @@ class TankSimSettingsMixin:
             pass
 
     def _on_heater_power_any_changed(self, value, source=None):
-        """Keep all heater power controls in sync and update labels (0-100%)."""
+        """Keep all heater power controls in sync and update labels."""
         try:
-            # Clamp to 0..100 (slider is 0-100%)
-            value = max(0, min(100, int(value)))
+            value = int(value)
 
             # Sync all sliders
             for slider in getattr(self, '_heater_power_sliders', []):
@@ -546,6 +545,21 @@ class TankSimSettingsMixin:
         gui_module.liquidVolume = self.tanksim_status.liquidVolume
         gui_module.tempVat = self.tanksim_status.liquidTemperature
         
+        # Update tank empty warning label; text always set, color toggles visibility
+        try:
+            if hasattr(self, 'QTlabel_warningTankEmpty'):
+                empty_text = "TANK EMPTY, HEATING COIL DISABLED"
+                self.QTlabel_warningTankEmpty.setText(empty_text)
+                if self.tanksim_status.liquidVolume <= 0.0:
+                    self.QTlabel_warningTankEmpty.setStyleSheet("color: red;")
+                    self.QTlabel_warningTankEmpty.setVisible(True)
+                else:
+                    # Keep text but make it invisible by using white (assuming light bg)
+                    self.QTlabel_warningTankEmpty.setStyleSheet("color: white;")
+                    self.QTlabel_warningTankEmpty.setVisible(True)
+        except Exception:
+            pass
+        
         # Pass heater power fraction to the VatWidget for coil color
         # BUT only in PLC mode - in manual/GUI mode, keep the user's checkbox value
         if not effective_gui_control:
@@ -559,11 +573,20 @@ class TankSimSettingsMixin:
             # Use GUI fields in GUI mode; otherwise use live config/status values
             if gui_mode:
                 if hasattr(self, 'maxFlowInEntry'):
-                    self.vat_widget.valveInMaxFlowValue = int(self.maxFlowInEntry.text() or 5)
+                    try:
+                        self.vat_widget.valveInMaxFlowValue = int(float(self.maxFlowInEntry.text() or 5))
+                    except (ValueError, AttributeError):
+                        self.vat_widget.valveInMaxFlowValue = 5
                 if hasattr(self, 'maxFlowOutEntry'):
-                    self.vat_widget.valveOutMaxFlowValue = int(self.maxFlowOutEntry.text() or 2)
+                    try:
+                        self.vat_widget.valveOutMaxFlowValue = int(float(self.maxFlowOutEntry.text() or 2))
+                    except (ValueError, AttributeError):
+                        self.vat_widget.valveOutMaxFlowValue = 2
                 if hasattr(self, 'powerHeatingCoilEntry'):
-                    self.vat_widget.powerValue = float(self.powerHeatingCoilEntry.text() or 10000.0)
+                    try:
+                        self.vat_widget.powerValue = float(self.powerHeatingCoilEntry.text() or 10000.0)
+                    except (ValueError, AttributeError):
+                        self.vat_widget.powerValue = 10000.0
                 
                 try:
                     if hasattr(self, 'volumeEntry'):
@@ -735,6 +758,8 @@ class TankSimSettingsMixin:
 
         if not hasattr(self, 'mainConfig') or self.mainConfig is None:
             return        
+
+        # No clamping or formatting helpers — accept raw user input
         # Make sure vat_widget is initialized
         if not hasattr(self, 'vat_widget') or self.vat_widget is None:
             try:
@@ -793,7 +818,6 @@ class TankSimSettingsMixin:
             try:
                 slider_level = getattr(self, 'slider_PidTankLevelSP', None)
                 if slider_level:
-                    # Convert percentage to actual volume (liters)
                     level_percent = float(slider_level.value())
                     if hasattr(self, 'tanksim_config') and self.tanksim_config:
                         tank_volume = self.tanksim_config.tankVolume
@@ -801,7 +825,7 @@ class TankSimSettingsMixin:
             except Exception:
                 pass
             
-            # Write valve positions - CRITICAL: Always write these in GUI mode or Manual mode
+            # Write valve positions
             try:
                 self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
                 self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
@@ -810,7 +834,6 @@ class TankSimSettingsMixin:
 
             # Write heater state (always analog mode now)
             try:
-                # Analog mode: Use the first visible heater slider; fallback to first available
                 slider_val = None
                 try:
                     for slider in getattr(self, '_heater_power_sliders', []):
@@ -825,8 +848,7 @@ class TankSimSettingsMixin:
                             slider_val = int(first_slider.value())
                     if slider_val is None:
                         slider_val = 0
-                    # Convert from percentage (0-100) to fraction (0-1)
-                    self.tanksim_status.heaterPowerFraction = max(0.0, min(1.0, slider_val / 100.0))
+                    self.tanksim_status.heaterPowerFraction = slider_val / 100.0
                 except Exception:
                     self.tanksim_status.heaterPowerFraction = 0.0
             except Exception as e:
@@ -839,7 +861,7 @@ class TankSimSettingsMixin:
                 # Max incoming flow
                 try:
                     val_in = float(self.maxFlowInEntry.text()) if hasattr(self, 'maxFlowInEntry') else None
-                    if val_in is not None and val_in >= 0:
+                    if val_in is not None:
                         self.tanksim_config.valveInMaxFlow = val_in
                 except Exception:
                     pass
@@ -847,7 +869,7 @@ class TankSimSettingsMixin:
                 # Max outgoing flow
                 try:
                     val_out = float(self.maxFlowOutEntry.text()) if hasattr(self, 'maxFlowOutEntry') else None
-                    if val_out is not None and val_out >= 0:
+                    if val_out is not None:
                         self.tanksim_config.valveOutMaxFlow = val_out
                 except Exception:
                     pass
@@ -855,7 +877,7 @@ class TankSimSettingsMixin:
                 # Heating coil max power (W)
                 try:
                     power = float(self.powerHeatingCoilEntry.text()) if hasattr(self, 'powerHeatingCoilEntry') else None
-                    if power is not None and power >= 0:
+                    if power is not None:
                         self.tanksim_config.heaterMaxPower = power
                 except Exception:
                     pass
@@ -864,8 +886,7 @@ class TankSimSettingsMixin:
                 try:
                     if hasattr(self, 'volumeEntry'):
                         m3 = float(self.volumeEntry.text())
-                        if m3 >= 0:
-                            self.tanksim_config.tankVolume = m3 * 1000.0
+                        self.tanksim_config.tankVolume = m3 * 1000.0
                 except Exception:
                     pass
 
@@ -881,8 +902,7 @@ class TankSimSettingsMixin:
                 try:
                     if hasattr(self, 'heatLossVatEntry'):
                         loss = float(self.heatLossVatEntry.text())
-                        if loss >= 0:
-                            self.tanksim_config.tankHeatLoss = loss
+                        self.tanksim_config.tankHeatLoss = loss
                 except Exception:
                     pass
 
@@ -890,41 +910,33 @@ class TankSimSettingsMixin:
                 try:
                     if hasattr(self, 'timeDelayfillingEntry'):
                         td_fill = float(self.timeDelayfillingEntry.text())
-                        if td_fill >= 0:
-                            self.tanksim_config.liquidVolumeTimeDelay = td_fill
+                        self.tanksim_config.liquidVolumeTimeDelay = td_fill
                 except Exception:
                     pass
                 try:
                     if hasattr(self, 'timeDelayTempEntry'):
                         td_temp = float(self.timeDelayTempEntry.text())
-                        if td_temp >= 0:
-                            self.tanksim_config.liquidTempTimeDelay = td_temp
+                        self.tanksim_config.liquidTempTimeDelay = td_temp
                 except Exception:
                     pass
 
                 # Level switch triggers (% of tank volume)
                 try:
-                    if hasattr(self, 'levelSwitchMaxHeightEntry'):
-                        hi_pct = float(self.levelSwitchMaxHeightEntry.text())
-                    else:
-                        hi_pct = None
+                    hi_pct = float(self.levelSwitchMaxHeightEntry.text()) if hasattr(self, 'levelSwitchMaxHeightEntry') else None
                 except Exception:
                     hi_pct = None
 
                 try:
-                    if hasattr(self, 'levelSwitchMinHeightEntry'):
-                        lo_pct = float(self.levelSwitchMinHeightEntry.text())
-                    else:
-                        lo_pct = None
+                    lo_pct = float(self.levelSwitchMinHeightEntry.text()) if hasattr(self, 'levelSwitchMinHeightEntry') else None
                 except Exception:
                     lo_pct = None
 
                 try:
                     tv = self.tanksim_config.tankVolume
-                    if hi_pct is not None and tv is not None:
-                        self.tanksim_config.digitalLevelSensorHighTriggerLevel = max(0.0, (hi_pct / 100.0) * tv)
-                    if lo_pct is not None and tv is not None:
-                        self.tanksim_config.digitalLevelSensorLowTriggerLevel = max(0.0, (lo_pct / 100.0) * tv)
+                    if hi_pct is not None:
+                        self.tanksim_config.digitalLevelSensorHighTriggerLevel = (hi_pct / 100.0) * tv
+                    if lo_pct is not None:
+                        self.tanksim_config.digitalLevelSensorLowTriggerLevel = (lo_pct / 100.0) * tv
                 except Exception:
                     pass
 
@@ -933,18 +945,15 @@ class TankSimSettingsMixin:
                     # Specific heat capacity (J/kg*K)
                     if hasattr(self, 'specificHeatCapacity'):
                         c = float(self.specificHeatCapacity.text())
-                        if c > 0:
-                            self.tanksim_config.liquidSpecificHeatCapacity = c
+                        self.tanksim_config.liquidSpecificHeatCapacity = c
                 except Exception:
                     pass
 
                 try:
                     # Density (kg/m³) mapped as specific weight (kg/L) if needed
-                    # UI provides kg/m³; convert to kg/L by dividing by 1000
                     if hasattr(self, 'specificWeightEntry'):
                         rho_m3 = float(self.specificWeightEntry.text())
-                        if rho_m3 > 0:
-                            self.tanksim_config.liquidSpecificWeight = rho_m3 / 1000.0
+                        self.tanksim_config.liquidSpecificWeight = rho_m3 / 1000.0
                 except Exception:
                     pass
 
@@ -952,12 +961,35 @@ class TankSimSettingsMixin:
                     # Boiling temperature (°C)
                     if hasattr(self, 'boilingTempEntry'):
                         t_boil = float(self.boilingTempEntry.text())
-                        if t_boil > 0:
-                            self.tanksim_config.liquidBoilingTemp = t_boil
+                        self.tanksim_config.liquidBoilingTemp = t_boil
                 except Exception:
                     pass
         except Exception:
             # Be resilient to missing widgets during early init
+            pass
+        
+        # ===== SAVE GUI DISPLAY STATE TO STATUS =====
+        # These are not simulation values, just display preferences
+        try:
+            # Save display checkboxes
+            if hasattr(self, 'levelSwitchesCheckBox') and self.tanksim_status:
+                self.tanksim_status.displayLevelSwitches = self.levelSwitchesCheckBox.isChecked()
+        except Exception:
+            pass
+        
+        try:
+            if hasattr(self, 'analogValueTempCheckBox') and self.tanksim_status:
+                self.tanksim_status.displayTemperature = self.analogValueTempCheckBox.isChecked()
+        except Exception:
+            pass
+        
+        try:
+            # Save tank color
+            if hasattr(self, 'colorDropDown') and self.tanksim_status:
+                color_hex = self.colorDropDown.currentData()
+                if color_hex:
+                    self.tanksim_status.tankColor = color_hex
+        except Exception:
             pass
 
     # =========================================================================
@@ -968,6 +1000,100 @@ class TankSimSettingsMixin:
         """Callback when water color changes"""
         new_color = self.colorDropDown.currentData()
         self.vat_widget.waterColor = new_color
+
+    # =====================================================================
+    # APPLY LOADED STATE → GUI FIELDS
+    # =====================================================================
+    def apply_loaded_state_to_gui(self, cfg, status):
+        """Populate key GUI fields from loaded config/status to avoid defaults overwriting loaded values."""
+        try:
+            def _set_text(widget, value):
+                try:
+                    widget.blockSignals(True)
+                    widget.setText(value)
+                    widget.blockSignals(False)
+                except Exception:
+                    pass
+
+            # Config-driven fields
+            if cfg:
+                if hasattr(self, 'volumeEntry') and getattr(cfg, 'tankVolume', None) is not None:
+                    _set_text(self.volumeEntry, f"{cfg.tankVolume/1000.0:.3f}")  # m3
+                if hasattr(self, 'maxFlowInEntry') and getattr(cfg, 'valveInMaxFlow', None) is not None:
+                    _set_text(self.maxFlowInEntry, f"{cfg.valveInMaxFlow:.2f}")
+                if hasattr(self, 'maxFlowOutEntry') and getattr(cfg, 'valveOutMaxFlow', None) is not None:
+                    _set_text(self.maxFlowOutEntry, f"{cfg.valveOutMaxFlow:.2f}")
+                if hasattr(self, 'powerHeatingCoilEntry') and getattr(cfg, 'heaterMaxPower', None) is not None:
+                    _set_text(self.powerHeatingCoilEntry, f"{cfg.heaterMaxPower:.2f}")
+                if hasattr(self, 'ambientTempEntry') and getattr(cfg, 'ambientTemp', None) is not None:
+                    _set_text(self.ambientTempEntry, f"{cfg.ambientTemp:.2f}")
+                if hasattr(self, 'heatLossVatEntry') and getattr(cfg, 'tankHeatLoss', None) is not None:
+                    _set_text(self.heatLossVatEntry, f"{cfg.tankHeatLoss:.2f}")
+                if hasattr(self, 'specificHeatCapacityEntry') and getattr(cfg, 'liquidSpecificHeatCapacity', None) is not None:
+                    _set_text(self.specificHeatCapacityEntry, f"{cfg.liquidSpecificHeatCapacity:.4f}")
+                if hasattr(self, 'specificWeightEntry') and getattr(cfg, 'liquidSpecificWeight', None) is not None:
+                    _set_text(self.specificWeightEntry, f"{cfg.liquidSpecificWeight*1000.0:.4f}")
+                if hasattr(self, 'boilingTempEntry') and getattr(cfg, 'liquidBoilingTemp', None) is not None:
+                    _set_text(self.boilingTempEntry, f"{cfg.liquidBoilingTemp:.2f}")
+                # Time delays
+                if hasattr(self, 'timeDelayfillingEntry') and getattr(cfg, 'liquidVolumeTimeDelay', None) is not None:
+                    _set_text(self.timeDelayfillingEntry, f"{cfg.liquidVolumeTimeDelay:.1f}")
+                if hasattr(self, 'timeDelayTempEntry') and getattr(cfg, 'liquidTempTimeDelay', None) is not None:
+                    _set_text(self.timeDelayTempEntry, f"{cfg.liquidTempTimeDelay:.1f}")
+
+            # Status-driven fields (runtime state + GUI display state)
+            if status:
+                if hasattr(self, 'valveInEntry') and getattr(status, 'valveInOpenFraction', None) is not None:
+                    _set_text(self.valveInEntry, f"{status.valveInOpenFraction*100.0:.1f}")
+                if hasattr(self, 'valveOutEntry') and getattr(status, 'valveOutOpenFraction', None) is not None:
+                    _set_text(self.valveOutEntry, f"{status.valveOutOpenFraction*100.0:.1f}")
+                
+                # Heater power controls
+                try:
+                    slider_val = int(max(0.0, min(1.0, getattr(status, 'heaterPowerFraction', 0.0))) * 100)
+                    for slider in getattr(self, '_heater_power_sliders', []):
+                        if slider is None:
+                            continue
+                        slider.blockSignals(True)
+                        slider.setValue(slider_val)
+                        slider.blockSignals(False)
+                except Exception:
+                    pass
+                
+                # Restore display checkboxes
+                try:
+                    if hasattr(self, 'levelSwitchesCheckBox'):
+                        display_level = getattr(status, 'displayLevelSwitches', True)
+                        self.levelSwitchesCheckBox.blockSignals(True)
+                        self.levelSwitchesCheckBox.setChecked(display_level)
+                        self.levelSwitchesCheckBox.blockSignals(False)
+                except Exception:
+                    pass
+                
+                try:
+                    if hasattr(self, 'analogValueTempCheckBox'):
+                        display_temp = getattr(status, 'displayTemperature', True)
+                        self.analogValueTempCheckBox.blockSignals(True)
+                        self.analogValueTempCheckBox.setChecked(display_temp)
+                        self.analogValueTempCheckBox.blockSignals(False)
+                except Exception:
+                    pass
+                
+                # Restore tank color
+                try:
+                    if hasattr(self, 'colorDropDown'):
+                        saved_color = getattr(status, 'tankColor', "#0000FF")
+                        # Find the color in the dropdown that matches the hex code
+                        for i in range(self.colorDropDown.count()):
+                            if self.colorDropDown.itemData(i) == saved_color:
+                                self.colorDropDown.blockSignals(True)
+                                self.colorDropDown.setCurrentIndex(i)
+                                self.colorDropDown.blockSignals(False)
+                                break
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Failed to apply loaded state to GUI: {e}")
 
     def on_tank_config_changed(self):
         """Callback when tank configuration changes"""

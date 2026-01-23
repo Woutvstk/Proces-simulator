@@ -10,6 +10,7 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer, Qt, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QIcon
 from PyQt5 import uic
+import time
 
 # ============================================================================
 # ABSOLUTE IMPORTS - Add src directory to path
@@ -21,6 +22,7 @@ from .pages.generalSettings import ProcessSettingsMixin
 from .pages.ioConfigPage import IOConfigMixin
 from .pages.generalControls import GeneralControlsMixin
 from .pages.simPage import SimPageMixin
+from .pages.saveLoadPage import SaveLoadMixin
 from .tooltipManager import setup_tooltip_manager
 # Tank simulation settings mixin from simulations package
 from simulations.PIDtankValve.settingsGui import TankSimSettingsMixin
@@ -73,7 +75,7 @@ else:
 # =============================================================================
 # MainWindow class - Same as before
 # =============================================================================
-class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralControlsMixin, SimPageMixin, TankSimSettingsMixin):
+class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin, GeneralControlsMixin, SimPageMixin, TankSimSettingsMixin, SaveLoadMixin):
     """
     Main application window
     Uses mixins for process settings and I/O config functionality
@@ -193,6 +195,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         
         # Initialize TANK SIM Settings Page
         self.init_tanksim_settings_page()
+        
+        # Initialize Save/Load Page
+        self.init_save_load_page()
 
         # Initialize network port combobox
         self._init_network_port_combobox()
@@ -319,14 +324,18 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
 
     def update_all_values(self):
         """Main update loop"""
+        now = time.monotonic()
+        suppress_gui_to_status = getattr(self, "_suppress_gui_to_status_until", 0) > now
+
         # Stagger updates to reduce frame rate spikes
         update_cycle = getattr(self, '_update_cycle', 0)
         self._update_cycle = (update_cycle + 1) % 3
         
         # Every update: critical items
         self.update_tanksim_display()  
-        self.write_gui_values_to_status() 
-        self._write_general_controls_to_status()
+        if not suppress_gui_to_status:
+            self.write_gui_values_to_status() 
+            self._write_general_controls_to_status()
         
         # Every 2nd cycle (500ms): IO table updates
         if self._update_cycle == 0:

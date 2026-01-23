@@ -1900,6 +1900,71 @@ class IOConfigMixin:
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to activate/reload: {str(e)}")
+
+    def apply_loaded_io_config(self, config_path: Path) -> bool:
+        """Apply an IO configuration file without overwriting it or asking confirmations."""
+        try:
+            if not config_path.exists():
+                logger.warning(f"IO config not found: {config_path}")
+                return False
+
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+
+            if 'signals' not in config_data:
+                logger.warning("IO config missing 'signals'")
+                return False
+
+            # Apply to simulation config
+            try:
+                if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                    self.tanksim_config.load_io_config_from_file(config_path)
+            except Exception as e:
+                logger.warning(f"Failed to load IO config into tanksim_config: {e}")
+
+            # Update offsets UI
+            try:
+                if 'offsets' in config_data:
+                    self.io_screen.byte_offsets = config_data['offsets'].copy()
+                    self.QLineEdit_BoolInput.setText(str(config_data['offsets'].get('BoolInput', 0)))
+                    self.QLineEdit_BoolOutput.setText(str(config_data['offsets'].get('BoolOutput', 0)))
+                    self.QLineEdit_DWORDInput.setText(str(config_data['offsets'].get('DWORDInput', 2)))
+                    self.QLineEdit_DWORDOutput.setText(str(config_data['offsets'].get('DWORDOutput', 2)))
+            except Exception:
+                pass
+
+            # Push signals into table (similar to load_io_configuration)
+            try:
+                table = self.tableWidget_IO
+                table.blockSignals(True)
+                for row in range(table.rowCount()):
+                    table._clear_row_data(row)
+
+                for idx, signal in enumerate(config_data['signals']):
+                    if idx >= table.rowCount():
+                        break
+                    table.setItem(idx, 0, ReadOnlyTableWidgetItem(signal.get('name', '')))
+                    table.setItem(idx, 1, ReadOnlyTableWidgetItem(signal.get('type', '')))
+                    table.setItem(idx, 2, EditableTableWidgetItem(signal.get('byte', '')))
+                    table.setItem(idx, 3, EditableTableWidgetItem(signal.get('bit', '')))
+                    table.setItem(idx, 4, ReadOnlyTableWidgetItem(signal.get('address', '')))
+                    table.setItem(idx, 5, ReadOnlyTableWidgetItem(signal.get('status', '')))
+                    table.setItem(idx, 6, ReadOnlyTableWidgetItem(signal.get('description', '')))
+                    table.setItem(idx, 7, ReadOnlyTableWidgetItem(signal.get('range', '')))
+                    table._save_row_data(idx)
+            finally:
+                table.blockSignals(False)
+
+            try:
+                self.io_screen.loading_config = False
+                self._io_config_dirty = False
+            except Exception:
+                pass
+
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to apply loaded IO config: {e}")
+            return False
         
     def _reload_io_config_without_confirmation(self):
         """Reload IO configuration without showing confirmation dialog - same as reload_io_config but skips dialog"""
