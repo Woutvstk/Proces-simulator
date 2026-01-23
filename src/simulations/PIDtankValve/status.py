@@ -79,6 +79,7 @@ class status:
             "analog1", "analog2", "analog3",
             "pidStartCmd", "pidStopCmd", "pidResetCmd",
             "temperatureSetpoint", "levelSetpoint",
+            "tankColor", "displayLevelSwitches", "displayTemperature",
         ]
 
         # General Controls - PLC Outputs reflected in status (written by: plc or force)
@@ -120,6 +121,14 @@ class status:
         # PID Valve Controls - setpoint values (written by: gui)
         self.pidPidTankTempSPValue: int = 0
         self.pidPidTankLevelSPValue: int = 0
+
+        # ===== GUI STATE (display settings, not simulation values) =====
+        # Tank color for visualization (written by: gui)
+        self.tankColor: str = "#0000FF"  # Default: Blue
+        
+        # Display checkboxes (written by: gui)
+        self.displayLevelSwitches: bool = True
+        self.displayTemperature: bool = True
 
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a JSON file"""
