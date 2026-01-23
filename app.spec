@@ -3,89 +3,51 @@
 import os
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
-# -----------------------------
-# 1. Hidden imports
-# -----------------------------
-hiddenimports = []
+# Hidden imports
+hiddenimports = [
+    'PyQt5.sip',
+]
 hiddenimports += collect_submodules("pymodbus")
 hiddenimports += collect_submodules("asyncio")
+hiddenimports += collect_submodules("core")
+hiddenimports += collect_submodules("IO")
+hiddenimports += collect_submodules("gui")
+hiddenimports += collect_submodules("simulations")
 
-# -----------------------------
-# 2. Data files
-# -----------------------------
-datas = []
-
-# GUI media (UI, QSS, SVG, PNG, ICO)
+# Data files - verzamel ALLES
 datas = [
     ('src/gui/media', 'gui/media'),
-    ('src/gui/media/icon', 'gui/media/icon'),
-    ('src/gui/media/media', 'gui/media/media'),
+    ('src/IO/IO_treeList_conveyor.xml', 'IO'),
+    ('src/IO/IO_treeList_PIDtankValve.xml', 'IO'),
+    ('src/IO/IO_configuration.json', 'IO'),
+    ('src/gui', 'gui'),
+    ('src/core', 'core'),
+    ('src/IO', 'IO'),
+    ('src/simulations', 'simulations'),
 ]
 
-
-datas += collect_data_files("src/gui/media")
-datas += collect_data_files("src/gui/media/icon")
-datas += collect_data_files("src/gui/media/media")
-
-# GUI pages
-datas += collect_data_files("src/gui/pages")
-
-# IO configuration files
-datas += collect_data_files("src/IO", includes=["*.json", "*.xml"])
-
-datas += [
-    ("src/IO/IO_treeList_conveyor.xml", "IO"),
-    ("src/IO/IO_treeList_PIDtankValve.xml", "IO"),
-    ("src/IO/IO_configuration.json", "IO"),
-]
-
-
-
-# PLCSimS7 protocol files
-datas += collect_data_files("src/IO/protocols/PLCSimS7/NetToPLCsim")
-
-# PLCSimAPI DLLs
-datas += collect_data_files("src/IO/protocols/PLCSimAPI")
-
-# Simulations
-datas += collect_data_files("src/simulations")
-
-# TankSim
-datas += collect_data_files("src/tankSim")
-
-# -----------------------------
-# 3. External binaries
-# -----------------------------
+# Binaries
 binaries = [
-    ("src/IO/protocols/PLCSimS7/NetToPLCsim/NetToPLCsim.exe", "."),
-    ("src/IO/protocols/PLCSimS7/NetToPLCsim/IsoToS7online.dll", "."),
-    ("src/IO/protocols/PLCSimAPI/SiemensAPI.DLL", "."),
+    (r"C:\Users\kobed\AppData\Roaming\Python\Python312\site-packages\snap7\lib\snap7.dll", "."),
 ]
 
-# -----------------------------
-# 4. Analysis
-# -----------------------------
+# Analysis
 a = Analysis(
     ["src/main.py"],
-    pathex=["src"],
+    pathex=["."],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=["pandas", "scipy"],
     noarchive=False,
 )
 
-# -----------------------------
-# 5. Python archive
-# -----------------------------
+# Python archive
 pyz = PYZ(a.pure, a.zipped_data)
 
-# -----------------------------
-# 6. EXE (ONEFILE MODE)
-# -----------------------------
 exe = EXE(
     pyz,
     a.scripts,
@@ -95,20 +57,6 @@ exe = EXE(
     name="PLC_Modbus_Proces_Simulator",
     debug=False,
     strip=False,
-    upx=True,
-    console=False,
-	icon="icon.ico"
-)
-
-# -----------------------------
-# 7. COLLECT
-# -----------------------------
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    name="PLC_Modbus_Proces_Simulator",
+    upx=False,
+    console=True,
 )

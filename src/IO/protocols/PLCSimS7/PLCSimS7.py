@@ -1,13 +1,20 @@
-import snap7
-import snap7.util as s7util
+try:
+    import snap7
+    import snap7.util as s7util
+    SNAP7_AVAILABLE = True
+except (ImportError, OSError) as e:
+    SNAP7_AVAILABLE = False
+    SNAP7_ERROR = str(e)
+
 import subprocess
 import os
 import time
 import socket
 import configparser
-import sys # Required for PyInstaller compatibility
+import sys  # Required for PyInstaller compatibility
 
-#Code succesfully tested with S7-1500/1200(G1-G2)/400/300/ET200 CPU in standard and advanced license(for the S7-1500)
+# Code succesfully tested with S7-1500/1200(G1-G2)/400/300/ET200 CPU in standard and advanced license(for the S7-1500)
+
 
 class plcSimS7:
     analogMax = 32767  # Max value for signed 16-bit integer
@@ -25,7 +32,8 @@ class plcSimS7:
         """
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             # Running in a PyInstaller bundle
-            return os.path.dirname(sys.executable) # Assume same directory as the main EXE
+            # Assume same directory as the main EXE
+            return os.path.dirname(sys.executable)
         else:
             # Running as a normal Python script
             return os.path.dirname(os.path.abspath(__file__))
@@ -33,18 +41,18 @@ class plcSimS7:
     # --- Class-level Configuration for NetToPLCSim ---
 
     # Call the static method once via None to get the base path
-    _BASE_DIR = _get_base_dir(None) 
+    _BASE_DIR = _get_base_dir(None)
     _NETTOPLCSIM_DIR = os.path.join(_BASE_DIR, "NetToPLCsim")
     NETTOPLCSIM_EXE = os.path.join(_NETTOPLCSIM_DIR, "NetToPLCsim.exe")
     NETTOPLCSIM_INI = os.path.join(_NETTOPLCSIM_DIR, "configuration.ini")
-    
+
     # Configuration for port retry logic
-    START_PORT = 1024 
-    PORT_TRY_LIMIT = 3 
-    
+    START_PORT = 1024
+    PORT_TRY_LIMIT = 3
+
     # Wait time for server startup verification
     MAX_SERVER_START_WAIT = 2.0
-    POLL_INTERVAL = 0.05 
+    POLL_INTERVAL = 0.05
 
     # --- Initialization ---
 
@@ -59,16 +67,19 @@ class plcSimS7:
         tcpport (int): TCP port for the connection (default: 1024, will be dynamically set by NetToPLCSim)
         network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
+        if not SNAP7_AVAILABLE:
+            raise ImportError(f"snap7 library not available: {SNAP7_ERROR}")
+
         # Snap7 connects to the NetToPLCSim proxy, which is always local
-        self.ip = "127.0.0.1" 
+        self.ip = "127.0.0.1"
         self.rack = rack
         self.slot = slot
         # Initial port, will be updated by _start_server with the actual listening port
-        self.tcpport = plcSimS7.START_PORT 
+        self.tcpport = plcSimS7.START_PORT
         self.network_adapter = network_adapter
         self.client = snap7.client.Client()
         self._server_process = None
-        self.actual_server_port = None 
+        self.actual_server_port = None
 
     # --- Internal Server Management Methods ---
 
@@ -96,15 +107,15 @@ class plcSimS7:
             if not os.path.exists(ini_dir):
                 print(f"Creating directory: {ini_dir}")
                 os.makedirs(ini_dir, exist_ok=True)
-            
+
             config = configparser.ConfigParser()
-            
+
             ini_config = {
                 'NetToPLCsim': {
                     'NumberOfStations': 1,
                     # Configure the port range for NetToPLCSim to try
-                    'StartPort': self.START_PORT, 
-                    'PortTryLimit': self.PORT_TRY_LIMIT 
+                    'StartPort': self.START_PORT,
+                    'PortTryLimit': self.PORT_TRY_LIMIT
                 },
                 'Station1': {
                     'Name': 'PLC#001',
@@ -115,20 +126,21 @@ class plcSimS7:
                     'TsapCheckEnabled': 1
                 }
             }
-            
+
             for section, options in ini_config.items():
                 if not config.has_section(section):
                     config.add_section(section)
-                
+
                 for key, value in options.items():
                     config.set(section, key, str(value))
-            
+
             with open(self.NETTOPLCSIM_INI, 'w') as configfile:
                 config.write(configfile)
-            
-            print(f"INI configured: Port range {self.START_PORT} to {self.START_PORT + self.PORT_TRY_LIMIT - 1}")
+
+            print(
+                f"INI configured: Port range {self.START_PORT} to {self.START_PORT + self.PORT_TRY_LIMIT - 1}")
             return True
-            
+
         except Exception as e:
             print(f"Error configuring INI file: {e}")
             return False
@@ -144,16 +156,16 @@ class plcSimS7:
             if self.actual_server_port:
                 self.tcpport = self.actual_server_port
             return True
-        
+
         # Check if EXE exists
         if not os.path.exists(self.NETTOPLCSIM_EXE):
             print(f"NetToPLCsim.exe not found at: {self.NETTOPLCSIM_EXE}")
             return False
-        
+
         # 1. Update INI file
         if not self._update_ini_file():
             return False
-        
+
         # 2. Start server process
         exe_dir = os.path.dirname(self.NETTOPLCSIM_EXE)
         command_list = [
@@ -161,7 +173,7 @@ class plcSimS7:
             self.NETTOPLCSIM_INI,
             '-autostart',
         ]
-        
+
         try:
             print("Starting NetToPLCSim server...")
             # Start the process hidden
@@ -172,19 +184,21 @@ class plcSimS7:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
-            
-            time.sleep(0.1) # Short initial pause
-            
+
+            time.sleep(0.1)  # Short initial pause
+
             # 3. Robust Verification of the Listening Port
             start_time = time.time()
-            
-            print(f"Waiting for NetToPLCSim listening port (max {self.MAX_SERVER_START_WAIT}s)...")
-            
+
+            print(
+                f"Waiting for NetToPLCSim listening port (max {self.MAX_SERVER_START_WAIT}s)...")
+
             while time.time() - start_time < self.MAX_SERVER_START_WAIT:
-                
+
                 # Check if process is still active
                 if self._server_process.poll() is not None:
-                    print(f"NetToPLCSim crashed during startup with exit code: {self._server_process.poll()}")
+                    print(
+                        f"NetToPLCSim crashed during startup with exit code: {self._server_process.poll()}")
                     self._server_process = None
                     return False
 
@@ -192,40 +206,43 @@ class plcSimS7:
                 import threading
                 found_port = None
                 lock = threading.Lock()
-                
+
                 def check_port_threaded(port):
                     nonlocal found_port
                     if self._is_server_listening(port, timeout=0.05):
                         with lock:
                             if found_port is None:  # Only set if not already found
                                 found_port = port
-                
+
                 # Start threads for all ports
                 threads = []
                 for offset in range(self.PORT_TRY_LIMIT):
                     current_port = self.START_PORT + offset
-                    t = threading.Thread(target=check_port_threaded, args=(current_port,), daemon=True)
+                    t = threading.Thread(target=check_port_threaded, args=(
+                        current_port,), daemon=True)
                     threads.append(t)
                     t.start()
-                
+
                 # Wait for all threads with timeout
                 for t in threads:
                     t.join(timeout=0.1)
-                
+
                 # Check if we found a port
                 if found_port is not None:
                     self.tcpport = found_port
                     self.actual_server_port = found_port
-                    print(f"NetToPLCSim server running on port {found_port} after {time.time() - start_time:.2f}s.")
+                    print(
+                        f"NetToPLCSim server running on port {found_port} after {time.time() - start_time:.2f}s.")
                     return True
-                
+
                 time.sleep(self.POLL_INTERVAL)
 
             # After the loop: server not found within the time limit
-            print(f"Timeout. No listening port found within {self.MAX_SERVER_START_WAIT} seconds.")
-            self._stop_server() 
+            print(
+                f"Timeout. No listening port found within {self.MAX_SERVER_START_WAIT} seconds.")
+            self._stop_server()
             return False
-                
+
         except FileNotFoundError:
             print(f"NetToPLCsim.exe not found: {self.NETTOPLCSIM_EXE}")
             return False
@@ -267,19 +284,20 @@ class plcSimS7:
         # Start server first. The server finds the correct port and sets self.tcpport.
         if not self._start_server():
             return False
-        
+
         max_retries = 2
         for attempt in range(1, max_retries + 1):
             try:
-                self.client.connect(self.ip, self.rack, self.slot, self.tcpport)
+                self.client.connect(self.ip, self.rack,
+                                    self.slot, self.tcpport)
                 if self.client.get_connected():
                     return True
             except Exception as e:
                 pass
-            
+
             if attempt < max_retries:
                 time.sleep(0.1)
-        
+
         # VERWIJDER de hele "alternative slots" sectie
         print("No PLCSim connection - check if PLCSim is running")
         return False
@@ -292,34 +310,34 @@ class plcSimS7:
             if self.client.get_connected():
                 self.client.disconnect()
                 print("Disconnected from PLC")
-            
+
             # Always try to stop server
             self._stop_server()
-            
+
             # Extra cleanup: kill any remaining NetToPLCSim processes
             try:
                 import subprocess
-                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'], 
-                             stdout=subprocess.DEVNULL, 
-                             stderr=subprocess.DEVNULL,
-                             timeout=2)
+                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL,
+                               timeout=2)
             except:
                 pass
-            
+
             return True
         except Exception as e:
             print(f"Error disconnecting: {e}")
             # Still try cleanup
             try:
                 import subprocess
-                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'], 
-                             stdout=subprocess.DEVNULL, 
-                             stderr=subprocess.DEVNULL,
-                             timeout=2)
+                subprocess.run(['taskkill', '/F', '/IM', 'NetToPLCSim.exe'],
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL,
+                               timeout=2)
             except:
                 pass
             return False
-        
+
     def isConnected(self) -> bool:
         """
         Check if the connection to the PLC is alive.
@@ -401,19 +419,21 @@ class plcSimS7:
         """
         if self.isConnected():
             # Snap7 functions handle SIGNED INT, but PLC AI/AQ are often used as UINT in simulation
-            if startByte >= 0 and 0 <= value <= 65535: 
+            if startByte >= 0 and 0 <= value <= 65535:
                 try:
                     buffer_AI = bytearray(2)
                     # Ensure value is an integer and within range
-                    val_int = int(round(value)) if isinstance(value, float) else int(value)
-                    
+                    val_int = int(round(value)) if isinstance(
+                        value, float) else int(value)
+
                     # Manual byte-swapping for Big Endian (S7 format) to simulate UINT
                     lowByte = val_int & 0xFF
                     highByte = (val_int >> 8) & 0xFF
                     buffer_AI[0] = highByte
                     buffer_AI[1] = lowByte
-                    
-                    self.client.eb_write(start=startByte, size=2, data=buffer_AI)
+
+                    self.client.eb_write(
+                        start=startByte, size=2, data=buffer_AI)
                     return val_int
                 except Exception as e:
                     # Raise to allow upper layers to disconnect on error
@@ -435,13 +455,13 @@ class plcSimS7:
             if startByte >= 0:
                 try:
                     data = self.client.ab_read(start=startByte, size=2)
-                    return s7util.get_int(data, 0) # Get as signed integer
+                    return s7util.get_int(data, 0)  # Get as signed integer
                 except Exception as e:
                     # Raise to allow upper layers to disconnect on error
                     raise
             return -1
         return -1
-    
+
     def SetDO(self, byte: int, bit: int, value: int) -> int:
         """
         Set a digital output (DO) bit in the PLC output process image.
@@ -489,17 +509,18 @@ class plcSimS7:
             if startByte >= 0 and -32768 <= value <= 32767:
                 try:
                     buffer_AO = bytearray(2)
-                    val_int = int(round(value)) if isinstance(value, float) else int(value)
-                    
+                    val_int = int(round(value)) if isinstance(
+                        value, float) else int(value)
+
                     # Convert to signed 16-bit and then to bytes (Big Endian)
                     if val_int < 0:
                         val_int = val_int & 0xFFFF  # Two's complement
-                    
+
                     lowByte = val_int & 0xFF
                     highByte = (val_int >> 8) & 0xFF
                     buffer_AO[0] = highByte
                     buffer_AO[1] = lowByte
-                    
+
                     self.client.ab_write(start=startByte, data=buffer_AO)
                     return val_int
                 except Exception as e:
@@ -524,14 +545,15 @@ class plcSimS7:
                 try:
                     size = endByte - startByte + 1
                     bufferEmpty = bytearray(size)
-                    self.client.eb_write(start=startByte, size=size, data=bufferEmpty)
+                    self.client.eb_write(
+                        start=startByte, size=size, data=bufferEmpty)
                     return True
                 except Exception as e:
                     # Raise to allow upper layers to disconnect on error
                     raise
             return False
         return False
-    
+
     def resetSendOutputs(self, startByte: int, endByte: int) -> bool:
         """
         Reset all output data sent to the PLC (DO, AO) by writing zeros.
@@ -563,4 +585,3 @@ class plcSimS7:
             self.disconnect()
         except:
             pass
-        

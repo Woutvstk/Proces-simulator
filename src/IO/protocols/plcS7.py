@@ -1,5 +1,10 @@
-import snap7
-import snap7.util as s7util
+try:
+    import snap7
+    import snap7.util as s7util
+    SNAP7_AVAILABLE = True
+except (ImportError, OSError) as e:
+    SNAP7_AVAILABLE = False
+    SNAP7_ERROR = str(e)
 
 
 class plcS7:
@@ -17,6 +22,9 @@ class plcS7:
         tcpport (int): TCP port for the connection (default: 102)
         network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
+        if not SNAP7_AVAILABLE:
+            raise ImportError(f"snap7 library not available: {SNAP7_ERROR}")
+
         self.ip = ip
         self.rack = rack
         self.slot = slot
