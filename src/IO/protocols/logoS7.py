@@ -1,10 +1,5 @@
-try:
-    import snap7
-    import snap7.util as s7util
-    SNAP7_AVAILABLE = True
-except (ImportError, OSError) as e:
-    SNAP7_AVAILABLE = False
-    SNAP7_ERROR = str(e)
+import snap7
+import snap7.util as s7util
 
 
 class logoS7:
@@ -27,8 +22,17 @@ class logoS7:
         tcpport (int): TCP port for the connection (default: 102)
         network_adapter (str): Network adapter to use ("auto" or adapter name)
         """
-        if not SNAP7_AVAILABLE:
-            raise ImportError(f"snap7 library not available: {SNAP7_ERROR}")
+        try:
+            self.ip = ip
+            self.tsapLogo = tsapLogo
+            self.tsapServer = tsapServer
+            self.tcpport = tcpport
+            self.network_adapter = network_adapter
+            self.logo = snap7.logo.Logo()
+            
+        except Exception as e:
+            print(f"__init__ error: {e}")
+
 
     def connect(self, instance_name: str | None = None) -> bool:
         """
@@ -150,7 +154,7 @@ class logoS7:
         """
         try:
             if byte % 2 == 0:
-                address = f"VW{byte}"
+                address = f"VW{byte }"
                 data = self.logo.read(address)
                 return int(data)
             return -1
@@ -194,7 +198,7 @@ class logoS7:
         try:
             if byte >= 0 and byte % 2 == 0:
                 val = int(value) & 0xFFFF
-                address = f"VW{byte}"
+                address = f"VW{byte }"
                 self.logo.write(address, val)
                 return val
             return -1

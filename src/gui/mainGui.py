@@ -234,6 +234,13 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 self._button_manager.set_button_status_obj('GeneralReset', status)
         except Exception:
             pass
+        try:
+            if hasattr(self, '_button_pulse_manager'):
+                self._button_pulse_manager.set_button_status_obj('PidStart', status)
+                self._button_pulse_manager.set_button_status_obj('PidStop', status)
+                self._button_pulse_manager.set_button_status_obj('PidReset', status)
+        except Exception:
+            pass
 
     def _initialize_gui_mode(self):
         """Initialize GUI mode after mainConfig is available"""

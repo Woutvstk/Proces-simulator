@@ -48,6 +48,7 @@ logger = logging.getLogger(__name__)
 # Suppress Snap7 logging completely to prevent spam when connection is lost
 logging.getLogger('snap7.client').setLevel(logging.CRITICAL)
 logging.getLogger('snap7.common').setLevel(logging.CRITICAL)
+logging.getLogger('snap7.logo').setLevel(logging.CRITICAL)
 
 # ============================================================================
 # INITIALIZATION
