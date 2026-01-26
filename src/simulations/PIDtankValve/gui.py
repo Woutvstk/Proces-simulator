@@ -364,34 +364,50 @@ class VatWidget(QWidget):
             try:
                 # Set tag labels with signal names from IO configuration
                 tag_mapping = {
-                    'tagValveOut': 'DQValveOut',
-                    'tagValveIn': 'DQValveIn',
-                    'tagHeater': 'DQHeater',
+                    'tagValveOut': 'AQValveOutFraction',
+                    'tagValveIn': 'AQValveInFraction',
+                    'tagHeater': 'AQHeaterFraction',
                     'tagLevelSwitchMax': 'DILevelSensorHigh',
                     'tagLevelSwitchMin': 'DILevelSensorLow',
                     'tagLevelSensor': 'AILevelSensor',
                     'tagTempValue': 'AITemperatureSensor'
                 }
 
-                # Apply signal names from config.signal_names dictionary
+                # Apply signal names from config using get_signal_name_for_attribute
                 for tag_id, attr_name in tag_mapping.items():
-                    if hasattr(self.config, 'signal_names') and attr_name in self.config.signal_names:
-                        signal_name = self.config.signal_names[attr_name]
+                    # Try to get custom signal name from IO configuration
+                    signal_name = None
+
+                    # First check custom_signal_names
+                    if hasattr(self.config, 'custom_signal_names') and attr_name in self.config.custom_signal_names:
+                        signal_name = self.config.custom_signal_names[attr_name]
+                    # Then check reverse_io_mapping
+                    elif hasattr(self.config, 'reverse_io_mapping') and attr_name in self.config.reverse_io_mapping:
+                        signal_name = self.config.reverse_io_mapping[attr_name]
+                    # Finally use get_signal_name_for_attribute if available
+                    elif hasattr(self.config, 'get_signal_name_for_attribute'):
+                        signal_name = self.config.get_signal_name_for_attribute(
+                            attr_name)
+
+                    # If we got a signal name, use it; otherwise use default
+                    if signal_name:
                         self.setSVGText(tag_id, signal_name)
-                    elif attr_name == 'DQValveOut':
-                        self.setSVGText(tag_id, "ValveOut")
-                    elif attr_name == 'DQValveIn':
-                        self.setSVGText(tag_id, "ValveIn")
-                    elif attr_name == 'DQHeater':
-                        self.setSVGText(tag_id, "Heater")
-                    elif attr_name == 'DILevelSensorHigh':
-                        self.setSVGText(tag_id, "LevelMax")
-                    elif attr_name == 'DILevelSensorLow':
-                        self.setSVGText(tag_id, "LevelMin")
-                    elif attr_name == 'AILevelSensor':
-                        self.setSVGText(tag_id, "LevelSensor")
-                    elif attr_name == 'AITemperatureSensor':
-                        self.setSVGText(tag_id, "TempSensor")
+                    else:
+                        # Fallback to default names
+                        if attr_name == 'AQValveOutFraction':
+                            self.setSVGText(tag_id, "ValveOut")
+                        elif attr_name == 'AQValveInFraction':
+                            self.setSVGText(tag_id, "ValveIn")
+                        elif attr_name == 'AQHeaterFraction':
+                            self.setSVGText(tag_id, "Heater")
+                        elif attr_name == 'DILevelSensorHigh':
+                            self.setSVGText(tag_id, "LevelMax")
+                        elif attr_name == 'DILevelSensorLow':
+                            self.setSVGText(tag_id, "LevelMin")
+                        elif attr_name == 'AILevelSensor':
+                            self.setSVGText(tag_id, "LevelSensor")
+                        elif attr_name == 'AITemperatureSensor':
+                            self.setSVGText(tag_id, "TempSensor")
 
                 # Update the SVG renderer to reflect changes
                 self.updateSVG()

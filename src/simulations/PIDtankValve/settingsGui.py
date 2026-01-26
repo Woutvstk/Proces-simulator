@@ -683,6 +683,38 @@ class TankSimSettingsMixin:
                 except Exception:
                     pass
 
+                # Update setpoint slider positions and labels in PLC mode
+                try:
+                    # Update temperature setpoint slider and label
+                    slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+                    label_temp = getattr(self, 'label_PidTankTempSP', None)
+                    if slider_temp and hasattr(self.tanksim_status, 'pidPidTankTempSPValue'):
+                        temp_sp_value = int(
+                            self.tanksim_status.pidPidTankTempSPValue)
+                        # Prevent triggering valueChanged
+                        slider_temp.blockSignals(True)
+                        slider_temp.setValue(temp_sp_value)
+                        slider_temp.blockSignals(False)
+                        if label_temp:
+                            self._update_temp_label(label_temp, temp_sp_value)
+
+                    # Update level setpoint slider and label
+                    slider_level = getattr(self, 'slider_PidTankLevelSP', None)
+                    label_level = getattr(self, 'label_PidTankLevelSP', None)
+                    if slider_level and hasattr(self.tanksim_status, 'pidPidTankLevelSPValue'):
+                        level_sp_value = int(
+                            self.tanksim_status.pidPidTankLevelSPValue)
+                        # Prevent triggering valueChanged
+                        slider_level.blockSignals(True)
+                        slider_level.setValue(level_sp_value)
+                        slider_level.blockSignals(False)
+                        if label_level:
+                            self._update_level_label(
+                                label_level, level_sp_value)
+                except Exception as e:
+                    logger.debug(
+                        f"Error updating setpoint sliders in PLC mode: {e}")
+
             # Water color
             self.vat_widget.waterColor = self.colorDropDown.currentData()
 
