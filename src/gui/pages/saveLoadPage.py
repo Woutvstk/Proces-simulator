@@ -177,12 +177,14 @@ class SaveLoadMixin:
                     if simulation_manager:
                         sim = simulation_manager.get_active_simulation()
                         if sim and hasattr(self, 'apply_loaded_state_to_gui'):
+                            logger.info(">>> Calling apply_loaded_state_to_gui...")
                             self.apply_loaded_state_to_gui(
                                 getattr(sim, 'config', None),
                                 getattr(sim, 'status', None)
                             )
+                            logger.info(">>> ✓ State applied to GUI")
                 except Exception as e:
-                    logger.warning(f"Could not apply loaded state to GUI fields: {e}")
+                    logger.error(f"ERROR: Could not apply loaded state to GUI fields: {e}", exc_info=True)
                 
                 # Update GUI to reflect loaded state
                 self._update_gui_after_load()
@@ -218,6 +220,7 @@ class SaveLoadMixin:
             io_config_path: Path to IO configuration file
         """
         try:
+            logger.info(f">>> Reloading IO config from: {io_config_path}")
             # Get active simulation
             simulation_manager = None
             if hasattr(self, 'mainConfig') and hasattr(self.mainConfig, 'simulationManager'):
@@ -228,7 +231,7 @@ class SaveLoadMixin:
                 if active_sim and hasattr(active_sim, 'config'):
                     # Reload IO config
                     active_sim.config.load_io_config_from_file(io_config_path)
-                    logger.info(f"IO configuration reloaded from: {io_config_path}")
+                    logger.info(f"    ✓ IO configuration loaded from: {io_config_path}")
                     
                     # Update GUI references
                     if hasattr(self, 'tanksim_config'):
@@ -237,20 +240,22 @@ class SaveLoadMixin:
                     if hasattr(self, 'tanksim_status'):
                         self.set_simulation_status(active_sim.status)
                     
-                    # Update IO table without overwriting loaded config
+                    # Apply loaded IO config to GUI table
                     try:
                         if hasattr(self, 'apply_loaded_io_config'):
-                            self.apply_loaded_io_config(Path(io_config_path))
+                            logger.info("    >>> Applying loaded IO config to GUI table...")
+                            result = self.apply_loaded_io_config(Path(io_config_path))
+                            logger.info(f"    ✓ IO config applied to GUI: {result}")
                     except Exception as e:
-                        logger.warning(f"Could not refresh IO table from loaded config: {e}")
+                        logger.error(f"    ERROR: Could not apply loaded IO config to GUI: {e}", exc_info=True)
                     
                     # Start forced write period for IO handler
                     if hasattr(self, 'mainConfig') and hasattr(self.mainConfig, 'ioHandler'):
                         self.mainConfig.ioHandler.start_force_write_period()
-                        logger.info("Started IO forced write period after load")
+                        logger.info("    ✓ Started IO forced write period after load")
                         
         except Exception as e:
-            logger.error(f"Failed to reload IO config after load: {e}")
+            logger.error(f"ERROR: Failed to reload IO config after load: {e}", exc_info=True)
 
     def _update_gui_after_load(self):
         """Update GUI elements after loading state."""
@@ -273,12 +278,29 @@ class SaveLoadMixin:
                 # Block signals to prevent triggering connection attempts
                 self.controlerDropDown.blockSignals(True)
                 
-                # Find and select the matching item
-                index = self.controlerDropDown.findText(dropdown_text)
-                if index >= 0:
-                    self.controlerDropDown.setCurrentIndex(index)
+                # Try exact display text match first
+                if self.controlerDropDown.findText(dropdown_text) >= 0:
+                    self.controlerDropDown.setCurrentText(dropdown_text)
+                else:
+                    # Fallback: try to match by base protocol name (e.g., 'logo!')
+                    matched = False
+                    for i in range(self.controlerDropDown.count()):
+                        item = self.controlerDropDown.itemText(i)
+                        if item.startswith(protocol):
+                            self.controlerDropDown.setCurrentIndex(i)
+                            matched = True
+                            break
+                    if not matched:
+                        # Last resort: set text directly (may not be present in list)
+                        self.controlerDropDown.setCurrentText(dropdown_text)
                 
                 self.controlerDropDown.blockSignals(False)
+                
+                # Ensure mainConfig matches what we just set (avoid races)
+                try:
+                    self.mainConfig.plcProtocol = protocol
+                except Exception:
+                    pass
                 
                 # Update active method label
                 if hasattr(self, '_update_active_method_label'):

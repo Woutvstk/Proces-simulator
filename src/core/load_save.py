@@ -270,15 +270,24 @@ class StateManager:
             # 3. Load main configuration
             logger.info("Restoring main configuration...")
             main_config_data = state_data["main_config"]
+            logger.debug(f"Main config data from file: {main_config_data}")
             
             if hasattr(main_config, 'importExportVariableList'):
                 for var in main_config.importExportVariableList:
                     if var in main_config_data:
                         try:
-                            current_type = type(getattr(main_config, var))
-                            setattr(main_config, var, current_type(main_config_data[var]))
+                            current_value = getattr(main_config, var)
+                            current_type = type(current_value)
+                            new_value = main_config_data[var]
+                            # Try converting to the target type, but fall back if conversion fails
+                            try:
+                                converted = current_type(new_value)
+                            except Exception:
+                                converted = new_value
+                            setattr(main_config, var, converted)
+                            logger.info(f"Set main_config.{var} = {getattr(main_config, var)!r}")
                         except Exception as e:
-                            logger.warning(f"Could not set {var}: {e}")
+                            logger.warning(f"Could not set {var} from value {main_config_data.get(var)!r}: {e}")
             else:
                 # Fallback: restore all attributes
                 for key, value in main_config_data.items():
@@ -287,6 +296,13 @@ class StateManager:
                             setattr(main_config, key, value)
                         except Exception as e:
                             logger.warning(f"Could not set {key}: {e}")
+            
+            # Debug: dump resulting main_config values for troubleshooting
+            try:
+                dump = {var: getattr(main_config, var) for var in getattr(main_config, 'importExportVariableList', [])}
+                logger.debug(f"Resulting main_config values after load: {dump}")
+            except Exception:
+                pass
             
             logger.info("✓ Main configuration restored")
             

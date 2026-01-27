@@ -46,6 +46,66 @@ class plcSimS7:
     NETTOPLCSIM_EXE = os.path.join(_NETTOPLCSIM_DIR, "NetToPLCsim.exe")
     NETTOPLCSIM_INI = os.path.join(_NETTOPLCSIM_DIR, "configuration.ini")
 
+    @staticmethod
+    def _find_nettoplcsim_exe_candidates():
+        """Return a list of candidate paths where NetToPLCsim.exe might be located."""
+        candidates = []
+        # Candidate based on computed NETTOPLCSIM_EXE
+        try:
+            base_dir = plcSimS7._BASE_DIR
+            candidates.append(os.path.join(base_dir, 'NetToPLCsim', 'NetToPLCsim.exe'))
+        except Exception:
+            pass
+
+        # Module relative path (always valid when running from source)
+        try:
+            module_dir = os.path.dirname(os.path.abspath(__file__))
+            candidates.append(os.path.join(module_dir, 'NetToPLCsim', 'NetToPLCsim.exe'))
+        except Exception:
+            pass
+
+        # If frozen with PyInstaller, check the _MEIPASS extraction dir
+        try:
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                meipass = sys._MEIPASS
+                candidates.append(os.path.join(meipass, 'NetToPLCsim', 'NetToPLCsim.exe'))
+                candidates.append(os.path.join(meipass, 'IO', 'protocols', 'PLCSimS7', 'NetToPLCsim', 'NetToPLCsim.exe'))
+        except Exception:
+            pass
+
+        # Current working directory
+        try:
+            candidates.append(os.path.join(os.getcwd(), 'NetToPLCsim', 'NetToPLCsim.exe'))
+        except Exception:
+            pass
+
+        # Directory next to the main executable (useful when app is placed in a folder with NetToPLCsim)
+        try:
+            if hasattr(sys, 'executable'):
+                candidates.append(os.path.join(os.path.dirname(sys.executable), 'NetToPLCsim', 'NetToPLCsim.exe'))
+        except Exception:
+            pass
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique = []
+        for c in candidates:
+            if c and c not in seen:
+                seen.add(c)
+                unique.append(c)
+        return unique
+
+    def _locate_nettoplcsim_exe(self) -> str | None:
+        """Try multiple candidate locations and return first existing path, or None if not found."""
+        candidates = self._find_nettoplcsim_exe_candidates()
+        for p in candidates:
+            try:
+                if os.path.exists(p):
+                    return p
+            except Exception:
+                continue
+        return None
+
     # Configuration for port retry logic
     START_PORT = 1024
     PORT_TRY_LIMIT = 3
@@ -157,10 +217,26 @@ class plcSimS7:
                 self.tcpport = self.actual_server_port
             return True
 
-        # Check if EXE exists
+        # Ensure NetToPLCsim executable is located; try multiple fallback locations
         if not os.path.exists(self.NETTOPLCSIM_EXE):
-            print(f"NetToPLCsim.exe not found at: {self.NETTOPLCSIM_EXE}")
-            return False
+            # Try locating in alternate locations
+            found = self._locate_nettoplcsim_exe()
+            if found:
+                self.NETTOPLCSIM_EXE = found
+                self._NETTOPLCSIM_DIR = os.path.dirname(found)
+                self.NETTOPLCSIM_INI = os.path.join(self._NETTOPLCSIM_DIR, 'configuration.ini')
+                print(f"NetToPLCsim.exe found at fallback location: {found}")
+            else:
+                print(f"NetToPLCsim.exe not found at: {self.NETTOPLCSIM_EXE}")
+                # Log candidates for debugging
+                try:
+                    candidates = self._find_nettoplcsim_exe_candidates()
+                    print("Searched candidates:")
+                    for c in candidates:
+                        print(f"  - {c}")
+                except Exception:
+                    pass
+                return False
 
         # 1. Update INI file
         if not self._update_ini_file():

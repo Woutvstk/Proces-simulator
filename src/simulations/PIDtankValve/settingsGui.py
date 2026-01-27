@@ -148,6 +148,261 @@ class TankSimSettingsMixin:
         except AttributeError:
             pass
 
+    def apply_loaded_state_to_gui(self, cfg, status):
+        """Apply loaded simulation config/status to GUI fields.
+
+        This is called after a state file is loaded to ensure UI controls
+        (entries, dropdowns, checkboxes) reflect the loaded values so the
+        visual representation is correct and not overwritten by defaults.
+        """
+        try:
+            logger.info("    >>> Applying loaded state to GUI...")
+            # Make sure the simPage is current so widgets are visible and update
+            try:
+                from PyQt5.QtWidgets import QStackedWidget
+                stackedWidget = self.findChild(QStackedWidget, "stackedWidget")
+                if stackedWidget:
+                    simPage = self.findChild(QWidget, "simPage")
+                    if simPage:
+                        index = stackedWidget.indexOf(simPage)
+                        if index >= 0:
+                            stackedWidget.setCurrentIndex(index)
+                            logger.info(f"        ✓ Set simPage as current")
+            except Exception as e:
+                logger.debug(f"        Could not switch to simPage: {e}")
+            
+            # Apply configuration values to entry fields (convert units where needed)
+            if cfg:
+                config_fields_to_apply = [
+                    'tankVolume', 'valveInMaxFlow', 'valveOutMaxFlow', 'heaterMaxPower',
+                    'ambientTemp', 'tankHeatLoss', 'liquidVolumeTimeDelay', 'liquidTempTimeDelay',
+                    'liquidSpecificHeatCapacity', 'liquidSpecificWeight', 'liquidBoilingTemp',
+                    'digitalLevelSensorHighTriggerLevel', 'digitalLevelSensorLowTriggerLevel'
+                ]
+                logger.info(f"        Applying config values: {', '.join(config_fields_to_apply)}")
+                logger.info(f"        Config object values:")
+                for field in config_fields_to_apply:
+                    val = getattr(cfg, field, '?')
+                    logger.info(f"          {field}: {val}")
+                
+                # Volume in UI is m^3, config stores liters
+                volumeEntry = self.findChild(QWidget, "volumeEntry")
+                if volumeEntry:
+                    try:
+                        m3_val = float(cfg.tankVolume) / 1000.0
+                        volumeEntry.blockSignals(True)
+                        volumeEntry.setText(f"{m3_val}")
+                        volumeEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Flow inputs (show as integers)
+                maxFlowInEntry = self.findChild(QWidget, "maxFlowInEntry")
+                if maxFlowInEntry:
+                    try:
+                        maxFlowInEntry.blockSignals(True)
+                        maxFlowInEntry.setText(str(int(cfg.valveInMaxFlow)))
+                        maxFlowInEntry.blockSignals(False)
+                    except Exception:
+                        pass
+                maxFlowOutEntry = self.findChild(QWidget, "maxFlowOutEntry")
+                if maxFlowOutEntry:
+                    try:
+                        maxFlowOutEntry.blockSignals(True)
+                        maxFlowOutEntry.setText(str(int(cfg.valveOutMaxFlow)))
+                        maxFlowOutEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Heater power
+                powerHeatingCoilEntry = self.findChild(QWidget, "powerHeatingCoilEntry")
+                if powerHeatingCoilEntry:
+                    try:
+                        powerHeatingCoilEntry.blockSignals(True)
+                        powerHeatingCoilEntry.setText(str(int(cfg.heaterMaxPower)))
+                        powerHeatingCoilEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Ambient temperature
+                ambientTempEntry = self.findChild(QWidget, "ambientTempEntry")
+                if ambientTempEntry:
+                    try:
+                        ambientTempEntry.blockSignals(True)
+                        ambientTempEntry.setText(str(float(cfg.ambientTemp)))
+                        ambientTempEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Tank heat loss
+                heatLossVatEntry = self.findChild(QWidget, "heatLossVatEntry")
+                if heatLossVatEntry:
+                    try:
+                        heatLossVatEntry.blockSignals(True)
+                        heatLossVatEntry.setText(str(float(cfg.tankHeatLoss)))
+                        heatLossVatEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Time delays
+                timeDelayfillingEntry = self.findChild(QWidget, "timeDelayfillingEntry")
+                if timeDelayfillingEntry:
+                    try:
+                        timeDelayfillingEntry.blockSignals(True)
+                        timeDelayfillingEntry.setText(str(float(getattr(cfg, 'liquidVolumeTimeDelay', 0.0))))
+                        timeDelayfillingEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                timeDelayTempEntry = self.findChild(QWidget, "timeDelayTempEntry")
+                if timeDelayTempEntry:
+                    try:
+                        timeDelayTempEntry.blockSignals(True)
+                        timeDelayTempEntry.setText(str(float(getattr(cfg, 'liquidTempTimeDelay', 0.0))))
+                        timeDelayTempEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Liquid properties: specific heat, density, boiling temp
+                specificHeatCapacity = self.findChild(QWidget, "specificHeatCapacity")
+                if specificHeatCapacity:
+                    try:
+                        specificHeatCapacity.blockSignals(True)
+                        specificHeatCapacity.setText(str(float(cfg.liquidSpecificHeatCapacity)))
+                        specificHeatCapacity.blockSignals(False)
+                    except Exception:
+                        pass
+
+                specificWeightEntry = self.findChild(QWidget, "specificWeightEntry")
+                if specificWeightEntry:
+                    try:
+                        specificWeightEntry.blockSignals(True)
+                        # UI expects kg/m^3, config stores kg/L; convert back
+                        specificWeightEntry.setText(str(float(cfg.liquidSpecificWeight) * 1000.0))
+                        specificWeightEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                boilingTempEntry = self.findChild(QWidget, "boilingTempEntry")
+                if boilingTempEntry:
+                    try:
+                        boilingTempEntry.blockSignals(True)
+                        boilingTempEntry.setText(str(float(cfg.liquidBoilingTemp)))
+                        boilingTempEntry.blockSignals(False)
+                    except Exception:
+                        pass
+
+                # Level switch heights (percentages)
+                try:
+                    levelSwitchMaxHeightEntry = self.findChild(QWidget, "levelSwitchMaxHeightEntry")
+                    levelSwitchMinHeightEntry = self.findChild(QWidget, "levelSwitchMinHeightEntry")
+                    if levelSwitchMaxHeightEntry and cfg.tankVolume:
+                        max_h = cfg.digitalLevelSensorHighTriggerLevel / cfg.tankVolume * 100.0
+                        levelSwitchMaxHeightEntry.blockSignals(True)
+                        levelSwitchMaxHeightEntry.setText(f"{max_h:.1f}")
+                        levelSwitchMaxHeightEntry.blockSignals(False)
+                    if levelSwitchMinHeightEntry and cfg.tankVolume:
+                        min_h = cfg.digitalLevelSensorLowTriggerLevel / cfg.tankVolume * 100.0
+                        levelSwitchMinHeightEntry.blockSignals(True)
+                        levelSwitchMinHeightEntry.setText(f"{min_h:.1f}")
+                        levelSwitchMinHeightEntry.blockSignals(False)
+                except Exception:
+                    pass
+        
+
+            # Apply status values to UI controls
+            if status:
+                logger.info(f"        Applying status values (color={getattr(status, 'tankColor', '?')}, displayLevel={getattr(status, 'displayLevelSwitches', '?')})...")
+                # Tank color dropdown - try to match by data() (hex code)
+                try:
+                    colorDropDown = self.findChild(QWidget, "colorDropDown")
+                    if colorDropDown:
+                        target = getattr(status, 'tankColor', None)
+                        if target:
+                            found = False
+                            for i in range(colorDropDown.count()):
+                                if colorDropDown.itemData(i) == target:
+                                    colorDropDown.blockSignals(True)
+                                    colorDropDown.setCurrentIndex(i)
+                                    colorDropDown.blockSignals(False)
+                                    found = True
+                                    break
+                            if not found:
+                                # Add custom color and select it
+                                colorDropDown.addItem(target, target)
+                                colorDropDown.setCurrentIndex(colorDropDown.count() - 1)
+                            # Also apply immediately to vat_widget if available
+                            try:
+                                if hasattr(self, 'vat_widget') and self.vat_widget:
+                                    self.vat_widget.waterColor = target
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                # Display checkboxes
+                try:
+                    levelSwitchesCheckBox = self.findChild(QWidget, "levelSwitchesCheckBox")
+                    if levelSwitchesCheckBox:
+                        levelSwitchesCheckBox.blockSignals(True)
+                        levelSwitchesCheckBox.setChecked(bool(getattr(status, 'displayLevelSwitches', True)))
+                        levelSwitchesCheckBox.blockSignals(False)
+                        # Also push to status object to be safe
+                        try:
+                            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                                self.tanksim_status.displayLevelSwitches = bool(getattr(status, 'displayLevelSwitches', True))
+                        except Exception:
+                            pass
+                    analogValueTempCheckBox = self.findChild(QWidget, "analogValueTempCheckBox")
+                    if analogValueTempCheckBox:
+                        analogValueTempCheckBox.blockSignals(True)
+                        analogValueTempCheckBox.setChecked(bool(getattr(status, 'displayTemperature', True)))
+                        analogValueTempCheckBox.blockSignals(False)
+                        try:
+                            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                                self.tanksim_status.displayTemperature = bool(getattr(status, 'displayTemperature', True))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                # Heater power fraction (0..1) -> slider/spinbox (0..100)
+                try:
+                    percent = int(round(getattr(status, 'heaterPowerFraction', 0.0) * 100.0))
+                    for slider in getattr(self, '_heater_power_sliders', []):
+                        try:
+                            slider.blockSignals(True)
+                            slider.setValue(percent)
+                            slider.blockSignals(False)
+                        except Exception:
+                            pass
+                    for spin in getattr(self, '_heater_power_spinboxes', []):
+                        try:
+                            spin.blockSignals(True)
+                            spin.setValue(percent)
+                            spin.blockSignals(False)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            # Finally, refresh display so visual elements reflect loaded values
+            try:
+                self.update_tanksim_display()
+            except Exception:
+                pass
+
+            # Prevent GUI from writing back to status/config for a longer window
+            # Extended to 3 seconds to ensure all loaded values are properly set
+            try:
+                import time as _time
+                self._suppress_gui_to_status_until = _time.monotonic() + 3.0
+                logger.info(f"GUI suppress enabled for 3 seconds")
+            except Exception:
+                pass
+        except Exception as e:
+            logger.warning(f"apply_loaded_state_to_gui failed: {e}")
+
         # Wire heater power sliders/spinboxes (supports multiple copies in different stacks)
         try:
             self._heater_power_sliders = []
@@ -802,6 +1057,16 @@ class TankSimSettingsMixin:
 
         if not hasattr(self, 'mainConfig') or self.mainConfig is None:
             return
+        
+        # Check if GUI updates are suppressed (e.g., after loading a state)
+        try:
+            if hasattr(self, '_suppress_gui_to_status_until'):
+                import time as _time
+                if _time.monotonic() < self._suppress_gui_to_status_until:
+                    return  # Skip writing to prevent overwriting loaded values
+        except Exception:
+            pass
+        
         # Make sure vat_widget is initialized
         if not hasattr(self, 'vat_widget') or self.vat_widget is None:
             try:

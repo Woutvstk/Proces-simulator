@@ -2229,7 +2229,7 @@ QGroupBox::title {
                      <string notr="true"/>
                     </property>
                     <property name="currentIndex">
-                     <number>1</number>
+                     <number>0</number>
                     </property>
                     <widget class="QWidget" name="PLCControls">
                      <layout class="QVBoxLayout" name="verticalLayout_adjustableValve_2">

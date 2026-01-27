@@ -2242,89 +2242,109 @@ class IOConfigMixin:
         except Exception as e:
             return  # Silent fail for auto-reload
 
-    def _update_table_from_config(self):
-        """Update the GUI table with addresses from the config"""
+    def apply_loaded_io_config(self, io_config_path: Path) -> bool:
+        """Apply an IO configuration file directly to the table without prompting.
+
+        Used when a state file contains an embedded IO configuration that was
+        extracted to disk. This will update `tanksim_config`, GUI offsets and
+        refresh the table to reflect the newly loaded file.
+        """
         try:
-            table = self.tableWidget_IO
-            config = self.tanksim_config
+            logger.info(f">>> apply_loaded_io_config called with path: {io_config_path}")
+            
+            if not hasattr(self, 'tanksim_config') or self.tanksim_config is None:
+                logger.warning("TankSim config unavailable - cannot apply IO config")
+                return False
 
-            table.blockSignals(True)
+            io_path = Path(io_config_path)
+            if not io_path.exists():
+                logger.warning(f"IO configuration file not found: {io_path}")
+                return False
 
-            # Determine correct address prefix based on controller type
-            is_logo = False
-            if hasattr(self, 'mainConfig') and self.mainConfig:
-                is_logo = (self.mainConfig.plcProtocol == "logo!")
+            logger.info(f"    Loading IO config from: {io_path}")
+            
+            # Prevent auto-conflict resolution while applying config
+            self.io_screen.loading_config = True
+            try:
+                # Load into the simulation config object
+                self.tanksim_config.load_io_config_from_file(io_path)
+                logger.info(f"    ✓ IO config loaded into tanksim_config")
 
-            for row in range(table.rowCount()):
-                name_item = table.item(row, 0)
-                if not name_item or not name_item.text():
-                    continue
+                # Update offsets in the GUI if present
+                try:
+                    with open(io_path, 'r', encoding='utf-8') as f:
+                        config_data = json.load(f)
+                    if 'offsets' in config_data:
+                        self.io_screen.byte_offsets = config_data['offsets'].copy()
+                        self.QLineEdit_BoolInput.setText(str(config_data['offsets'].get('BoolInput', 0)))
+                        self.QLineEdit_BoolOutput.setText(str(config_data['offsets'].get('BoolOutput', 0)))
+                        self.QLineEdit_DWORDInput.setText(str(config_data['offsets'].get('DWORDInput', 2)))
+                        self.QLineEdit_DWORDOutput.setText(str(config_data['offsets'].get('DWORDOutput', 2)))
+                        logger.info(f"    ✓ Offsets updated: {config_data['offsets']}")
+                    
+                    # Check signals count
+                    if 'signals' in config_data:
+                        signal_count = len(config_data['signals'])
+                        logger.info(f"    Found {signal_count} signals in IO config")
+                except Exception as e:
+                    logger.warning(f"    Failed to parse IO config file: {e}")
+                    pass
 
-                signal_name = name_item.text()
+                # Update the table to reflect the new addresses
+                try:
+                    logger.info("    >>> Calling _update_table_from_config...")
+                    self._update_table_from_config()
+                    logger.info("    ✓ Table updated from config")
+                except Exception as e:
+                    # Table may not be present in headless/test contexts; just warn
+                    logger.warning(f"Failed to update IO table from config: {e}", exc_info=True)
 
-                if signal_name not in config.io_signal_mapping:
-                    continue
+                # Clear dirty state - we just applied a file-derived config
+                try:
+                    self._io_config_dirty = False
+                except Exception:
+                    pass
 
-                attr_name = config.io_signal_mapping[signal_name]
-                attr_value = getattr(config, attr_name, None)
+            finally:
+                self.io_screen.loading_config = False
 
-                if attr_value is None:
-                    continue
+            # Start IO forced write period to initialize PLC/UI values
+            try:
+                if hasattr(self, 'mainConfig') and hasattr(self.mainConfig, 'ioHandler'):
+                    self.mainConfig.ioHandler.start_force_write_period()
+            except Exception:
+                pass
 
-                if "bit" in attr_value:
-                    byte_num = attr_value["byte"]
-                    bit_num = attr_value["bit"]
+            return True
+        except Exception as e:
+            logger.warning(f"apply_loaded_io_config failed: {e}")
+            return False
 
-                    # Format address based on controller type
-                    if is_logo:
-                        is_output = attr_name.startswith(("DQ", "AQ"))
-                        if is_output:
-                            # LOGO outputs: Q0.0 -> Q1, Q0.1 -> Q2, Q0.2 -> Q3, etc.
-                            channel = byte_num * 8 + bit_num + 1
-                            address = f"Q{channel}"
-                        else:
-                            # LOGO inputs: I0.0 -> V0.0, I0.1 -> V0.1, etc.
-                            address = f"V{byte_num}.{bit_num}"
-                    else:
-                        io_prefix = "Q" if attr_name.startswith(
-                            ("DQ", "AQ")) else "I"
-                        address = f"{io_prefix}{byte_num}.{bit_num}"
-
-                    table.setItem(
-                        row, 2, EditableTableWidgetItem(str(byte_num)))
-                    table.setItem(
-                        row, 3, EditableTableWidgetItem(str(bit_num)))
-                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
-
+    def _update_table_from_config(self):
+        """Update the GUI table with addresses from the config by reloading the entire IO config file"""
+        try:
+            logger.info("        >>> _update_table_from_config called")
+            
+            # Instead of using the mapping (which might not match), 
+            # directly reload the IO config JSON file into the table
+            try:
+                # Get the IO config path
+                from pathlib import Path
+                src_dir = Path(__file__).resolve().parent.parent.parent
+                io_config_path = src_dir / "IO" / "IO_configuration.json"
+                
+                if io_config_path.exists():
+                    logger.info(f"        Loading IO config from file: {io_config_path}")
+                    # Use the load_io_config method which fully rebuilds the table
+                    self.load_io_config(io_config_path)
+                    logger.info(f"        ✓ IO config reloaded into table from file")
                 else:
-                    byte_num = attr_value["byte"]
-
-                    # Format word addresses based on controller type
-                    if is_logo:
-                        is_output = attr_name.startswith(("DQ", "AQ"))
-                        if is_output:
-                            # LOGO analog outputs: QW4 -> AQ3, QW6 -> AQ4, etc.
-                            channel = (byte_num // 2) + 1
-                            address = f"AQ{channel}"
-                        else:
-                            # LOGO analog inputs: IW4 -> VW4, IW6 -> VW6, etc.
-                            address = f"VW{byte_num}"
-                    else:
-                        io_prefix = "Q" if attr_name.startswith(
-                            ("DQ", "AQ")) else "I"
-                        address = f"{io_prefix}W{byte_num}"
-
-                    table.setItem(
-                        row, 2, EditableTableWidgetItem(str(byte_num)))
-                    table.setItem(row, 3, EditableTableWidgetItem(""))
-                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
-
-                table._save_row_data(row)
-
-            table.blockSignals(False)
+                    logger.warning(f"        IO config file not found: {io_config_path}")
+            except Exception as e:
+                logger.error(f"        Failed to reload IO config from file: {e}", exc_info=True)
 
         except Exception as e:
-            pass  # Removed print
+            logger.error(f"        ERROR in _update_table_from_config: {e}", exc_info=True)
 
     def toggle_force_mode(self, checked):
         """Toggle force mode on/off"""

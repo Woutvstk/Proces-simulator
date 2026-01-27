@@ -160,7 +160,8 @@ class configuration:
             "tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp",
             "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel",
             "heaterMaxPower", "tankHeatLoss", "liquidSpecificHeatCapacity",
-            "liquidBoilingTemp", "liquidSpecificWeight"
+            "liquidBoilingTemp", "liquidSpecificWeight", "liquidVolumeTimeDelay",
+            "liquidTempTimeDelay"
         ]
 
     def get_byte_range(self):

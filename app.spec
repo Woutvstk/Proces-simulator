@@ -27,8 +27,10 @@ datas = [
 ]
 
 # Binaries
+import sys
+snap7_dll_path = os.path.join(sys.prefix, 'Lib', 'site-packages', 'snap7', 'lib', 'snap7.dll')
 binaries = [
-    (r"C:\Users\kobed\AppData\Roaming\Python\Python312\site-packages\snap7\lib\snap7.dll", "."),
+    (snap7_dll_path, "."),
 ]
 
 # Analysis
