@@ -384,13 +384,13 @@ class TemperatureTrendWindow(TrendGraphWindow):
         self.ax.set_ylabel('Temperature (°C)', color='black', fontsize=10)
         self.ax.tick_params(colors='black')
 
-        # Temperature line (animated for better performance)
+        # Temperature line
         self.line, = self.ax.plot(
-            [], [], color='#d9534f', linewidth=2, label='Temperature (°C)', animated=True)
+            [], [], color='#d9534f', linewidth=2, label='Temperature (°C)')
 
-        # Setpoint line (horizontal, animated)
+        # Setpoint line (horizontal)
         self.setpoint_line, = self.ax.plot(
-            [], [], color='#f0ad4e', linewidth=2, linestyle='--', label='Setpoint', animated=True)
+            [], [], color='#f0ad4e', linewidth=2, linestyle='--', label='Setpoint')
 
         # Power subplot (bottom, 44% of height)
         self.ax_power = self.figure.add_subplot(gs[1])
@@ -402,9 +402,9 @@ class TemperatureTrendWindow(TrendGraphWindow):
         self.ax_power.tick_params(colors='black')
         self.ax_power.set_ylim([0, 110])
 
-        # Power line (animated for better performance)
+        # Power line
         self.line_power, = self.ax_power.plot(
-            [], [], color='#e67e22', linewidth=2, label='Heating Power (%)', animated=True)
+            [], [], color='#e67e22', linewidth=2, label='Heating Power (%)')
 
         # Legends
         self.ax.legend(loc='upper left', facecolor='white',
@@ -421,10 +421,6 @@ class TemperatureTrendWindow(TrendGraphWindow):
 
         # Recreate canvas
         self.canvas = FigureCanvas(self.figure)
-
-        # Cache background for blitting (improves performance)
-        self.background_temp = None
-        self.background_power = None
 
         # Update toolbar (call without parameter now, will use self.boiling_temp)
         self.setup_toolbar()
@@ -608,6 +604,10 @@ class TemperatureTrendWindow(TrendGraphWindow):
                 sp = float(
                     setpoint) if setpoint is not None else self.setpoint_value
                 self.all_setpoints.append(sp)
+                
+                # Debug: Log data points
+                if self.counter % 50 == 0:  # Log every 50 samples (5 seconds at 10Hz)
+                    logger.debug(f"Temp trend: T={value:.1f}°C, SP={sp:.1f}°C, Power={power_fraction:.1f}%")
 
         except Exception as e:
             logger.error(f"Error adding trend value: {e}")
@@ -693,26 +693,9 @@ class TemperatureTrendWindow(TrendGraphWindow):
                 self.setpoint_line.set_data([], [])
                 self.line_power.set_data([], [])
 
-            # Draw and blit for better performance
+            # Always draw first to ensure visibility
             self.canvas.draw_idle()
-            
-            # Cache backgrounds if needed
-            if self.background_temp is None:
-                self.background_temp = self.canvas.copy_from_bbox(self.ax.bbox)
-            if self.background_power is None:
-                self.background_power = self.canvas.copy_from_bbox(self.ax_power.bbox)
-            
-            # Restore backgrounds and draw animated artists
-            if self.background_temp:
-                self.canvas.restore_region(self.background_temp)
-                self.ax.draw_artist(self.line)
-                self.ax.draw_artist(self.setpoint_line)
-                self.canvas.blit(self.ax.bbox)
-            
-            if self.background_power:
-                self.canvas.restore_region(self.background_power)
-                self.ax_power.draw_artist(self.line_power)
-                self.canvas.blit(self.ax_power.bbox)
+            self.canvas.flush_events()
                 
         except Exception as e:
             logger.error(f"Error updating trend plot: {e}")
@@ -728,9 +711,6 @@ class TemperatureTrendWindow(TrendGraphWindow):
         self.line.set_data([], [])
         self.setpoint_line.set_data([], [])
         self.line_power.set_data([], [])
-        # Reset backgrounds for blitting
-        self.background_temp = None
-        self.background_power = None
         self.canvas.draw_idle()
 
 
@@ -768,12 +748,12 @@ class LevelTrendWindow(TrendGraphWindow):
         self.ax.grid(True, alpha=0.3, color='#cccccc')
         self.ax.set_ylabel('Level (%)', color='black', fontsize=10)
         self.ax.tick_params(colors='black')
-        # Level line (animated for better performance)
+        # Level line
         self.line = self.ax.plot(
-            [], [], color='#27ae60', linewidth=2, label='Level (%)', animated=True)[0]
-        # Setpoint line (animated)
+            [], [], color='#27ae60', linewidth=2, label='Level (%)')[0]
+        # Setpoint line
         self.setpoint_line, = self.ax.plot(
-            [], [], color='#f0ad4e', linewidth=2, linestyle='--', label='Setpoint (%)', animated=True)
+            [], [], color='#f0ad4e', linewidth=2, linestyle='--', label='Setpoint (%)')
         self.ax.legend(loc='upper left', facecolor='white',
                        edgecolor='#cccccc', labelcolor='black')
 
@@ -789,9 +769,9 @@ class LevelTrendWindow(TrendGraphWindow):
             'Valve In (%)', color='black', fontsize=9)
         self.ax_valve_in.tick_params(colors='black')
         self.ax_valve_in.set_ylim([0, 110])
-        # Valve In line (animated for better performance)
+        # Valve In line
         self.line_valve_in, = self.ax_valve_in.plot(
-            [], [], color='#3498db', linewidth=2, label='Valve In (%)', animated=True)
+            [], [], color='#3498db', linewidth=2, label='Valve In (%)')
         self.ax_valve_in.legend(
             loc='upper left', facecolor='white', edgecolor='#cccccc', labelcolor='black')
 
@@ -803,19 +783,14 @@ class LevelTrendWindow(TrendGraphWindow):
             'Valve Out (%)', color='black', fontsize=9)
         self.ax_valve_out.tick_params(colors='black')
         self.ax_valve_out.set_ylim([0, 110])
-        # Valve Out line (animated for better performance)
+        # Valve Out line
         self.line_valve_out, = self.ax_valve_out.plot(
-            [], [], color='#e74c3c', linewidth=2, label='Valve Out (%)', animated=True)
+            [], [], color='#e74c3c', linewidth=2, label='Valve Out (%)')
         self.ax_valve_out.legend(
             loc='upper left', facecolor='white', edgecolor='#cccccc', labelcolor='black')
 
         # Recreate canvas
         self.canvas = FigureCanvas(self.figure)
-
-        # Cache background for blitting (improves performance)
-        self.background_level = None
-        self.background_valve_in = None
-        self.background_valve_out = None
 
         # Setup toolbar (will be overridden in the layout setup below)
         self.setup_level_toolbar()
@@ -1082,33 +1057,9 @@ class LevelTrendWindow(TrendGraphWindow):
                 self.line_valve_in.set_data([], [])
                 self.line_valve_out.set_data([], [])
 
-            # Draw and blit for better performance
+            # Always draw first to ensure visibility
             self.canvas.draw_idle()
-            
-            # Cache backgrounds if needed
-            if self.background_level is None:
-                self.background_level = self.canvas.copy_from_bbox(self.ax.bbox)
-            if self.background_valve_in is None:
-                self.background_valve_in = self.canvas.copy_from_bbox(self.ax_valve_in.bbox)
-            if self.background_valve_out is None:
-                self.background_valve_out = self.canvas.copy_from_bbox(self.ax_valve_out.bbox)
-            
-            # Restore backgrounds and draw animated artists
-            if self.background_level:
-                self.canvas.restore_region(self.background_level)
-                self.ax.draw_artist(self.line)
-                self.ax.draw_artist(self.setpoint_line)
-                self.canvas.blit(self.ax.bbox)
-            
-            if self.background_valve_in:
-                self.canvas.restore_region(self.background_valve_in)
-                self.ax_valve_in.draw_artist(self.line_valve_in)
-                self.canvas.blit(self.ax_valve_in.bbox)
-                
-            if self.background_valve_out:
-                self.canvas.restore_region(self.background_valve_out)
-                self.ax_valve_out.draw_artist(self.line_valve_out)
-                self.canvas.blit(self.ax_valve_out.bbox)
+            self.canvas.flush_events()
                 
         except Exception as e:
             logger.error(f"Error updating trend plot: {e}")
@@ -1126,10 +1077,6 @@ class LevelTrendWindow(TrendGraphWindow):
         self.setpoint_line.set_data([], [])
         self.line_valve_in.set_data([], [])
         self.line_valve_out.set_data([], [])
-        # Reset backgrounds for blitting
-        self.background_level = None
-        self.background_valve_in = None
-        self.background_valve_out = None
         self.canvas.draw_idle()
 
 

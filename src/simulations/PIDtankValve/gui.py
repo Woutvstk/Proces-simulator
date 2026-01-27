@@ -670,34 +670,51 @@ class VatWidget(QWidget):
         status = self.mainwindow.tanksim_status
         
         try:
-            # Write valve positions from VatWidget adjustable values
-            status.valveInOpenFraction = self.adjustableValveInValue / 100.0
-            status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
-        except Exception:
-            pass
+            # Read valve positions from GUI entry fields
+            valve_in_pct = 0
+            valve_out_pct = 0
+            
+            # Try to read from entry fields
+            valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
+            if valve_in_entry:
+                try:
+                    valve_in_pct = int(valve_in_entry.text() or 0)
+                except ValueError:
+                    valve_in_pct = 0
+            
+            valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
+            if valve_out_entry:
+                try:
+                    valve_out_pct = int(valve_out_entry.text() or 0)
+                except ValueError:
+                    valve_out_pct = 0
+            
+            # Write to status
+            status.valveInOpenFraction = valve_in_pct / 100.0
+            status.valveOutOpenFraction = valve_out_pct / 100.0
+            
+            # Also update VatWidget properties for display consistency
+            self.adjustableValveInValue = valve_in_pct
+            self.adjustableValveOutValue = valve_out_pct
+            
+            print(f"[DEBUG] Manual mode init: Valve In={valve_in_pct}%, Valve Out={valve_out_pct}%")
+        except Exception as e:
+            print(f"[DEBUG] Error writing valve positions: {e}")
         
         try:
-            # Write heater power from slider (if available)
-            # Get the first visible heater power slider, or the first available one
+            # Read heater power from slider (try all possible slider names)
             slider_val = None
-            try:
-                for slider in getattr(self.mainwindow, '_heater_power_sliders', []):
-                    if slider is None:
-                        continue
-                    if slider.isVisible():
-                        slider_val = int(slider.value())
-                        break
-                if slider_val is None:
-                    first_slider = next((s for s in getattr(self.mainwindow, '_heater_power_sliders', []) if s is not None), None)
-                    if first_slider is not None:
-                        slider_val = int(first_slider.value())
-            except Exception:
-                pass
+            for slider_name in ['heaterPowerSlider', 'heaterPowerSlider_1', 'heaterPowerSlider_2', 'heaterPowerSlider_3']:
+                slider = getattr(self.mainwindow, slider_name, None)
+                if slider is not None:
+                    slider_val = slider.value()
+                    break
             
             if slider_val is not None:
-                status.heaterPowerFraction = max(0.0, min(1.0, slider_val / 100.0))
-        except Exception:
-            pass
+                status.heaterPowerFraction = slider_val / 100.0
+                print(f"[DEBUG] Manual mode init: Heater power={slider_val}%")
+        except Exception as e:
+            print(f"[DEBUG] Error writing heater power: {e}")
     
     def _update_control_groupboxes(self, enabled):
         """Enable or disable control groupboxes based on Auto/Manual mode.
