@@ -938,6 +938,38 @@ class TankSimSettingsMixin:
                 except Exception:
                     pass
 
+                # Update setpoint slider positions and labels in PLC mode
+                try:
+                    # Update temperature setpoint slider and label
+                    slider_temp = getattr(self, 'slider_PidTankTempSP', None)
+                    label_temp = getattr(self, 'label_PidTankTempSP', None)
+                    if slider_temp and hasattr(self.tanksim_status, 'pidPidTankTempSPValue'):
+                        temp_sp_value = int(
+                            self.tanksim_status.pidPidTankTempSPValue)
+                        # Prevent triggering valueChanged
+                        slider_temp.blockSignals(True)
+                        slider_temp.setValue(temp_sp_value)
+                        slider_temp.blockSignals(False)
+                        if label_temp:
+                            self._update_temp_label(label_temp, temp_sp_value)
+
+                    # Update level setpoint slider and label
+                    slider_level = getattr(self, 'slider_PidTankLevelSP', None)
+                    label_level = getattr(self, 'label_PidTankLevelSP', None)
+                    if slider_level and hasattr(self.tanksim_status, 'pidPidTankLevelSPValue'):
+                        level_sp_value = int(
+                            self.tanksim_status.pidPidTankLevelSPValue)
+                        # Prevent triggering valueChanged
+                        slider_level.blockSignals(True)
+                        slider_level.setValue(level_sp_value)
+                        slider_level.blockSignals(False)
+                        if label_level:
+                            self._update_level_label(
+                                label_level, level_sp_value)
+                except Exception as e:
+                    logger.debug(
+                        f"Error updating setpoint sliders in PLC mode: {e}")
+
             # Water color
             self.vat_widget.waterColor = self.colorDropDown.currentData()
 
@@ -1004,7 +1036,16 @@ class TankSimSettingsMixin:
                     output_value=heater_op_percent
                 )
 
-                # Add level data with PV (%), Setpoint (%), and OP (%) - all as percentages
+                # Update temperature setpoint display
+                self.trend_manager.set_temperature_setpoint(temp_sp_percent)
+
+                # Get level setpoint (from slider or status)
+                level_setpoint = self.tanksim_status.levelSetpoint if hasattr(
+                    self.tanksim_status, 'levelSetpoint') else 100.0
+                level_sp_percent = (level_setpoint / tank_volume_max *
+                                    100.0) if tank_volume_max > 0 else 0
+
+                # Add level data with PV (%), valve positions (%)
                 level_pv_percent = (self.tanksim_status.liquidVolume /
                                     tank_volume_max * 100.0) if tank_volume_max > 0 else 0
                 valve_in_percent = self.tanksim_status.valveInOpenFraction * 100.0
@@ -1012,9 +1053,13 @@ class TankSimSettingsMixin:
 
                 self.trend_manager.add_level(
                     pv_value=level_pv_percent,
-                    setpoint_value=valve_in_percent,
-                    output_value=valve_out_percent
+                    setpoint_value=level_sp_percent,
+                    valve_in_fraction=valve_in_percent,
+                    valve_out_fraction=valve_out_percent
                 )
+
+                # Update level setpoint display
+                self.trend_manager.set_level_setpoint(level_sp_percent)
         except Exception as e:
             logger.debug(f"Error updating trend graphs: {e}")
 
@@ -1135,6 +1180,21 @@ class TankSimSettingsMixin:
                             level_percent / 100.0) * tank_volume
             except Exception:
                 pass
+        else:
+            # In PLC mode, convert IO value to levelSetpoint
+            # The IO handler reads pidPidTankLevelSPValue from PLC (0-27648)
+            # Convert it to levelSetpoint in liters for simulation
+            try:
+                if hasattr(self.tanksim_status, 'pidPidTankLevelSPValue') and hasattr(self, 'tanksim_config') and self.tanksim_config:
+                    level_analog = float(
+                        self.tanksim_status.pidPidTankLevelSPValue)
+                    # Convert 0-27648 to 0-100% then to liters
+                    level_percent = (level_analog / 27648.0) * 100.0
+                    tank_volume = self.tanksim_config.tankVolume
+                    self.tanksim_status.levelSetpoint = (
+                        level_percent / 100.0) * tank_volume
+            except Exception as e:
+                logger.debug(f"Error converting PLC level setpoint: {e}")
 
             # Write valve positions - CRITICAL: Always write these in GUI mode or Manual mode
             try:

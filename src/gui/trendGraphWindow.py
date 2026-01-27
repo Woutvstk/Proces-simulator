@@ -360,6 +360,7 @@ class TemperatureTrendWindow(TrendGraphWindow):
         # Store all temperature and power data for history switching
         self.all_temperatures = deque(maxlen=10000)  # Store full history
         self.all_power = deque(maxlen=10000)
+        self.all_setpoints = deque(maxlen=10000)  # Store setpoint history
         self.sample_counter = 0
 
         # Mode: 'live' for last 300 samples, 'history' for all samples from start
@@ -587,8 +588,8 @@ class TemperatureTrendWindow(TrendGraphWindow):
         else:
             self.label_mouse.setText("Time: -- Y: -- T: -- P: --")
 
-    def add_value(self, value, power_fraction=0.0):
-        """Add temperature and power data point (only if not paused)"""
+    def add_value(self, value, power_fraction=0.0, setpoint=None):
+        """Add temperature, power, and setpoint data point (only if not paused)"""
         try:
             if not self.is_paused:
                 self.values.append(float(value))
@@ -599,6 +600,10 @@ class TemperatureTrendWindow(TrendGraphWindow):
                 self.all_temperatures.append(float(value))
                 # Store power percentage (already in % from data source)
                 self.all_power.append(float(power_fraction))
+                # Store setpoint (use current value if not provided)
+                sp = float(
+                    setpoint) if setpoint is not None else self.setpoint_value
+                self.all_setpoints.append(sp)
 
         except Exception as e:
             logger.error(f"Error adding trend value: {e}")
@@ -618,15 +623,18 @@ class TemperatureTrendWindow(TrendGraphWindow):
                     # Show only last 300 samples
                     x_data = list(self.timestamps)
                     y_temp = list(self.values)
-                    # Use same x-axis length for power
+                    # Use same x-axis length for power and setpoint
                     num_samples = len(self.timestamps)
                     power_data = list(self.all_power)[-num_samples:] if len(
                         self.all_power) >= num_samples else list(self.all_power)
+                    setpoint_data = list(self.all_setpoints)[-num_samples:] if len(
+                        self.all_setpoints) >= num_samples else list(self.all_setpoints)
                 else:  # history mode
                     # Show all samples from sample 0
                     x_data = list(range(len(self.all_temperatures)))
                     y_temp = list(self.all_temperatures)
                     power_data = list(self.all_power)
+                    setpoint_data = list(self.all_setpoints)
 
                 # Apply scroll offset
                 if self.scroll_offset > 0:
@@ -642,6 +650,8 @@ class TemperatureTrendWindow(TrendGraphWindow):
                 y_temp = y_temp[start_idx:end_idx]
                 power_data = power_data[start_idx:end_idx] if power_data else [
                 ]
+                setpoint_data = setpoint_data[start_idx:end_idx] if setpoint_data else [
+                ]
 
                 # Convert x_data from samples to seconds (10Hz)
                 x_data = [x / 10.0 for x in x_data]
@@ -649,12 +659,12 @@ class TemperatureTrendWindow(TrendGraphWindow):
                 # Update temperature line
                 self.line.set_data(x_data, y_temp)
 
-                # Update setpoint line (horizontal across entire plot)
-                if len(x_data) > 0:
-                    self.setpoint_line.set_data(
-                        [x_data[0], x_data[-1]], [self.setpoint_value, self.setpoint_value])
+                # Update setpoint line (as trend line, not horizontal)
+                if len(setpoint_data) > 0 and len(x_data) > 0:
+                    self.setpoint_line.set_data(x_data, setpoint_data)
 
-                    # Update X-axis limits
+                # Update X-axis limits
+                if len(x_data) > 0:
                     self.ax.set_xlim([min(x_data), max(x_data) + 1])
 
                 # Update power line
@@ -689,6 +699,7 @@ class TemperatureTrendWindow(TrendGraphWindow):
         self.timestamps.clear()
         self.all_temperatures.clear()
         self.all_power.clear()
+        self.all_setpoints.clear()
         self.counter = 0
         self.line.set_data([], [])
         self.setpoint_line.set_data([], [])
@@ -709,9 +720,14 @@ class LevelTrendWindow(TrendGraphWindow):
         self.all_levels = deque(maxlen=10000)
         self.all_valve_in = deque(maxlen=10000)
         self.all_valve_out = deque(maxlen=10000)
+        self.all_setpoints = deque(maxlen=10000)  # Store setpoint history
 
         # Mode: 'live' for last 300 samples, 'history' for all samples from start
         self.view_mode = 'live'
+
+        # Setpoint tracking
+        self.setpoint_value = 100.0
+        self.setpoint_line = None
 
         # Replace old single axis with subplots using GridSpec
         self.figure.clear()
@@ -723,19 +739,19 @@ class LevelTrendWindow(TrendGraphWindow):
         self.ax = self.figure.add_subplot(gs[0, :])
         self.ax.set_facecolor('white')
         self.ax.grid(True, alpha=0.3, color='#cccccc')
-        self.ax.set_ylabel('Level (liters)', color='black', fontsize=10)
+        self.ax.set_ylabel('Level (%)', color='black', fontsize=10)
         self.ax.tick_params(colors='black')
         self.line = self.ax.plot(
-            [], [], color='#27ae60', linewidth=2, label='Level (liters)')[0]
+            [], [], color='#27ae60', linewidth=2, label='Level (%)')[0]
+        # Setpoint line
+        self.setpoint_line, = self.ax.plot(
+            [], [], color='#f0ad4e', linewidth=2, linestyle='--', label='Setpoint (%)')
         self.ax.legend(loc='upper left', facecolor='white',
                        edgecolor='#cccccc', labelcolor='black')
 
-        # Set level axis limits (0 to tank_volume_max + 10%)
-        level_max_display = y_max * 1.1
-        y_range = max(1, level_max_display - 0)
-        y_padding = y_range * 0.2 + 20
-        padded_y_max = level_max_display + y_padding
-        self.ax.set_ylim([0, padded_y_max])
+        # Set level axis limits (0 to 110%)
+        level_max_display = 110
+        self.ax.set_ylim([0, level_max_display])
 
         # Valve In subplot (bottom left)
         self.ax_valve_in = self.figure.add_subplot(gs[1, 0])
@@ -836,21 +852,21 @@ class LevelTrendWindow(TrendGraphWindow):
 
         self.toolbar_layout.addSpacing(20)
 
-        # Level limits (in liters)
-        self.toolbar_layout.addWidget(QLabel("L Min (L):"))
+        # Level limits (in percent)
+        self.toolbar_layout.addWidget(QLabel("L Min (%):"))
         self.spinbox_l_min = QSpinBox()
         self.spinbox_l_min.setMinimum(0)
-        self.spinbox_l_min.setMaximum(200)
+        self.spinbox_l_min.setMaximum(110)
         self.spinbox_l_min.setValue(0)
         self.spinbox_l_min.setMaximumWidth(80)
         self.spinbox_l_min.valueChanged.connect(self.on_level_limits_changed)
         self.toolbar_layout.addWidget(self.spinbox_l_min)
 
-        self.toolbar_layout.addWidget(QLabel("L Max (L):"))
+        self.toolbar_layout.addWidget(QLabel("L Max (%):"))
         self.spinbox_l_max = QSpinBox()
         self.spinbox_l_max.setMinimum(0)
-        self.spinbox_l_max.setMaximum(200)
-        self.spinbox_l_max.setValue(200)
+        self.spinbox_l_max.setMaximum(110)
+        self.spinbox_l_max.setValue(110)
         self.spinbox_l_max.setMaximumWidth(80)
         self.spinbox_l_max.valueChanged.connect(self.on_level_limits_changed)
         self.toolbar_layout.addWidget(self.spinbox_l_max)
@@ -882,10 +898,7 @@ class LevelTrendWindow(TrendGraphWindow):
         l_max = self.spinbox_l_max.value()
 
         if l_max > l_min:
-            y_range = max(1, l_max - l_min)
-            padding = y_range * 0.2 + 20
-            padded_y_max = l_max + padding
-            self.ax.set_ylim([l_min, padded_y_max])
+            self.ax.set_ylim([l_min, l_max])
             self.canvas.draw_idle()
 
     def on_mouse_move(self, event):
@@ -918,17 +931,16 @@ class LevelTrendWindow(TrendGraphWindow):
 
             # Format based on which subplot
             if event.inaxes == self.ax:
-                # Level subplot - convert from percentage to liters
-                y_liters = (y_value / 100.0) * self.tank_volume_max
+                # Level subplot - show as percentage
                 self.label_mouse.setText(
-                    f"Time: {time_sec:.2f}s  Y: {y_liters:.1f}L")
+                    f"Time: {time_sec:.2f}s  Y: {y_value:.1f}%")
             else:
                 # Valve subplots - show as percentage
                 self.label_mouse.setText(
                     f"Time: {time_sec:.2f}s  Y: {y_value:.1f}%")
 
-    def add_value(self, level_value, valve_in_fraction=0.0, valve_out_fraction=0.0):
-        """Add level and valve data point (only if not paused)"""
+    def add_value(self, level_value, setpoint_value=0.0, valve_in_fraction=0.0, valve_out_fraction=0.0):
+        """Add level, setpoint, and valve data point (only if not paused)"""
         try:
             if not self.is_paused:
                 self.values.append(float(level_value))
@@ -940,9 +952,15 @@ class LevelTrendWindow(TrendGraphWindow):
                 # Store valve percentages (already in % from data source)
                 self.all_valve_in.append(float(valve_in_fraction))
                 self.all_valve_out.append(float(valve_out_fraction))
+                # Store setpoint history
+                self.all_setpoints.append(float(setpoint_value))
 
         except Exception as e:
             logger.error(f"Error adding trend value: {e}")
+
+    def set_setpoint(self, sp_value):
+        """Update the setpoint value for display"""
+        self.setpoint_value = float(sp_value)
 
     def update_plot(self):
         """Update all three plots (level, valve in, valve out)"""
@@ -960,16 +978,17 @@ class LevelTrendWindow(TrendGraphWindow):
                         self.all_valve_in) >= num_samples else list(self.all_valve_in)
                     valve_out_data = list(self.all_valve_out)[-num_samples:] if len(
                         self.all_valve_out) >= num_samples else list(self.all_valve_out)
+                    setpoint_data = list(self.all_setpoints)[-num_samples:] if len(
+                        self.all_setpoints) >= num_samples else list(self.all_setpoints)
                 else:  # history mode
                     # Show all samples from sample 0
                     x_data = list(range(len(self.all_levels)))
                     y_level = list(self.all_levels)
                     valve_in_data = list(self.all_valve_in)
                     valve_out_data = list(self.all_valve_out)
+                    setpoint_data = list(self.all_setpoints)
 
-                # Convert level from percentage to liters for display
-                y_level = [(val / 100.0) *
-                           self.tank_volume_max for val in y_level]
+                # Level is already in percentage - no conversion needed
 
                 # Apply scroll offset
                 if self.scroll_offset > 0:
@@ -987,12 +1006,18 @@ class LevelTrendWindow(TrendGraphWindow):
                 ]
                 valve_out_data = valve_out_data[start_idx:end_idx] if valve_out_data else [
                 ]
+                setpoint_data = setpoint_data[start_idx:end_idx] if setpoint_data else [
+                ]
 
                 # Convert x_data from samples to seconds (10Hz)
                 x_data = [x / 10.0 for x in x_data]
 
                 # Update level line
                 self.line.set_data(x_data, y_level)
+
+                # Update setpoint line (as trend line, not horizontal)
+                if len(setpoint_data) > 0 and len(x_data) > 0:
+                    self.setpoint_line.set_data(x_data, setpoint_data)
 
                 # Update valve lines
                 if len(valve_in_data) > 0:
@@ -1006,20 +1031,17 @@ class LevelTrendWindow(TrendGraphWindow):
                     self.ax_valve_in.set_xlim([min(x_data), max(x_data) + 1])
                     self.ax_valve_out.set_xlim([min(x_data), max(x_data) + 1])
 
-                # Keep level Y-axis limits
+                # Keep level Y-axis limits (in percent)
                 l_min = self.spinbox_l_min.value() if hasattr(self, 'spinbox_l_min') else 0
-                l_max = self.spinbox_l_max.value() if hasattr(
-                    self, 'spinbox_l_max') else int(self.tank_volume_max * 1.1)
-                y_range = max(1, l_max - l_min)
-                padding = y_range * 0.2 + 20
-                padded_y_max = l_max + padding
-                self.ax.set_ylim([l_min, padded_y_max])
+                l_max = self.spinbox_l_max.value() if hasattr(self, 'spinbox_l_max') else 110
+                self.ax.set_ylim([l_min, l_max])
 
                 self.ax_valve_in.set_ylim([0, 110])
                 self.ax_valve_out.set_ylim([0, 110])
             else:
                 # Clear plot if no data
                 self.line.set_data([], [])
+                self.setpoint_line.set_data([], [])
                 self.line_valve_in.set_data([], [])
                 self.line_valve_out.set_data([], [])
 
@@ -1034,8 +1056,10 @@ class LevelTrendWindow(TrendGraphWindow):
         self.all_levels.clear()
         self.all_valve_in.clear()
         self.all_valve_out.clear()
+        self.all_setpoints.clear()
         self.counter = 0
         self.line.set_data([], [])
+        self.setpoint_line.set_data([], [])
         self.line_valve_in.set_data([], [])
         self.line_valve_out.set_data([], [])
         self.canvas.draw_idle()
@@ -1139,7 +1163,9 @@ class TrendGraphManager:
                 # Use new-style parameters if provided, otherwise fall back to old-style
                 if pv_value is not None:
                     self.temp_window.add_value(
-                        pv_value, output_value if output_value is not None else 0.0)
+                        pv_value,
+                        output_value if output_value is not None else 0.0,
+                        setpoint_value if setpoint_value is not None else None)
                 elif value is not None:
                     self.temp_window.add_value(value, power_fraction)
         except RuntimeError:
@@ -1153,10 +1179,23 @@ class TrendGraphManager:
         except RuntimeError:
             self.temp_window = None
 
-    def add_level(self, pv_value=None, setpoint_value=None, output_value=None, value=None, valve_in_fraction=0.0, valve_out_fraction=0.0):
-        """Add level and valve position data to trend if window is open
+    def set_level_setpoint(self, sp_value):
+        """Set the setpoint value for level trend display"""
+        try:
+            if self._is_window_valid(self.level_window) and isinstance(self.level_window, LevelTrendWindow):
+                self.level_window.set_setpoint(sp_value)
+        except RuntimeError:
+            self.level_window = None
 
-        Supports both old-style (value, valve_in_fraction, valve_out_fraction) and new-style (pv_value, setpoint_value, output_value) parameters
+    def add_level(self, pv_value=None, setpoint_value=None, valve_in_fraction=0.0, valve_out_fraction=0.0, value=None):
+        """Add level, setpoint, and valve position data to trend if window is open
+
+        Parameters:
+        - pv_value: Process value (level in %)
+        - setpoint_value: Setpoint value (level setpoint in %)
+        - valve_in_fraction: Inlet valve position (%)
+        - valve_out_fraction: Outlet valve position (%)
+        - value: Legacy parameter for backward compatibility
         """
         try:
             if self._is_window_valid(self.level_window):
@@ -1164,10 +1203,13 @@ class TrendGraphManager:
                     # Use new-style parameters if provided, otherwise fall back to old-style
                     if pv_value is not None:
                         self.level_window.add_value(
-                            pv_value, setpoint_value if setpoint_value is not None else 0.0, output_value if output_value is not None else 0.0)
+                            pv_value,
+                            setpoint_value if setpoint_value is not None else 0.0,
+                            valve_in_fraction,
+                            valve_out_fraction)
                     elif value is not None:
                         self.level_window.add_value(
-                            value, valve_in_fraction, valve_out_fraction)
+                            value, 0.0, valve_in_fraction, valve_out_fraction)
                 else:
                     # Fallback for basic TrendGraphWindow
                     if pv_value is not None:
