@@ -270,9 +270,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                     # User wants to reload - trigger reload without confirmation
                     try:
                         # Call reload_io_config directly on self (MainWindow inherits IOConfigMixin)
-                        self.reload_io_config(skip_confirmation=True)
-                        # Return True to allow navigation after reload
-                        return True
+                        success = self.reload_io_config(skip_confirmation=True)
+                        # Return True to allow navigation only if reload was successful
+                        return success
                     except Exception as e:
                         return False
                 # User clicked No - block navigation to stay on IO page

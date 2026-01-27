@@ -142,8 +142,10 @@ class DroppableTableWidget(QTableWidget):
             try:
                 mw = getattr(self, 'io_screen', None).main_window if getattr(self, 'io_screen', None) else None
                 if mw and hasattr(mw, "handle_io_signal_rename"):
-                    # Use old name as canonical fallback; mixin will add alias
-                    mw.handle_io_signal_rename(old_name, old_name, name)
+                    # Get canonical name from UserRole data
+                    canonical_name = item.data(Qt.UserRole) if item.data(Qt.UserRole) else old_name
+                    # Call with canonical name, old display name, and new display name
+                    mw.handle_io_signal_rename(canonical_name, old_name, name)
             except Exception:
                 pass
             return
@@ -639,10 +641,11 @@ class DroppableTableWidget(QTableWidget):
                         else:
                             self.setItem(row, 3, EditableTableWidgetItem(""))
                         self.setItem(row, 4, ReadOnlyTableWidgetItem(full_address))
-                        # Always create a status item with green background
+                        # Create status item with correct background color based on force mode
                         status_text = signal_data.get('status', 'FALSE')
                         status_item = ReadOnlyTableWidgetItem(status_text)
-                        status_item.setBackground(QColor(200, 255, 200))
+                        # Blue for normal, green for force mode available
+                        status_item.setBackground(QColor(200, 230, 245))  # Blue by default
                         self.setItem(row, 5, status_item)
                         try:
                             if data_type == 'bool':
@@ -652,23 +655,16 @@ class DroppableTableWidget(QTableWidget):
                         except Exception:
                             value = 0
                         self.update_status_column(row, value)
-                        # Guarantee color even if update_status_column replaced the item
-                        status_item = self.item(row, 5)
-                        if status_item:
-                            status_item.setBackground(QColor(200, 255, 200))
                         if 'description' in signal_data:
                             self.setItem(row, 6, ReadOnlyTableWidgetItem(signal_data['description']))
                         if 'range' in signal_data:
                             self.setItem(row, 7, ReadOnlyTableWidgetItem(signal_data['range']))
                         self._save_row_data(row)
                     else:
-                        # No signal_data (e.g., plain text) – still ensure status column gets default green
+                        # No signal_data (e.g., plain text) – update status column with default value
                         data_type_item = self.item(row, 1)
                         data_type = data_type_item.text() if data_type_item else 'bool'
                         self.update_status_column(row, False if data_type == 'bool' else 0)
-                        status_item = self.item(row, 5)
-                        if status_item:
-                            status_item.setBackground(QColor(200, 255, 200))
                         self._save_row_data(row)
                     
                     self.blockSignals(False)
@@ -690,26 +686,35 @@ class DroppableTableWidget(QTableWidget):
         self.dragLeaveEvent(event)
 
     def set_force_mode(self, enabled):
-        """Enable or disable force mode"""
+        """Enable or disable force mode with color updates"""
         self.force_enabled = enabled
         
-        if not enabled:
-            # The calling function clear_all_forces() handles clearing of forced_rows and colors.
-            # We only clear forced_rows here if it hasn't been handled already (e.g. if set_force_mode is called directly with False)
-            # The clear_all_forces logic in IOConfigMixin is more robust for external events (like connection).
-            # Keeping the original logic here for completeness.
+        if enabled:
+            # Change status column cells to green to show they're available for forcing
+            for row in range(self.rowCount()):
+                status_item = self.item(row, 5)
+                if status_item and row not in self.forced_rows:
+                    status_item.setBackground(QColor(200, 255, 200))  # Light green
+        else:
+            # Clear forced rows and reset colors to blue
             for row in list(self.forced_rows.keys()):
                 self.remove_force(row)
+            
+            # Reset all status cells to blue
+            for row in range(self.rowCount()):
+                status_item = self.item(row, 5)
+                if status_item:
+                    status_item.setBackground(QColor(200, 230, 245))  # Blue
 
 
     def apply_force(self, row, value):
         """Apply force to a signal"""
         self.forced_rows[row] = {"value": value}
         
-        for col in range(self.columnCount()):
-            item = self.item(row, col)
-            if item:
-                item.setBackground(Qt.yellow)
+        # Only highlight the Status cell (column 5), not the entire row
+        status_item = self.item(row, 5)
+        if status_item:
+            status_item.setBackground(Qt.yellow)
 
     def apply_force_analog(self, row, signal_name):
         """Apply force to an analog signal with dialog"""
@@ -749,11 +754,14 @@ class DroppableTableWidget(QTableWidget):
         if row in self.forced_rows:
             del self.forced_rows[row]
             
-            # Update color back to default (white)
-            for col in range(self.columnCount()):
-                item = self.item(row, col)
-                if item:
-                    item.setBackground(Qt.white)
+            # Only reset the Status cell (column 5)
+            status_item = self.item(row, 5)
+            if status_item:
+                # Restore green if force mode is still enabled, blue if disabled
+                if self.force_enabled:
+                    status_item.setBackground(QColor(200, 255, 200))  # Light green
+                else:
+                    status_item.setBackground(QColor(200, 230, 245))  # Blue
 
     def get_forced_value(self, row):
         """Get forced value for a row, or None if not forced"""
@@ -784,22 +792,29 @@ class DroppableTableWidget(QTableWidget):
         
         is_forced = self.is_row_forced(row)
         if is_forced:
-            display_text = f"[LOCKED] {display_text}"
+            display_text = f"[F] {display_text}"
         
         if status_item:
             status_item.setText(display_text)
             
+            # Apply color based on force state:
+            # Yellow = Forced
+            # Green = Available to force (force mode enabled but not forced)
+            # Blue = Normal (force mode disabled)
             if is_forced:
                 status_item.setBackground(Qt.yellow)
+            elif self.force_enabled:
+                status_item.setBackground(QColor(200, 255, 200))  # Light green
             else:
-                # Use a specific color for unforced, active status display
-                status_item.setBackground(QColor(200, 255, 200))
+                status_item.setBackground(QColor(200, 230, 245))  # Blue
         else:
             new_item = ReadOnlyTableWidgetItem(display_text)
             if is_forced:
                 new_item.setBackground(Qt.yellow)
+            elif self.force_enabled:
+                new_item.setBackground(QColor(200, 255, 200))  # Light green
             else:
-                new_item.setBackground(QColor(200, 255, 200))
+                new_item.setBackground(QColor(200, 230, 245))  # Blue
             self.setItem(row, 5, new_item)
 
 
@@ -1154,33 +1169,29 @@ class IOConfigMixin:
             tree = ET.parse(str(xml_file))
             root = tree.getroot()
             
-            # Always load GeneralControls first
-            general = root.find('GeneralControls')
-            if general is not None:
-                self._load_generalcontrols_signals(general)
-            
+
             # Load simulation-specific signals (original format)
             pidtank = root.find('PIDtankValve')
             if pidtank is not None:
                 self._load_simulation_signals(pidtank, "PIDtankValve")
             
-            # Load split PIDtankValve sections (sensors and controls)
-            pidtank_sensors = root.find('PIDtankValve_Sensors')
+            # Load split PIDtankValve sections (sensors/actuators and controls)
+            pidtank_sensors = root.find('PIDtankValve_Sensors_Actuators')
             if pidtank_sensors is not None:
-                self._load_simulation_signals(pidtank_sensors, "PIDtankValve_Sensors")
+                self._load_simulation_signals(pidtank_sensors, "PIDtankValve_Sensors_Actuators")
             
-            pidtank_controls = root.find('PIDtankValve_Controls')
+            pidtank_controls = root.find('PIDtankValve_PLC_Controls')
             if pidtank_controls is not None:
-                self._load_simulation_signals(pidtank_controls, "PIDtankValve_Controls")
+                self._load_simulation_signals(pidtank_controls, "PIDtankValve_PLC_Controls")
+
+            general = root.find('GeneralControls')
+            if general is not None:
+                self._load_generalcontrols_signals(general)
+            
             
             conveyor = root.find('ConveyorSim')
             if conveyor is not None:
                 self._load_simulation_signals(conveyor, "ConveyorSim")
-            
-            # Legacy support for old format
-            tanksim = root.find('TankSim')
-            if tanksim is not None:
-                self._load_tanksim_signals(tanksim)
             
             self.treeWidget_IO.expandAll()
             logger.info(f"IO tree loaded successfully from {active_sim}")
@@ -1345,8 +1356,23 @@ class IOConfigMixin:
                 # Remove duplicates first
                 table.remove_duplicate_signals(signal_name, exclude_row=current_row)
                 
-                # Set signal name
-                table.setItem(current_row, 0, EditableTableWidgetItem(signal_name))
+                # Set signal name - use custom name if available
+                display_name = signal_name
+                if self.io_screen and hasattr(self.io_screen, 'main_window'):
+                    main_window = self.io_screen.main_window
+                    if hasattr(main_window, 'tanksim_config'):
+                        config = main_window.tanksim_config
+                        # custom_signal_names uses attribute names as keys, not signal names
+                        # First get attribute name from signal name via io_signal_mapping
+                        if hasattr(config, 'io_signal_mapping') and signal_name in config.io_signal_mapping:
+                            attr_name = config.io_signal_mapping[signal_name]
+                            if hasattr(config, 'custom_signal_names') and attr_name in config.custom_signal_names:
+                                display_name = config.custom_signal_names[attr_name]
+                
+                name_item = EditableTableWidgetItem(display_name)
+                # Store canonical name in item data for internal reference
+                name_item.setData(Qt.UserRole, signal_name)
+                table.setItem(current_row, 0, name_item)
                 
                 if signal_data:
                     data_type = signal_data.get('type', 'bool')
@@ -1361,10 +1387,10 @@ class IOConfigMixin:
                         table.setItem(current_row, 3, EditableTableWidgetItem(""))
                     table.setItem(current_row, 4, ReadOnlyTableWidgetItem(full_address))
                     
-                    # Status column with green background
+                    # Status column with blue background (normal mode)
                     status_text = signal_data.get('status', 'FALSE')
                     status_item = ReadOnlyTableWidgetItem(status_text)
-                    status_item.setBackground(QColor(200, 255, 200))
+                    status_item.setBackground(QColor(200, 230, 245))  # Blue
                     table.setItem(current_row, 5, status_item)
                     
                     # Update status value
@@ -1491,8 +1517,11 @@ class IOConfigMixin:
                 if not name_item or not name_item.text():
                     continue
                 
+                # Get canonical name from item data, fallback to display name
+                canonical_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
+                
                 cfg = {
-                    'name': table.item(row, 0).text(),
+                    'name': canonical_name,  # Use canonical name for saving
                     'type': table.item(row, 1).text() if table.item(row, 1) else "",
                     'byte': table.item(row, 2).text() if table.item(row, 2) else "",
                     'bit': table.item(row, 3).text() if table.item(row, 3) else "",
@@ -1568,8 +1597,22 @@ class IOConfigMixin:
                 if idx >= table.rowCount():
                     break
                 
+                # Get canonical name and custom display name
+                canonical_name = signal.get('name', '')
+                display_name = canonical_name
+                if hasattr(self, 'tanksim_config'):
+                    config = self.tanksim_config
+                    # custom_signal_names uses attribute names as keys, not signal names
+                    # First get attribute name from signal name via io_signal_mapping
+                    if hasattr(config, 'io_signal_mapping') and canonical_name in config.io_signal_mapping:
+                        attr_name = config.io_signal_mapping[canonical_name]
+                        if hasattr(config, 'custom_signal_names') and attr_name in config.custom_signal_names:
+                            display_name = config.custom_signal_names[attr_name]
+                
                 # Column 0 (name) should be editable, all others read-only except byte/bit
-                table.setItem(idx, 0, EditableTableWidgetItem(signal.get('name', '')))
+                name_item = EditableTableWidgetItem(display_name)
+                name_item.setData(Qt.UserRole, canonical_name)  # Store canonical name for internal use
+                table.setItem(idx, 0, name_item)
                 table.setItem(idx, 1, ReadOnlyTableWidgetItem(signal.get('type', '')))
                 table.setItem(idx, 2, EditableTableWidgetItem(signal.get('byte', '')))
                 table.setItem(idx, 3, EditableTableWidgetItem(signal.get('bit', '')))
@@ -1591,12 +1634,19 @@ class IOConfigMixin:
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load: {str(e)}")
 
-    def reload_io_config(self):
-        """Reload IO configuration - saves current table first, then reloads from file"""
+    def reload_io_config(self, skip_confirmation=False):
+        """Reload IO configuration - saves current table first, then reloads from file
+        
+        Args:
+            skip_confirmation: If True, skip the confirmation dialog and reload immediately
+            
+        Returns:
+            bool: True if reload was successful, False if cancelled or failed
+        """
         try:
             if not hasattr(self, 'tanksim_config') or self.tanksim_config is None:
                 QMessageBox.warning(self, "Error", "TankSim config unavailable")
-                return
+                return False
             
             # __file__ is in src/gui/pages/ioConfigPage.py
             # .parent = src/gui/pages
@@ -1608,17 +1658,18 @@ class IOConfigMixin:
             # Ensure IO directory exists
             io_config_path.parent.mkdir(parents=True, exist_ok=True)
             
-            reply = QMessageBox.question(
-                self, "Confirm Activation",
-                "Activate and reload configuration?\n\n"
-                "This will:\n"
-                "1. Save current table to IO_configuration.json\n"
-                "2. Reload configuration from file\n"
-                "3. Disconnect active PLC connections if needed",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            
-            if reply == QMessageBox.No:
-                return
+            if not skip_confirmation:
+                reply = QMessageBox.question(
+                    self, "Confirm Activation",
+                    "Activate and reload configuration?\n\n"
+                    "This will:\n"
+                    "1. Save current table to IO_configuration.json\n"
+                    "2. Reload configuration from file\n"
+                    "3. Disconnect active PLC connections if needed",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                
+                if reply == QMessageBox.No:
+                    return False
             
             # STEP 1: Save the current table to the default JSON location
             try:
@@ -1641,8 +1692,11 @@ class IOConfigMixin:
                     if not name_item or not name_item.text():
                         continue
                     
+                    # Get canonical name from item data, fallback to display name
+                    canonical_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
+                    
                     cfg = {
-                        'name': table.item(row, 0).text(),
+                        'name': canonical_name,  # Use canonical name for saving
                         'type': table.item(row, 1).text() if table.item(row, 1) else "",
                         'byte': table.item(row, 2).text() if table.item(row, 2) else "",
                         'bit': table.item(row, 3).text() if table.item(row, 3) else "",
@@ -1659,7 +1713,7 @@ class IOConfigMixin:
                     
             except Exception as e:
                 QMessageBox.critical(self, "Save Error", f"Failed to save configuration: {str(e)}")
-                return
+                return False
             
             # STEP 2: Disconnect PLC if connected
             if hasattr(self, 'validPlcConnection') and self.validPlcConnection:
@@ -1700,7 +1754,9 @@ class IOConfigMixin:
             # STEP 5: Update table from reloaded config
             self._update_table_from_config()
             
-            QMessageBox.information(self, "Success", "Configuration activated and reloaded successfully")
+            if not skip_confirmation:
+                QMessageBox.information(self, "Success", "Configuration activated and reloaded successfully")
+            
             # Reload activates config; clear dirty state
             try:
                 self._io_config_dirty = False
@@ -1724,9 +1780,12 @@ class IOConfigMixin:
             except Exception as e:
                 pass  # Silently fail if auto-connect fails
             
+            return True
+        
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to activate/reload: {str(e)}")
-        
+            return False
+    
     def _auto_reload_io_config(self):
         """
         Automatically reload IO configuration without user confirmation.
@@ -1772,8 +1831,11 @@ class IOConfigMixin:
                     if not name_item or not name_item.text():
                         continue
                     
+                    # Get canonical name from item data, fallback to display name
+                    canonical_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
+                    
                     cfg = {
-                        'name': table.item(row, 0).text(),
+                        'name': canonical_name,  # Use canonical name for saving
                         'type': table.item(row, 1).text() if table.item(row, 1) else "",
                         'byte': table.item(row, 2).text() if table.item(row, 2) else "",
                         'bit': table.item(row, 3).text() if table.item(row, 3) else "",
@@ -1874,7 +1936,8 @@ class IOConfigMixin:
                 if not name_item or not name_item.text():
                     continue
                 
-                signal_name = name_item.text()
+                # Use canonical name for lookup in io_signal_mapping
+                signal_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
                 
                 if signal_name not in config.io_signal_mapping:
                     continue
@@ -1924,6 +1987,18 @@ class IOConfigMixin:
     def toggle_force_mode(self, checked):
         """Toggle force mode on/off"""
         self.tableWidget_IO.set_force_mode(checked)
+        
+        # Update Label_ForceState to show current status
+        try:
+            if hasattr(self, 'Label_Forcestate'):
+                if checked:
+                    self.Label_Forcestate.setText("Force Mode: ENABLED (Double-click status cells to force values)")
+                    self.Label_Forcestate.setStyleSheet("color: green; font-weight: bold;")
+                else:
+                    self.Label_Forcestate.setText("Force Mode: DISABLED")
+                    self.Label_Forcestate.setStyleSheet("color: gray;")
+        except Exception:
+            pass
         
         if not checked:
             self.clear_all_forces()
@@ -1976,7 +2051,8 @@ class IOConfigMixin:
                 if not name_item or not name_item.text():
                     continue
                 
-                signal_name = name_item.text()
+                # Use canonical name for lookup in io_signal_mapping
+                signal_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
                 is_forced = table.is_row_forced(row)
                 
                 if signal_name not in config.io_signal_mapping:
@@ -2143,7 +2219,8 @@ class IOConfigMixin:
             if not name_item or not type_item or not addr_item:
                 continue
             
-            signal_name = name_item.text()
+            # Use canonical name for lookup in io_signal_mapping
+            signal_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
             address = addr_item.text()
             forced_value = force_data["value"]
             

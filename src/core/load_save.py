@@ -139,6 +139,14 @@ class StateManager:
             logger.info(f"Saving application state to: {save_file_path}")
             
             # Initialize state structure
+            # Make io_config_path relative to src directory for portability
+            try:
+                io_config_relative = Path(io_config_path).relative_to(Path(__file__).parent.parent)
+                io_config_path_str = str(io_config_relative).replace('\\', '/')
+            except (ValueError, AttributeError):
+                # If path is not relative to src, use filename only
+                io_config_path_str = Path(io_config_path).name
+            
             state_data = {
                 "version": self.VERSION,
                 "timestamp": datetime.now().isoformat(),
@@ -148,7 +156,7 @@ class StateManager:
                 "simulation_config": {},
                 "simulation_status": {},
                 "io_config": None,
-                "io_config_original_path": io_config_path
+                "io_config_original_path": io_config_path_str
             }
             
             # 1. Save main configuration

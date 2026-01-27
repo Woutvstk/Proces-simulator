@@ -2,8 +2,8 @@
   "offsets": {
     "BoolInput": 0,
     "BoolOutput": 0,
-    "DWORDInput": 4,
-    "DWORDOutput": 4
+    "DWORDInput": 2,
+    "DWORDOutput": 2
   },
   "signals": [
     {
@@ -27,11 +27,11 @@
       "range": "0-1"
     },
     {
-      "name": "IK ben niveau tank",
+      "name": "Sim_WaterLevelMeasurement",
       "type": "int",
-      "byte": "4",
+      "byte": "2",
       "bit": "",
-      "address": "IW4",
+      "address": "IW2",
       "status": "6912",
       "description": "Current water level in tank (0-100%)",
       "range": "0-27648"
@@ -39,11 +39,11 @@
     {
       "name": "Sim_WaterTemperatureMeasurement",
       "type": "int",
-      "byte": "6",
+      "byte": "4",
       "bit": "",
-      "address": "IW6",
+      "address": "IW4",
       "status": "4608",
-      "description": "Current water temperature (\u00c2\u00b0C)",
+      "description": "Current water temperature (°C)",
       "range": "0-27648"
     },
     {
@@ -79,9 +79,9 @@
     {
       "name": "Sim_InletValvePosition",
       "type": "int",
-      "byte": "4",
+      "byte": "2",
       "bit": "",
-      "address": "QW4",
+      "address": "QW2",
       "status": "0",
       "description": "Upper inlet valve position (0-100% open)",
       "range": "0-27648"
@@ -89,9 +89,9 @@
     {
       "name": "Sim_OutletValvePosition",
       "type": "int",
-      "byte": "6",
+      "byte": "4",
       "bit": "",
-      "address": "QW6",
+      "address": "QW4",
       "status": "0",
       "description": "Lower outlet valve position (0-100% open)",
       "range": "0-27648"
@@ -99,9 +99,9 @@
     {
       "name": "Sim_HeaterPowerLevel",
       "type": "int",
-      "byte": "8",
+      "byte": "6",
       "bit": "",
-      "address": "QW8",
+      "address": "QW6",
       "status": "0",
       "description": "Heater power level (0-100%)",
       "range": "0-27648"
@@ -199,19 +199,19 @@
     {
       "name": "Sim_TemperatureSetpoint",
       "type": "int",
-      "byte": "8",
+      "byte": "6",
       "bit": "",
-      "address": "IW8",
+      "address": "IW6",
       "status": "0",
-      "description": "Desired water temperature (-50 to 100\u00c2\u00b0C)",
+      "description": "Desired water temperature (-50 to 100°C)",
       "range": "0-27648"
     },
     {
       "name": "Sim_WaterLevelSetpoint",
       "type": "int",
-      "byte": "10",
+      "byte": "8",
       "bit": "",
-      "address": "IW10",
+      "address": "IW8",
       "status": "0",
       "description": "Desired water level (0-100%)",
       "range": "0-27648"
@@ -249,9 +249,9 @@
     {
       "name": "Control1",
       "type": "int",
-      "byte": "12",
+      "byte": "10",
       "bit": "",
-      "address": "IW12",
+      "address": "IW10",
       "status": "0",
       "description": "General Control slider 1 value",
       "range": "0-27648"
@@ -259,9 +259,9 @@
     {
       "name": "Control2",
       "type": "int",
-      "byte": "14",
+      "byte": "12",
       "bit": "",
-      "address": "IW14",
+      "address": "IW12",
       "status": "0",
       "description": "General Control slider 2 value",
       "range": "0-27648"
@@ -269,9 +269,9 @@
     {
       "name": "Control3",
       "type": "int",
-      "byte": "16",
+      "byte": "14",
       "bit": "",
-      "address": "IW16",
+      "address": "IW14",
       "status": "0",
       "description": "General Control slider 3 value",
       "range": "0-27648"
@@ -319,9 +319,9 @@
     {
       "name": "Analog1",
       "type": "int",
-      "byte": "10",
+      "byte": "8",
       "bit": "",
-      "address": "QW10",
+      "address": "QW8",
       "status": "0",
       "description": "General Analog value 1",
       "range": "0-27648"
@@ -329,9 +329,9 @@
     {
       "name": "Analog2",
       "type": "int",
-      "byte": "12",
+      "byte": "10",
       "bit": "",
-      "address": "QW12",
+      "address": "QW10",
       "status": "0",
       "description": "General Analog value 2",
       "range": "0-27648"
@@ -339,15 +339,15 @@
     {
       "name": "Analog3",
       "type": "int",
-      "byte": "14",
+      "byte": "12",
       "bit": "",
-      "address": "QW14",
+      "address": "QW12",
       "status": "0",
       "description": "General Analog value 3",
       "range": "0-27648"
     }
   ],
   "custom_signal_names": {
-    "AILevelSensor": "IK ben niveau tank"
+    "DILevelSensorHigh": "Iktestdit"
   }
 }

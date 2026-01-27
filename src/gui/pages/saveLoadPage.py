@@ -167,7 +167,7 @@ class SaveLoadMixin:
                         except Exception as e:
                             logger.warning(f"    Could not sync PID control states: {e}", exc_info=True)
                     
-                    # Sync GUI display settings to config before saving
+                    # Sync GUI display settings and ALL config values to config before saving
                     if active_sim and hasattr(active_sim, 'config'):
                         try:
                             # Tank color from dropdown
@@ -176,20 +176,143 @@ class SaveLoadMixin:
                                 tank_color = colorDropDown.currentData()
                                 if tank_color:
                                     active_sim.config.tankColor = tank_color
-                                    logger.info(f"    ✓ Synced tankColor: {tank_color}")
+                                    logger.info(f"    ✓ Synced tankColor to config: {tank_color}")
                             
                             # Display checkboxes
                             levelSwitchesCheckBox = self.findChild(QWidget, "levelSwitchesCheckBox")
                             if levelSwitchesCheckBox:
                                 active_sim.config.displayLevelSwitches = levelSwitchesCheckBox.isChecked()
-                                logger.info(f"    ✓ Synced displayLevelSwitches: {levelSwitchesCheckBox.isChecked()}")
+                                logger.info(f"    ✓ Synced displayLevelSwitches to config: {levelSwitchesCheckBox.isChecked()}")
                             
                             analogValueTempCheckBox = self.findChild(QWidget, "analogValueTempCheckBox")
                             if analogValueTempCheckBox:
                                 active_sim.config.displayTemperature = analogValueTempCheckBox.isChecked()
-                                logger.info(f"    ✓ Synced displayTemperature: {analogValueTempCheckBox.isChecked()}")
+                                logger.info(f"    ✓ Synced displayTemperature to config: {analogValueTempCheckBox.isChecked()}")
+                            
+                            # Sync all entry fields to config
+                            # Tank volume (UI in m³, config in liters)
+                            volumeEntry = self.findChild(QWidget, "volumeEntry")
+                            if volumeEntry:
+                                try:
+                                    m3 = float(volumeEntry.text())
+                                    active_sim.config.tankVolume = m3 * 1000.0
+                                    logger.info(f"    ✓ Synced tankVolume: {active_sim.config.tankVolume}L")
+                                except ValueError:
+                                    pass
+                            
+                            # Max flows
+                            for entry_name in ['maxFlowInEntry', 'maxFlowInEntry1', 'maxFlowInEntry2']:
+                                entry = self.findChild(QWidget, entry_name)
+                                if entry:
+                                    try:
+                                        active_sim.config.valveInMaxFlow = float(entry.text())
+                                        logger.info(f"    ✓ Synced valveInMaxFlow: {active_sim.config.valveInMaxFlow}")
+                                        break
+                                    except ValueError:
+                                        pass
+                            
+                            for entry_name in ['maxFlowOutEntry', 'maxFlowOutEntry1', 'maxFlowOutEntry2']:
+                                entry = self.findChild(QWidget, entry_name)
+                                if entry:
+                                    try:
+                                        active_sim.config.valveOutMaxFlow = float(entry.text())
+                                        logger.info(f"    ✓ Synced valveOutMaxFlow: {active_sim.config.valveOutMaxFlow}")
+                                        break
+                                    except ValueError:
+                                        pass
+                            
+                            # Heater max power - CRITICAL FIX
+                            for entry_name in ['powerHeatingCoilEntry', 'powerHeatingCoilEntry2']:
+                                entry = self.findChild(QWidget, entry_name)
+                                if entry:
+                                    try:
+                                        active_sim.config.heaterMaxPower = float(entry.text())
+                                        logger.info(f"    ✓ Synced heaterMaxPower: {active_sim.config.heaterMaxPower}")
+                                        break
+                                    except ValueError:
+                                        pass
+                            
+                            # Physical properties
+                            ambientTempEntry = self.findChild(QWidget, "ambientTempEntry")
+                            if ambientTempEntry:
+                                try:
+                                    active_sim.config.ambientTemp = float(ambientTempEntry.text())
+                                    logger.info(f"    ✓ Synced ambientTemp: {active_sim.config.ambientTemp}")
+                                except ValueError:
+                                    pass
+                            
+                            heatLossVatEntry = self.findChild(QWidget, "heatLossVatEntry")
+                            if heatLossVatEntry:
+                                try:
+                                    active_sim.config.tankHeatLoss = float(heatLossVatEntry.text())
+                                    logger.info(f"    ✓ Synced tankHeatLoss: {active_sim.config.tankHeatLoss}")
+                                except ValueError:
+                                    pass
+                            
+                            specificHeatCapacity = self.findChild(QWidget, "specificHeatCapacity")
+                            if specificHeatCapacity:
+                                try:
+                                    active_sim.config.liquidSpecificHeatCapacity = float(specificHeatCapacity.text())
+                                    logger.info(f"    ✓ Synced liquidSpecificHeatCapacity: {active_sim.config.liquidSpecificHeatCapacity}")
+                                except ValueError:
+                                    pass
+                            
+                            boilingTempEntry = self.findChild(QWidget, "boilingTempEntry")
+                            if boilingTempEntry:
+                                try:
+                                    active_sim.config.liquidBoilingTemp = float(boilingTempEntry.text())
+                                    logger.info(f"    ✓ Synced liquidBoilingTemp: {active_sim.config.liquidBoilingTemp}")
+                                except ValueError:
+                                    pass
+                            
+                            # Density (UI in kg/m³, config in kg/L)
+                            specificWeightEntry = self.findChild(QWidget, "specificWeightEntry")
+                            if specificWeightEntry:
+                                try:
+                                    rho_m3 = float(specificWeightEntry.text())
+                                    active_sim.config.liquidSpecificWeight = rho_m3 / 1000.0
+                                    logger.info(f"    ✓ Synced liquidSpecificWeight: {active_sim.config.liquidSpecificWeight}")
+                                except ValueError:
+                                    pass
+                            
+                            # Time delays - CRITICAL FIX
+                            timeDelayfillingEntry = self.findChild(QWidget, "timeDelayfillingEntry")
+                            if timeDelayfillingEntry:
+                                try:
+                                    active_sim.config.liquidVolumeTimeDelay = float(timeDelayfillingEntry.text())
+                                    logger.info(f"    ✓ Synced liquidVolumeTimeDelay: {active_sim.config.liquidVolumeTimeDelay}")
+                                except ValueError:
+                                    pass
+                            
+                            timeDelayTempEntry = self.findChild(QWidget, "timeDelayTempEntry")
+                            if timeDelayTempEntry:
+                                try:
+                                    active_sim.config.liquidTempTimeDelay = float(timeDelayTempEntry.text())
+                                    logger.info(f"    ✓ Synced liquidTempTimeDelay: {active_sim.config.liquidTempTimeDelay}")
+                                except ValueError:
+                                    pass
+                            
+                            # Level switch thresholds (UI in %, config in liters)
+                            levelSwitchMaxHeightEntry = self.findChild(QWidget, "levelSwitchMaxHeightEntry")
+                            if levelSwitchMaxHeightEntry and active_sim.config.tankVolume > 0:
+                                try:
+                                    high_pct = float(levelSwitchMaxHeightEntry.text())
+                                    active_sim.config.digitalLevelSensorHighTriggerLevel = (high_pct / 100.0) * active_sim.config.tankVolume
+                                    logger.info(f"    ✓ Synced digitalLevelSensorHighTriggerLevel: {active_sim.config.digitalLevelSensorHighTriggerLevel}L ({high_pct}%)")
+                                except ValueError:
+                                    pass
+                            
+                            levelSwitchMinHeightEntry = self.findChild(QWidget, "levelSwitchMinHeightEntry")
+                            if levelSwitchMinHeightEntry and active_sim.config.tankVolume > 0:
+                                try:
+                                    low_pct = float(levelSwitchMinHeightEntry.text())
+                                    active_sim.config.digitalLevelSensorLowTriggerLevel = (low_pct / 100.0) * active_sim.config.tankVolume
+                                    logger.info(f"    ✓ Synced digitalLevelSensorLowTriggerLevel: {active_sim.config.digitalLevelSensorLowTriggerLevel}L ({low_pct}%)")
+                                except ValueError:
+                                    pass
+                            
                         except Exception as e:
-                            logger.warning(f"    Could not sync GUI display settings: {e}", exc_info=True)
+                            logger.warning(f"    Could not sync GUI settings to config: {e}", exc_info=True)
             except Exception as e:
                 logger.warning(f"Could not sync status/config before save: {e}", exc_info=True)
             
@@ -350,14 +473,43 @@ class SaveLoadMixin:
                     if hasattr(self, 'tanksim_status'):
                         self.set_simulation_status(active_sim.status)
                     
-                    # Apply loaded IO config to GUI table
+                    # Load IO tree FIRST (needed for load_all_tags_to_table)
                     try:
-                        if hasattr(self, 'apply_loaded_io_config'):
-                            logger.info("    >>> Applying loaded IO config to GUI table...")
-                            result = self.apply_loaded_io_config(Path(io_config_path))
-                            logger.info(f"    ✓ IO config applied to GUI: {result}")
+                        if hasattr(self, 'load_io_tree'):
+                            logger.info("    >>> Loading IO tree for active simulation...")
+                            self.load_io_tree()
+                            logger.info(f"    ✓ IO tree loaded")
                     except Exception as e:
-                        logger.error(f"    ERROR: Could not apply loaded IO config to GUI: {e}", exc_info=True)
+                        logger.error(f"    ERROR: Could not load IO tree: {e}", exc_info=True)
+                    
+                    # Now update IO table from loaded config
+                    try:
+                        # First, load the byte offsets from the JSON file
+                        import json
+                        with open(io_config_path, 'r', encoding='utf-8') as f:
+                            io_config_data = json.load(f)
+                        if 'offsets' in io_config_data and hasattr(self, 'io_screen'):
+                            self.io_screen.byte_offsets = io_config_data['offsets'].copy()
+                            logger.info(f"    ✓ Loaded byte offsets: {io_config_data['offsets']}")
+                        
+                        # Clear table before loading
+                        if hasattr(self, 'tableWidget_IO'):
+                            self.tableWidget_IO.setRowCount(0)
+                            logger.info("    ✓ Cleared IO table")
+                        
+                        # Load all tags from IO tree to table (uses offsets)
+                        if hasattr(self, 'load_all_tags_to_table'):
+                            logger.info("    >>> Loading all tags from tree to table...")
+                            self.load_all_tags_to_table()
+                            logger.info(f"    ✓ All tags loaded to table")
+                        
+                        # Then update addresses from config (custom mappings)
+                        if hasattr(self, '_update_table_from_config'):
+                            logger.info("    >>> Updating table addresses from config...")
+                            self._update_table_from_config()
+                            logger.info(f"    ✓ Table addresses updated from config")
+                    except Exception as e:
+                        logger.error(f"    ERROR: Could not update IO table: {e}", exc_info=True)
                     
                     # Start forced write period for IO handler
                     if hasattr(self, 'mainConfig') and hasattr(self.mainConfig, 'ioHandler'):
@@ -507,3 +659,135 @@ class SaveLoadMixin:
             
         except Exception as e:
             logger.error(f"Failed to update GUI after load: {e}", exc_info=True)
+
+    def apply_loaded_state_to_gui(self, config, status):
+        """Apply loaded configuration and status to GUI elements.
+        
+        Args:
+            config: Simulation configuration object
+            status: Simulation status object
+        """
+        try:
+            logger.info(">>> Applying loaded state to GUI elements...")
+            
+            if config:
+                # Apply tank color from config
+                if hasattr(config, 'tankColor'):
+                    colorDropDown = self.findChild(QWidget, "colorDropDown")
+                    if colorDropDown:
+                        # Find index by color data (hex value)
+                        for i in range(colorDropDown.count()):
+                            if colorDropDown.itemData(i) == config.tankColor:
+                                colorDropDown.blockSignals(True)
+                                colorDropDown.setCurrentIndex(i)
+                                colorDropDown.blockSignals(False)
+                                logger.info(f"    ✓ Set tankColor from config: {config.tankColor}")
+                                break
+                
+                # Apply display checkboxes from config
+                if hasattr(config, 'displayLevelSwitches'):
+                    levelSwitchesCheckBox = self.findChild(QWidget, "levelSwitchesCheckBox")
+                    if levelSwitchesCheckBox:
+                        levelSwitchesCheckBox.blockSignals(True)
+                        levelSwitchesCheckBox.setChecked(config.displayLevelSwitches)
+                        levelSwitchesCheckBox.blockSignals(False)
+                        logger.info(f"    ✓ Set displayLevelSwitches from config: {config.displayLevelSwitches}")
+                
+                if hasattr(config, 'displayTemperature'):
+                    analogValueTempCheckBox = self.findChild(QWidget, "analogValueTempCheckBox")
+                    if analogValueTempCheckBox:
+                        analogValueTempCheckBox.blockSignals(True)
+                        analogValueTempCheckBox.setChecked(config.displayTemperature)
+                        analogValueTempCheckBox.blockSignals(False)
+                        logger.info(f"    ✓ Set displayTemperature from config: {config.displayTemperature}")
+                
+                # Apply configuration entry fields (tank volume, flows, power, etc.)
+                try:
+                    # Tank volume (in m³, config stores liters)
+                    volumeEntry = self.findChild(QWidget, "volumeEntry")
+                    if volumeEntry and hasattr(config, 'tankVolume'):
+                        volumeEntry.blockSignals(True)
+                        volumeEntry.setText(str(config.tankVolume / 1000.0))  # Convert liters to m³
+                        volumeEntry.blockSignals(False)
+                        logger.info(f"    ✓ Set tankVolume: {config.tankVolume}L ({config.tankVolume/1000.0}m³)")
+                    
+                    # Max flow in
+                    for entry_name in ['maxFlowInEntry', 'maxFlowInEntry1', 'maxFlowInEntry2']:
+                        entry = self.findChild(QWidget, entry_name)
+                        if entry and hasattr(config, 'valveInMaxFlow'):
+                            entry.blockSignals(True)
+                            entry.setText(str(config.valveInMaxFlow))
+                            entry.blockSignals(False)
+                    if hasattr(config, 'valveInMaxFlow'):
+                        logger.info(f"    ✓ Set valveInMaxFlow: {config.valveInMaxFlow}")
+                    
+                    # Max flow out
+                    for entry_name in ['maxFlowOutEntry', 'maxFlowOutEntry1', 'maxFlowOutEntry2']:
+                        entry = self.findChild(QWidget, entry_name)
+                        if entry and hasattr(config, 'valveOutMaxFlow'):
+                            entry.blockSignals(True)
+                            entry.setText(str(config.valveOutMaxFlow))
+                            entry.blockSignals(False)
+                    if hasattr(config, 'valveOutMaxFlow'):
+                        logger.info(f"    ✓ Set valveOutMaxFlow: {config.valveOutMaxFlow}")
+                    
+                    # Heater max power
+                    for entry_name in ['powerHeatingCoilEntry', 'powerHeatingCoilEntry2']:
+                        entry = self.findChild(QWidget, entry_name)
+                        if entry and hasattr(config, 'heaterMaxPower'):
+                            entry.blockSignals(True)
+                            entry.setText(str(config.heaterMaxPower))
+                            entry.blockSignals(False)
+                    if hasattr(config, 'heaterMaxPower'):
+                        logger.info(f"    ✓ Set heaterMaxPower: {config.heaterMaxPower}")
+                    
+                    # Other config fields
+                    field_mapping = {
+                        'ambientTempEntry': 'ambientTemp',
+                        'heatLossVatEntry': 'tankHeatLoss',
+                        'specificHeatCapacity': 'liquidSpecificHeatCapacity',
+                        'boilingTempEntry': 'liquidBoilingTemp',
+                        'specificWeightEntry': 'liquidSpecificWeight',
+                        'timeDelayfillingEntry': 'liquidVolumeTimeDelay',
+                        'timeDelayTempEntry': 'liquidTempTimeDelay',
+                    }
+                    
+                    for entry_name, config_attr in field_mapping.items():
+                        entry = self.findChild(QWidget, entry_name)
+                        if entry and hasattr(config, config_attr):
+                            value = getattr(config, config_attr)
+                            # Convert density from kg/L to kg/m³ for UI
+                            if config_attr == 'liquidSpecificWeight':
+                                value = value * 1000.0
+                            entry.blockSignals(True)
+                            entry.setText(str(value))
+                            entry.blockSignals(False)
+                            logger.info(f"    ✓ Set {config_attr}: {getattr(config, config_attr)}")
+                    
+                    # Level switch thresholds (% of tank volume)
+                    if hasattr(config, 'digitalLevelSensorHighTriggerLevel') and hasattr(config, 'tankVolume') and config.tankVolume > 0:
+                        levelSwitchMaxHeightEntry = self.findChild(QWidget, "levelSwitchMaxHeightEntry")
+                        if levelSwitchMaxHeightEntry:
+                            high_pct = (config.digitalLevelSensorHighTriggerLevel / config.tankVolume) * 100.0
+                            levelSwitchMaxHeightEntry.blockSignals(True)
+                            levelSwitchMaxHeightEntry.setText(str(high_pct))
+                            levelSwitchMaxHeightEntry.blockSignals(False)
+                            logger.info(f"    ✓ Set digitalLevelSensorHighTriggerLevel: {high_pct}% ({config.digitalLevelSensorHighTriggerLevel}L)")
+                    
+                    if hasattr(config, 'digitalLevelSensorLowTriggerLevel') and hasattr(config, 'tankVolume') and config.tankVolume > 0:
+                        levelSwitchMinHeightEntry = self.findChild(QWidget, "levelSwitchMinHeightEntry")
+                        if levelSwitchMinHeightEntry:
+                            low_pct = (config.digitalLevelSensorLowTriggerLevel / config.tankVolume) * 100.0
+                            levelSwitchMinHeightEntry.blockSignals(True)
+                            levelSwitchMinHeightEntry.setText(str(low_pct))
+                            levelSwitchMinHeightEntry.blockSignals(False)
+                            logger.info(f"    ✓ Set digitalLevelSensorLowTriggerLevel: {low_pct}% ({config.digitalLevelSensorLowTriggerLevel}L)")
+                            
+                except Exception as e:
+                    logger.warning(f"Could not set config entry fields: {e}", exc_info=True)
+            
+            logger.info(">>> ✓ Loaded state applied to GUI successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to apply loaded state to GUI: {e}", exc_info=True)
+

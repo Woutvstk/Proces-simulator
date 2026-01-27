@@ -120,14 +120,6 @@ class status:
         self.pidPidTankTempSPValue: int = 0
         self.pidPidTankLevelSPValue: int = 0
 
-        # ===== GUI STATE (display settings, not simulation values) =====
-        # Tank color for visualization (written by: gui)
-        self.tankColor: str = "#0000FF"  # Default: Blue
-        
-        # Display checkboxes (written by: gui)
-        self.displayLevelSwitches: bool = True
-        self.displayTemperature: bool = True
-
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a JSON file"""
         print(f"Exporting status to: {exportFileName}")

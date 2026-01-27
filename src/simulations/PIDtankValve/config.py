@@ -155,12 +155,19 @@ class configuration:
         self.liquidSpecificWeight: float = 0.997
         self.liquidBoilingTemp: float = 100.0
 
+        # GUI Display Settings
+        self.tankColor: str = "#0000FF"  # Default: Blue
+        self.displayLevelSwitches: bool = True
+        self.displayTemperature: bool = True
+
         self.importExportVariableList = [
             "simulationInterval",
             "tankVolume", "valveInMaxFlow", "valveOutMaxFlow", "ambientTemp",
             "digitalLevelSensorHighTriggerLevel", "digitalLevelSensorLowTriggerLevel",
             "heaterMaxPower", "tankHeatLoss", "liquidSpecificHeatCapacity",
-            "liquidBoilingTemp", "liquidSpecificWeight"
+            "liquidBoilingTemp", "liquidSpecificWeight",
+            "liquidVolumeTimeDelay", "liquidTempTimeDelay",
+            "tankColor", "displayLevelSwitches", "displayTemperature",
         ]
 
     def get_byte_range(self):
@@ -198,6 +205,14 @@ class configuration:
             if 'signals' not in config_data:
                 logger.warning("No signals found in IO configuration")
                 return
+
+            # Load custom signal names from config if present
+            if 'custom_signal_names' in config_data:
+                try:
+                    self.custom_signal_names = config_data['custom_signal_names'].copy()
+                    logger.info(f"Loaded {len(self.custom_signal_names)} custom signal name(s)")
+                except Exception as e:
+                    logger.warning(f"Could not load custom signal names: {e}")
 
             # Reset enabled signals; will be repopulated based on file content
             self.enabled_attrs.clear()

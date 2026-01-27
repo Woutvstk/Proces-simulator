@@ -160,10 +160,6 @@ class simulation:
             if not hasattr(self, '_debug_counter'):
                 self._debug_counter = 0
             self._debug_counter += 1
-            
-            if self._debug_counter >= 10:
-                self._debug_counter = 0
-                print(f"[DEBUG SIM] heaterPowerFraction={status.heaterPowerFraction:.2f}, delayed={self.delayedHeaterPowerFraction:.2f}, maxPower={config.heaterMaxPower}W, temp={status.liquidTemperature:.1f}°C")
 
             if self._debug_counter % 10 == 0:
                 logger.debug(
@@ -201,10 +197,6 @@ class simulation:
                 
                 # Calculate heat input rate (Joules/second = Watts)
                 heat_input_rate = config.heaterMaxPower * self.delayedHeaterPowerFraction
-                
-                # Debug heat calculation every 10 cycles
-                if self._debug_counter == 0:
-                    print(f"[DEBUG SIM HEAT] heaterMaxPower={config.heaterMaxPower}W, delayedFraction={self.delayedHeaterPowerFraction:.3f}, heat_input={heat_input_rate:.1f}W")
                 
                 # Calculate heat loss rate (proportional to temp difference)
                 # This creates exponential cooling behavior

@@ -85,6 +85,14 @@ class TankSimSettingsMixin:
             for name, hexcode in colors:
                 self.colorDropDown.addItem(name, hexcode)
 
+            # Set initial color from config if available
+            if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                tank_color = getattr(self.tanksim_config, 'tankColor', "#0000FF")
+                for i in range(self.colorDropDown.count()):
+                    if self.colorDropDown.itemData(i) == tank_color:
+                        self.colorDropDown.setCurrentIndex(i)
+                        break
+
             self.colorDropDown.currentIndexChanged.connect(
                 self.on_color_changed)
         except AttributeError:
@@ -99,9 +107,16 @@ class TankSimSettingsMixin:
             self.analogValueTempCheckBox.toggled.connect(
                 self.on_tank_config_changed)
             
-            # Set default checked state
-            self.levelSwitchesCheckBox.setChecked(True)
-            self.analogValueTempCheckBox.setChecked(True)
+            # Set checked state from config if available, otherwise use defaults
+            if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                self.levelSwitchesCheckBox.setChecked(
+                    getattr(self.tanksim_config, 'displayLevelSwitches', True))
+                self.analogValueTempCheckBox.setChecked(
+                    getattr(self.tanksim_config, 'displayTemperature', True))
+            else:
+                # Default values if config not yet loaded
+                self.levelSwitchesCheckBox.setChecked(True)
+                self.analogValueTempCheckBox.setChecked(True)
         except AttributeError:
             pass
 
@@ -545,9 +560,15 @@ class TankSimSettingsMixin:
             # Use GUI fields in GUI mode; otherwise use live config/status values
             if gui_mode:
                 if hasattr(self, 'maxFlowInEntry'):
-                    self.vat_widget.valveInMaxFlowValue = int(self.maxFlowInEntry.text() or 5)
+                    try:
+                        self.vat_widget.valveInMaxFlowValue = int(float(self.maxFlowInEntry.text() or 5))
+                    except (ValueError, AttributeError):
+                        self.vat_widget.valveInMaxFlowValue = 5
                 if hasattr(self, 'maxFlowOutEntry'):
-                    self.vat_widget.valveOutMaxFlowValue = int(self.maxFlowOutEntry.text() or 2)
+                    try:
+                        self.vat_widget.valveOutMaxFlowValue = int(float(self.maxFlowOutEntry.text() or 2))
+                    except (ValueError, AttributeError):
+                        self.vat_widget.valveOutMaxFlowValue = 2
                 if hasattr(self, 'powerHeatingCoilEntry'):
                     self.vat_widget.powerValue = float(self.powerHeatingCoilEntry.text() or 10000.0)
                 
@@ -814,12 +835,14 @@ class TankSimSettingsMixin:
             except Exception:
                 pass
             
-            # Write valve positions - CRITICAL: Always write these in GUI mode or Manual mode
-            try:
-                self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
-                self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
-            except Exception as e:
-                logger.error(f"Error writing valve positions: {e}")
+            # Write valve positions ONLY when in GUI mode or Manual mode
+            # In Automatic mode, PLC controls valves - don't override with GUI values
+            if manual_mode or gui_mode:
+                try:
+                    self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
+                    self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
+                except Exception as e:
+                    logger.error(f"Error writing valve positions: {e}")
 
             # Write heater state - SKIP THIS, _on_heater_slider_changed handles it directly
             # Commenting out to prevent overwriting status.heaterPowerFraction with 0
@@ -967,9 +990,19 @@ class TankSimSettingsMixin:
         """Callback when water color changes"""
         new_color = self.colorDropDown.currentData()
         self.vat_widget.waterColor = new_color
+        # Also update config for persistence
+        if hasattr(self, 'tanksim_config') and self.tanksim_config:
+            self.tanksim_config.tankColor = new_color
 
     def on_tank_config_changed(self):
         """Callback when tank configuration changes"""
+        # Update config for persistence
+        if hasattr(self, 'tanksim_config') and self.tanksim_config:
+            if hasattr(self, 'levelSwitchesCheckBox'):
+                self.tanksim_config.displayLevelSwitches = self.levelSwitchesCheckBox.isChecked()
+            if hasattr(self, 'analogValueTempCheckBox'):
+                self.tanksim_config.displayTemperature = self.analogValueTempCheckBox.isChecked()
+        
         # Always use analog valve control (digital mode removed)
         try:
             stacked_widget = self.findChild(QStackedWidget, "regelingSimGui")
