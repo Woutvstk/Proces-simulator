@@ -1,7 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSlider
 from PyQt5.QtCore import QSize, QRectF
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtGui import QPainter
@@ -444,9 +444,11 @@ class VatWidget(QWidget):
                 man_btn.clicked.connect(self._on_manual_button_clicked)
                 print("[DEBUG TOGGLE] Manual button connected")
             
-            # Start with Auto active
+            # Start with Auto active (block signals to prevent triggering callbacks)
             if auto_btn:
+                auto_btn.blockSignals(True)
                 auto_btn.setChecked(True)
+                auto_btn.blockSignals(False)
                 auto_btn.setStyleSheet("""
                     QPushButton {
                         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
@@ -461,7 +463,9 @@ class VatWidget(QWidget):
                 """)
             
             if man_btn:
+                man_btn.blockSignals(True)
                 man_btn.setChecked(False)
+                man_btn.blockSignals(False)
                 man_btn.setStyleSheet("""
                     QPushButton {
                         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, 
@@ -512,6 +516,10 @@ class VatWidget(QWidget):
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
         
+        # Guard: if already in Auto mode, don't re-trigger
+        if auto_btn and auto_btn.isChecked() and man_btn and not man_btn.isChecked():
+            return
+        
         # Force button states
         if auto_btn:
             auto_btn.setChecked(True)
@@ -520,12 +528,15 @@ class VatWidget(QWidget):
         
         # Apply Auto mode
         self._toggle_auto_mode()
-        print("[DEBUG] Auto mode activated")
     
     def _on_manual_button_clicked(self):
         """Handle Manual button click - switch to manual mode."""
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
+        
+        # Guard: if already in Manual mode, don't re-trigger
+        if man_btn and man_btn.isChecked() and auto_btn and not auto_btn.isChecked():
+            return
         
         # Force button states
         if man_btn:
@@ -535,7 +546,6 @@ class VatWidget(QWidget):
         
         # Apply Manual mode
         self._toggle_manual_mode()
-        print("[DEBUG] Manual mode activated")
     
     def _toggle_auto_mode(self):
         """Set Auto as active, Manual as inactive."""
@@ -590,6 +600,34 @@ class VatWidget(QWidget):
         if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
             self.mainwindow.tanksim_status.pidPidValveAutoCmd = True
             self.mainwindow.tanksim_status.pidPidValveManCmd = False
+        
+        # When switching to Auto, clear manual actuator inputs
+        try:
+            valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
+            valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
+            if valve_in_entry:
+                valve_in_entry.blockSignals(True)
+                valve_in_entry.setText("0")
+                valve_in_entry.blockSignals(False)
+            if valve_out_entry:
+                valve_out_entry.blockSignals(True)
+                valve_out_entry.setText("0")
+                valve_out_entry.blockSignals(False)
+            
+            if hasattr(self, 'adjustableValveInValue'):
+                self.adjustableValveInValue = 0
+            if hasattr(self, 'adjustableValveOutValue'):
+                self.adjustableValveOutValue = 0
+            
+            for slider_name in ["heaterPowerSlider", "heaterPowerSlider_1", "heaterPowerSlider_2", "heaterPowerSlider_3"]:
+                slider = self.mainwindow.findChild(QSlider, slider_name)
+                if slider:
+                    slider.blockSignals(True)
+                    slider.setValue(0)
+                    slider.blockSignals(False)
+                    break
+        except Exception:
+            pass
         
         # Gray out control groupboxes in Auto mode ONLY if in PLC control mode
         gui_mode = (hasattr(self.mainwindow, 'mainConfig') and 
@@ -746,6 +784,11 @@ class VatWidget(QWidget):
     def is_manual_mode(self):
         """Check if currently in Manual mode.
         
+        In both GUI and PLC modes, manual button allows user override of actuators.
+        - GUI mode + Manual: User controls actuators
+        - PLC mode + Auto: PLC controls actuators  
+        - PLC mode + Manual: User controls actuators (manual override of PLC)
+        
         Returns:
             bool: True if Manual mode is active, False if Auto mode
         """
@@ -753,8 +796,20 @@ class VatWidget(QWidget):
             return False
         
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-        if man_btn:
-            return man_btn.isChecked()
+        auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
+        
+        if man_btn and auto_btn:
+            result = man_btn.isChecked()
+            # Log state changes to track unexpected mode switches
+            prev_state = getattr(self, '_last_manual_mode_state', None)
+            if prev_state is not None and prev_state != result:
+                import traceback
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"[is_manual_mode] MODE CHANGED: {prev_state} -> {result}, Auto={auto_btn.isChecked()}, Man={man_btn.isChecked()}")
+                logger.warning(f"[is_manual_mode] Call stack:\n{''.join(traceback.format_stack()[-5:-1])}")
+            self._last_manual_mode_state = result
+            return result
         return False
 
     def set_plc_pidcontrol_index(self, gui_mode: bool):

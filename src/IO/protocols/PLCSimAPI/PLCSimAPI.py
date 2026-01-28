@@ -29,12 +29,29 @@ class plcSimAPI:
             script_dir = os.path.dirname(os.path.abspath(__file__))
 
             # Construct the absolute path to the API DLL
-            dll_path = os.path.join(
-                script_dir, "Siemens.Simatic.Simulation.Runtime.Api.x64.dll")
+            dll_path = os.path.join(script_dir, "SiemensAPI.DLL")
 
             print(f"Attempting to load DLL from: {dll_path}")
             if not os.path.exists(dll_path):
-                raise FileNotFoundError(f"Required DLL not found: {dll_path}")
+                error_msg = (
+                    f"Required DLL not found: {dll_path}\n\n"
+                    f"The PLCSim Advanced API DLL (SiemensAPI.DLL) is missing.\n"
+                    f"This DLL is required for S7-1500 advanced simulation.\n\n"
+                    f"To fix this:\n"
+                    f"1. Install Siemens PLCSim Advanced\n"
+                    f"2. Locate the DLL (usually in C:\\Program Files\\Siemens\\Automation\\Portal V19\\SIMATICController)\n"
+                    f"3. Copy 'SiemensAPI.DLL' or 'Siemens.Simatic.Simulation.Runtime.Api.x64.dll' to:\n"
+                    f"   {script_dir}\n"
+                    f"4. Rename it to 'SiemensAPI.DLL'\n\n"
+                    f"Note: The DLL is only available with PLCSim Advanced license.\n"
+                    f"See PLCSIM_ADVANCED_SETUP.md for detailed instructions."
+                )
+                print("=" * 80)
+                print("ERROR: PLCSim Advanced DLL Missing")
+                print("=" * 80)
+                print(error_msg)
+                print("=" * 80)
+                raise FileNotFoundError(error_msg)
 
             # Import the DLL using the Common Language Runtime (CLR) bridge
             clr.AddReference(dll_path)

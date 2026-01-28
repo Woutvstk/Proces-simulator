@@ -22,7 +22,7 @@ from .pages.generalSettings import ProcessSettingsMixin
 from .pages.ioConfigPage import IOConfigMixin
 from .pages.generalControls import GeneralControlsMixin
 from .pages.simPage import SimPageMixin
-from .pages.saveLoadPage import SaveLoadMixin
+from core.load_save import SaveLoadMixin
 from .tooltipManager import setup_tooltip_manager
 # Tank simulation settings mixin from simulations package
 from simulations.PIDtankValve.settingsGui import TankSimSettingsMixin

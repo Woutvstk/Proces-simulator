@@ -394,19 +394,19 @@ class GeneralControlsMixin:
                 return
 
             label_map = {
-                'AIGen_Control1': getattr(self, 'label_slider1', None),
-                'AIGen_Control2': getattr(self, 'label_slider2', None),
-                'AIGen_Control3': getattr(self, 'label_slider3', None),
-                'DQGen_Indicator1': getattr(self, 'label_status1', None),
-                'DQGen_Indicator2': getattr(self, 'label_status2', None),
-                'DQGen_Indicator3': getattr(self, 'label_status3', None),
-                'DQGen_Indicator4': getattr(self, 'label_status4', None),
-                'DIGen_Start': getattr(self, 'pushButton_control1', None),
-                'DIGen_Stop': getattr(self, 'pushButton_control2', None),
-                'DIGen_Reset': getattr(self, 'pushButton_control3', None),
-                'AQGen_Analog1': getattr(self, 'label_value1', None),
-                'AQGen_Analog2': getattr(self, 'label_value2', None),
-                'AQGen_Analog3': getattr(self, 'label_value3', None),
+                'AIControl1': getattr(self, 'label_slider1', None),
+                'AIControl2': getattr(self, 'label_slider2', None),
+                'AIControl3': getattr(self, 'label_slider3', None),
+                'DQIndicator1': getattr(self, 'label_status1', None),
+                'DQIndicator2': getattr(self, 'label_status2', None),
+                'DQIndicator3': getattr(self, 'label_status3', None),
+                'DQIndicator4': getattr(self, 'label_status4', None),
+                'DIStart': getattr(self, 'pushButton_control1', None),
+                'DIStop': getattr(self, 'pushButton_control2', None),
+                'DIReset': getattr(self, 'pushButton_control3', None),
+                'AQAnalog1': getattr(self, 'label_value1', None),
+                'AQAnalog2': getattr(self, 'label_value2', None),
+                'AQAnalog3': getattr(self, 'label_value3', None),
             }
 
             for attr, label_widget in label_map.items():

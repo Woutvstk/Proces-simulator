@@ -543,10 +543,11 @@ class TankSimSettingsMixin:
         except Exception:
             gui_mode = False
         
-        # Check manual mode
+        # Check manual override (PLC mode + Manual => GUI controls actuators)
         manual_mode = False
         try:
-            manual_mode = self.vat_widget.is_manual_mode() if hasattr(self.vat_widget, 'is_manual_mode') else False
+            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                manual_mode = self.tanksim_status.is_manual_override(self.mainConfig.plcGuiControl)
         except Exception:
             manual_mode = False
         
@@ -574,6 +575,7 @@ class TankSimSettingsMixin:
         try:
             # Use GUI fields in GUI mode; otherwise use live config/status values
             if gui_mode:
+                # Try all possible entry field names (UI file has multiple naming conventions)
                 if hasattr(self, 'maxFlowInEntry'):
                     try:
                         self.vat_widget.valveInMaxFlowValue = int(float(self.maxFlowInEntry.text() or 5))
@@ -584,8 +586,20 @@ class TankSimSettingsMixin:
                         self.vat_widget.valveOutMaxFlowValue = int(float(self.maxFlowOutEntry.text() or 2))
                     except (ValueError, AttributeError):
                         self.vat_widget.valveOutMaxFlowValue = 2
-                if hasattr(self, 'powerHeatingCoilEntry'):
-                    self.vat_widget.powerValue = float(self.powerHeatingCoilEntry.text() or 10000.0)
+                
+                # Try all heater power entry variants
+                power_set = False
+                for power_entry_name in ['powerHeatingCoilMaxEntry', 'powerHeatingCoilEntry', 'powerHeatingCoilEntry2']:
+                    power_entry = getattr(self, power_entry_name, None)
+                    if power_entry:
+                        try:
+                            self.vat_widget.powerValue = float(power_entry.text() or 10000.0)
+                            power_set = True
+                            break
+                        except (ValueError, AttributeError):
+                            pass
+                if not power_set:
+                    self.vat_widget.powerValue = 10000.0
                 
                 try:
                     if hasattr(self, 'volumeEntry'):
@@ -601,6 +615,7 @@ class TankSimSettingsMixin:
                 if hasattr(self, 'levelSwitchMinHeightEntry'):
                     self.vat_widget.levelSwitchMinHeight = float(self.levelSwitchMinHeightEntry.text() or 10.0)
             else:
+                # PLC mode: read from config object (correct after load)
                 cfg = getattr(self, 'tanksim_config', None)
                 self.vat_widget.valveInMaxFlowValue = int(cfg.valveInMaxFlow) if cfg and cfg.valveInMaxFlow is not None else 5
                 self.vat_widget.valveOutMaxFlowValue = int(cfg.valveOutMaxFlow) if cfg and cfg.valveOutMaxFlow is not None else 2
@@ -739,6 +754,8 @@ class TankSimSettingsMixin:
     def is_manual_mode(self):
         """Check if manual mode is active - generic method for main.py"""
         try:
+            if hasattr(self, 'tanksim_status') and self.tanksim_status and hasattr(self, 'mainConfig') and self.mainConfig:
+                return self.tanksim_status.is_manual_override(self.mainConfig.plcGuiControl)
             if hasattr(self, 'vat_widget') and self.vat_widget:
                 return self.vat_widget.is_manual_mode()
         except Exception:
@@ -793,16 +810,19 @@ class TankSimSettingsMixin:
         # If PLC is in control, do not overwrite runtime status, but still propagate UI config changes (max flows, power, etc.)
         gui_mode = (self.mainConfig.plcGuiControl == "gui")
         
-        # Check if Manual mode is active (even in PLC mode, Manual mode allows GUI control)
+        # Check if Manual override is active (PLC mode + Manual => GUI controls actuators)
         manual_mode = False
-        if hasattr(self, 'vat_widget') and self.vat_widget:
+        if hasattr(self, 'tanksim_status') and self.tanksim_status:
             try:
-                manual_mode = self.vat_widget.is_manual_mode()
+                manual_mode = self.tanksim_status.is_manual_override(self.mainConfig.plcGuiControl)
             except Exception:
                 manual_mode = False
         
-        # Effective control: GUI mode OR Manual mode allows writing valve/heater values
+        # Effective control: GUI mode OR Manual override allows writing valve/heater values
         effective_gui_control = gui_mode or manual_mode
+        logger.info(f"[settingsGui] gui_mode={gui_mode}, manual_mode={manual_mode}, effective_gui_control={effective_gui_control}")
+        
+        logger.debug(f"[settingsGui] gui_mode={gui_mode}, manual_mode={manual_mode}, effective_gui_control={effective_gui_control}")
 
         # Update PLCControl_PIDControl widget based on GUI mode
         if hasattr(self, 'vat_widget') and self.vat_widget:
@@ -854,10 +874,26 @@ class TankSimSettingsMixin:
             # In Automatic mode, PLC controls valves - don't override with GUI values
             if manual_mode or gui_mode:
                 try:
-                    self.tanksim_status.valveInOpenFraction = self.vat_widget.adjustableValveInValue / 100.0
-                    self.tanksim_status.valveOutOpenFraction = self.vat_widget.adjustableValveOutValue / 100.0
+                    old_in = self.tanksim_status.valveInOpenFraction
+                    old_out = self.tanksim_status.valveOutOpenFraction
+                    new_in = self.vat_widget.adjustableValveInValue / 100.0
+                    new_out = self.vat_widget.adjustableValveOutValue / 100.0
+                    
+                    self.tanksim_status.valveInOpenFraction = new_in
+                    self.tanksim_status.valveOutOpenFraction = new_out
+                    logger.info(f"[settingsGui] WROTE VALVE: valveIn {old_in:.2%} -> {new_in:.2%}, valveOut {old_out:.2%} -> {new_out:.2%}")
                 except Exception as e:
                     logger.error(f"Error writing valve positions: {e}")
+            else:
+                # In PLC Auto mode - do NOT write from GUI
+                # Log if we would have written (to detect unwanted writes)
+                try:
+                    gui_valve_in = self.vat_widget.adjustableValveInValue / 100.0
+                    gui_valve_out = self.vat_widget.adjustableValveOutValue / 100.0
+                    if gui_valve_in != 0 or gui_valve_out != 0:
+                        logger.info(f"[settingsGui] BLOCKED valve write in Auto mode: GUI has valveIn={gui_valve_in:.2%}, valveOut={gui_valve_out:.2%} (ignored)")
+                except Exception:
+                    pass
 
             # Write heater state - SKIP THIS, _on_heater_slider_changed handles it directly
             # Commenting out to prevent overwriting status.heaterPowerFraction with 0

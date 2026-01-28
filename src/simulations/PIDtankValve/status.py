@@ -120,6 +120,32 @@ class status:
         self.pidPidTankTempSPValue: int = 0
         self.pidPidTankLevelSPValue: int = 0
 
+    def get_actuator_control_source(self, plc_gui_control: str) -> str:
+        """Return the control source for actuators: 'plc' or 'gui'.
+
+        Rules:
+        - GUI mode: GUI controls actuators.
+        - PLC mode + Auto: PLC controls actuators.
+        - PLC mode + Manual: GUI controls actuators (manual override).
+        """
+        if plc_gui_control == "gui":
+            return "gui"
+
+        # PLC mode
+        if self.pidPidValveManCmd and not self.pidPidValveAutoCmd:
+            return "gui"
+        if self.pidPidValveAutoCmd and not self.pidPidValveManCmd:
+            return "plc"
+
+        # Ambiguous state: prefer manual override if set, else PLC
+        if self.pidPidValveManCmd:
+            return "gui"
+        return "plc"
+
+    def is_manual_override(self, plc_gui_control: str) -> bool:
+        """True when PLC mode is active but GUI should control actuators."""
+        return plc_gui_control == "plc" and self.get_actuator_control_source(plc_gui_control) == "gui"
+
     def saveToFile(self, exportFileName, createFile: bool = False):
         """Save status to a JSON file"""
         print(f"Exporting status to: {exportFileName}")

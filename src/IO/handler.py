@@ -426,12 +426,29 @@ class IOHandler:
     
     def _read_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
         # Read PIDValve buttons and radios from PLC
+        # BUT: Respect the load lock - don't overwrite status flags during load sequence
+        import time
+        is_locked = (hasattr(status, '_lock_status_flags_until') and 
+                     status._lock_status_flags_until and
+                     time.monotonic() < status._lock_status_flags_until)
+        
+        if is_locked:
+            # During load lock window, skip reading Auto/Man flags from PLC
+            # Only read the other flags that aren't part of the lock
+            skip_names = {'PidValveAuto', 'PidValveMan'}
+        else:
+            skip_names = set()
+        
         for name in [
             'PidValveStart', 'PidValveStop', 'PidValveReset',
             'PidValveAuto', 'PidValveMan',
             'PidTankValveAItemp', 'PidTankValveDItemp',
             'PidTankValveAIlevel', 'PidTankValveDIlevel'
         ]:
+            # Skip locked flags during load
+            if name in skip_names:
+                continue
+                
             key = f"DI{name}"
             attr = f"pid{name}Cmd"
             if key in forced_values:
