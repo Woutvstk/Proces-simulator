@@ -140,7 +140,7 @@ if __name__ == "__main__":
         while not mainConfig.doExit:
             app.processEvents()
             
-            time.sleep(0.004)
+            time.sleep(0.005)
             
             # Check for connect command from GUI
             if mainConfig.tryConnect:
@@ -191,8 +191,8 @@ if __name__ == "__main__":
             # PLCSim communication can be slower; throttle slightly
             io_interval = active_config.simulationInterval
             if mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
-                # Use a minimum interval of 100ms
-                io_interval = max(0.1, active_config.simulationInterval)
+                # Use a minimum interval of 200ms for PLCSim instead of 1s
+                io_interval = max(0.2, active_config.simulationInterval)
             
             # Throttle calculations and data exchange
             if (time.time() - timeLastUpdate) > io_interval:

@@ -1632,13 +1632,13 @@ QPushButton:pressed {
                     <property name="minimumSize">
                      <size>
                       <width>350</width>
-                      <height>195</height>
+                      <height>165</height>
                      </size>
                     </property>
                     <property name="maximumSize">
                      <size>
                       <width>350</width>
-                      <height>195</height>
+                      <height>165</height>
                      </size>
                     </property>
                     <property name="styleSheet">
@@ -1690,13 +1690,13 @@ QGroupBox::title {
                        <property name="minimumSize">
                         <size>
                          <width>340</width>
-                         <height>190</height>
+                         <height>160</height>
                         </size>
                        </property>
                        <property name="maximumSize">
                         <size>
                          <width>340</width>
-                         <height>190</height>
+                         <height>160</height>
                         </size>
                        </property>
                        <property name="palette">
@@ -2063,67 +2063,6 @@ QGroupBox::title {
                          </layout>
                         </item>
                         <item row="2" column="0">
-                         <widget class="QLabel" name="label_8">
-                          <property name="font">
-                           <font>
-                            <family>Segoe UI,Arial,sans-serif</family>
-                           </font>
-                          </property>
-                          <property name="text">
-                           <string>Heating Coil Power:</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="2" column="1">
-                         <layout class="QHBoxLayout" name="horizontalLayout_6">
-                          <item>
-                           <widget class="QLineEdit" name="powerHeatingCoilEntry">
-                            <property name="sizePolicy">
-                             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                              <horstretch>0</horstretch>
-                              <verstretch>0</verstretch>
-                             </sizepolicy>
-                            </property>
-                            <property name="minimumSize">
-                             <size>
-                              <width>0</width>
-                              <height>30</height>
-                             </size>
-                            </property>
-                            <property name="maximumSize">
-                             <size>
-                              <width>16777215</width>
-                              <height>30</height>
-                             </size>
-                            </property>
-                            <property name="font">
-                             <font>
-                              <family>Segoe UI,Arial,sans-serif</family>
-                             </font>
-                            </property>
-                            <property name="toolTip">
-                             <string>Set the heating coil power in watts</string>
-                            </property>
-                            <property name="text">
-                             <string>15000</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QLabel" name="label_12">
-                            <property name="font">
-                             <font>
-                              <family>Segoe UI,Arial,sans-serif</family>
-                             </font>
-                            </property>
-                            <property name="text">
-                             <string>W</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
-                        <item row="3" column="0">
                          <widget class="QLabel" name="label_heaterPower">
                           <property name="font">
                            <font>
@@ -2135,7 +2074,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="3" column="1">
+                        <item row="2" column="1">
                          <layout class="QHBoxLayout" name="horizontalLayout_heaterPower_2">
                           <item>
                            <widget class="QSlider" name="heaterPowerSlider">
@@ -4924,11 +4863,11 @@ QGroupBox::title {
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>358</width>
-                    <height>886</height>
+                    <width>970</width>
+                    <height>953</height>
                    </rect>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_tankSimScroll">
+                  <layout class="QVBoxLayout" name="verticalLayout_30">
                    <item>
                     <layout class="QVBoxLayout" name="verticalLayout_6">
                      <item>
@@ -5304,7 +5243,7 @@ QGroupBox::title {
                           </item>
                          </layout>
                         </item>
-                        <item row="3" column="0">
+                        <item row="4" column="0">
                          <widget class="QLabel" name="label_40">
                           <property name="font">
                            <font>
@@ -5316,57 +5255,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="3" column="1">
-                         <layout class="QHBoxLayout" name="horizontalLayout_33">
-                          <item>
-                           <widget class="QLineEdit" name="powerHeatingCoilEntry2">
-                            <property name="maximumSize">
-                             <size>
-                              <width>100</width>
-                              <height>16777215</height>
-                             </size>
-                            </property>
-                            <property name="font">
-                             <font>
-                              <family>Segoe UI,Arial,sans-serif</family>
-                             </font>
-                            </property>
-                            <property name="toolTip">
-                             <string>Set the heating coil power in watts (Tank 2)</string>
-                            </property>
-                            <property name="text">
-                             <string>20000</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QLabel" name="label_41">
-                            <property name="font">
-                             <font>
-                              <family>Segoe UI,Arial,sans-serif</family>
-                             </font>
-                            </property>
-                            <property name="text">
-                             <string>W</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <spacer name="horizontalSpacer_25">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>40</width>
-                              <height>20</height>
-                             </size>
-                            </property>
-                           </spacer>
-                          </item>
-                         </layout>
-                        </item>
-                        <item row="5" column="0">
+                        <item row="6" column="0">
                          <widget class="QLabel" name="label_42">
                           <property name="font">
                            <font>
@@ -5378,7 +5267,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="5" column="1">
+                        <item row="6" column="1">
                          <layout class="QHBoxLayout" name="horizontalLayout_34">
                           <item>
                            <widget class="QLineEdit" name="heatLossVatEntry">
@@ -5428,7 +5317,7 @@ QGroupBox::title {
                           </item>
                          </layout>
                         </item>
-                        <item row="6" column="0">
+                        <item row="7" column="0">
                          <widget class="QLabel" name="label_52">
                           <property name="font">
                            <font>
@@ -5440,7 +5329,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="6" column="1">
+                        <item row="7" column="1">
                          <layout class="QHBoxLayout" name="horizontalLayout_39">
                           <item>
                            <widget class="QLineEdit" name="levelSwitchMaxHeightEntry">
@@ -5490,7 +5379,7 @@ QGroupBox::title {
                           </item>
                          </layout>
                         </item>
-                        <item row="7" column="0">
+                        <item row="8" column="0">
                          <widget class="QLabel" name="label_58">
                           <property name="font">
                            <font>
@@ -5502,7 +5391,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="7" column="1">
+                        <item row="8" column="1">
                          <layout class="QHBoxLayout" name="horizontalLayout_42">
                           <item>
                            <widget class="QLineEdit" name="levelSwitchMinHeightEntry">
@@ -5552,7 +5441,7 @@ QGroupBox::title {
                           </item>
                          </layout>
                         </item>
-                        <item row="8" column="0">
+                        <item row="9" column="0">
                          <widget class="QLabel" name="label_36">
                           <property name="font">
                            <font>
@@ -5564,7 +5453,7 @@ QGroupBox::title {
                           </property>
                          </widget>
                         </item>
-                        <item row="8" column="1">
+                        <item row="9" column="1">
                          <layout class="QHBoxLayout" name="horizontalLayout_31">
                           <item>
                            <widget class="QLineEdit" name="timeDelayfillingEntry">
@@ -5598,6 +5487,68 @@ QGroupBox::title {
                           </item>
                           <item>
                            <spacer name="horizontalSpacer_23">
+                            <property name="orientation">
+                             <enum>Qt::Horizontal</enum>
+                            </property>
+                            <property name="sizeHint" stdset="0">
+                             <size>
+                              <width>40</width>
+                              <height>20</height>
+                             </size>
+                            </property>
+                           </spacer>
+                          </item>
+                         </layout>
+                        </item>
+                        <item row="4" column="1">
+                         <layout class="QHBoxLayout" name="horizontalLayout_6">
+                          <item>
+                           <widget class="QLineEdit" name="powerHeatingCoilEntry">
+                            <property name="sizePolicy">
+                             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                              <horstretch>0</horstretch>
+                              <verstretch>0</verstretch>
+                             </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                             <size>
+                              <width>0</width>
+                              <height>30</height>
+                             </size>
+                            </property>
+                            <property name="maximumSize">
+                             <size>
+                              <width>100</width>
+                              <height>30</height>
+                             </size>
+                            </property>
+                            <property name="font">
+                             <font>
+                              <family>Segoe UI,Arial,sans-serif</family>
+                             </font>
+                            </property>
+                            <property name="toolTip">
+                             <string>Set the heating coil power in watts</string>
+                            </property>
+                            <property name="text">
+                             <string>15000</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QLabel" name="label_12">
+                            <property name="font">
+                             <font>
+                              <family>Segoe UI,Arial,sans-serif</family>
+                             </font>
+                            </property>
+                            <property name="text">
+                             <string>W</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <spacer name="horizontalSpacer_25">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
                             </property>

@@ -234,6 +234,13 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
                 self._button_manager.set_button_status_obj('GeneralReset', status)
         except Exception:
             pass
+        
+        # Update PID valve button manager with the new status object
+        try:
+            if hasattr(self, 'update_button_manager_status'):
+                self.update_button_manager_status()
+        except Exception:
+            pass
 
     def _initialize_gui_mode(self):
         """Initialize GUI mode after mainConfig is available"""

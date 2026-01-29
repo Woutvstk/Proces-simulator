@@ -636,14 +636,19 @@ class TemperatureTrendWindow(TrendGraphWindow):
                     power_data = list(self.all_power)
                     setpoint_data = list(self.all_setpoints)
 
-                # Apply scroll offset
-                if self.scroll_offset > 0:
-                    start_idx = max(
-                        0, len(x_data) - self.max_points - self.scroll_offset)
-                    end_idx = len(x_data) - self.scroll_offset
-                    end_idx = max(start_idx + 1, end_idx)
+                # Apply scroll offset (only in live mode)
+                if self.view_mode == 'live':
+                    if self.scroll_offset > 0:
+                        start_idx = max(
+                            0, len(x_data) - self.max_points - self.scroll_offset)
+                        end_idx = len(x_data) - self.scroll_offset
+                        end_idx = max(start_idx + 1, end_idx)
+                    else:
+                        start_idx = max(0, len(x_data) - self.max_points)
+                        end_idx = len(x_data)
                 else:
-                    start_idx = max(0, len(x_data) - self.max_points)
+                    # In history mode, show all data
+                    start_idx = 0
                     end_idx = len(x_data)
 
                 x_data = x_data[start_idx:end_idx]
@@ -990,14 +995,19 @@ class LevelTrendWindow(TrendGraphWindow):
 
                 # Level is already in percentage - no conversion needed
 
-                # Apply scroll offset
-                if self.scroll_offset > 0:
-                    start_idx = max(
-                        0, len(x_data) - self.max_points - self.scroll_offset)
-                    end_idx = len(x_data) - self.scroll_offset
-                    end_idx = max(start_idx + 1, end_idx)
+                # Apply scroll offset (only in live mode)
+                if self.view_mode == 'live':
+                    if self.scroll_offset > 0:
+                        start_idx = max(
+                            0, len(x_data) - self.max_points - self.scroll_offset)
+                        end_idx = len(x_data) - self.scroll_offset
+                        end_idx = max(start_idx + 1, end_idx)
+                    else:
+                        start_idx = max(0, len(x_data) - self.max_points)
+                        end_idx = len(x_data)
                 else:
-                    start_idx = max(0, len(x_data) - self.max_points)
+                    # In history mode, show all data
+                    start_idx = 0
                     end_idx = len(x_data)
 
                 x_data = x_data[start_idx:end_idx]

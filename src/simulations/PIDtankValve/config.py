@@ -93,9 +93,9 @@ class configuration:
             "Sim_WaterTemperatureMeasurement": "AITemperatureSensor",
 
             # PLC Controls Buttons
-            "Sim_StartButton": "DIPidValveStart",
-            "Sim_StopButton": "DIPidValveStop",
-            "Sim_ResetButton": "DIPidValveReset",
+            "Sim_PidValveStartButton": "DIPidValveStart",
+            "Sim_PidValveStopButton": "DIPidValveStop",
+            "Sim_PidValveResetButton": "DIPidValveReset",
 
             # Mode Switches
             "Sim_AutomaticMode": "DIPidValveAuto",

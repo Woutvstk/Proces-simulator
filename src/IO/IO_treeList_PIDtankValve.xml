@@ -33,9 +33,9 @@
         <Inputs>
             <Digital>
                 <!-- Control Buttons -->
-                <Signal description="Start button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_StartButton</Signal>
-                <Signal description="Stop button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_StopButton</Signal>
-                <Signal description="Reset button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_ResetButton</Signal>
+                <Signal description="Start button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveStartButton</Signal>
+                <Signal description="Stop button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveStopButton</Signal>
+                <Signal description="Reset button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveResetButton</Signal>
                 <!-- Mode Switches -->
                 <Signal description="Mode: Automatic (controller adjusts valve and coil wattage)" type="bool" range="0-1" io_prefix="I" status="TRUE">Sim_AutomaticMode</Signal>
                 <Signal description="Mode: Manual (user adjusts valve and coil wattage)" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_ManualMode</Signal>
