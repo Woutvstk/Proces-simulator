@@ -32,7 +32,7 @@
       "byte": "2",
       "bit": "",
       "address": "IW2",
-      "status": "6912",
+      "status": "7021",
       "description": "Current water level in tank (0-100%)",
       "range": "0-27648"
     },
@@ -42,7 +42,7 @@
       "byte": "4",
       "bit": "",
       "address": "IW4",
-      "status": "4608",
+      "status": "6543",
       "description": "Current water temperature (°C)",
       "range": "0-27648"
     },
@@ -52,7 +52,7 @@
       "byte": "0",
       "bit": "0",
       "address": "Q0.0",
-      "status": "[F] TRUE",
+      "status": "FALSE",
       "description": "Upper inlet valve - Pump water IN (ON/OFF)",
       "range": "0-1"
     },
@@ -82,7 +82,7 @@
       "byte": "2",
       "bit": "",
       "address": "QW2",
-      "status": "27648",
+      "status": "0",
       "description": "Upper inlet valve position (0-100% open)",
       "range": "0-27648"
     },

@@ -9,6 +9,13 @@ External Libraries Used:
 - logging (Python Standard Library) - Application-wide logging configuration
 - pathlib (Python Standard Library) - Path handling for imports
 """
+from gui.mainGui import MainWindow
+from PyQt5.QtWidgets import QApplication
+from simulations.PIDtankValve.simulation import PIDTankSimulation
+from IO.handler import IOHandler
+from core.protocolManager import ProtocolManager
+from core.simulationManager import SimulationManager
+from core.configuration import configuration as mainConfigClass
 import sys
 import os
 import time
@@ -24,19 +31,12 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 # Core imports
-from core.configuration import configuration as mainConfigClass
-from core.simulationManager import SimulationManager
-from core.protocolManager import ProtocolManager
 
 # IO imports
-from IO.handler import IOHandler
 
 # Simulation imports
-from simulations.PIDtankValve.simulation import PIDTankSimulation
 
 # GUI imports
-from PyQt5.QtWidgets import QApplication
-from gui.mainGui import MainWindow
 
 # Configure logging
 logging.basicConfig(
@@ -64,7 +64,8 @@ mainConfig.simulationManager = simulationManager
 
 # Register available simulations
 simulationManager.register_simulation("PIDtankValve", PIDTankSimulation)
-logger.info("Registered simulations: " + str(simulationManager.get_registered_simulations()))
+logger.info("Registered simulations: " +
+            str(simulationManager.get_registered_simulations()))
 
 # Load the tank simulation by default
 if simulationManager.load_simulation("PIDtankValve", "tankSimSimulation0"):
@@ -136,12 +137,12 @@ connectionLostLogged = False
 if __name__ == "__main__":
     try:
         logger.info("Starting main loop...")
-        
+
         while not mainConfig.doExit:
             app.processEvents()
-            
+
             time.sleep(0.004)
-            
+
             # Check for connect command from GUI
             if mainConfig.tryConnect:
                 validPlcConnection = False
@@ -180,27 +181,28 @@ if __name__ == "__main__":
                     else:
                         # Connection successful - start forced write period (500ms)
                         ioHandler.start_force_write_period()
-                        logger.info("Connection established - starting 500ms IO initialization period")
+                        logger.info(
+                            "Connection established - starting 500ms IO initialization period")
 
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
                 window.plc = protocolManager.get_active_protocol() if validPlcConnection else None
                 window.update_connection_status_icon()
-            
+
             # Process loop for simulation and data exchange
             # PLCSim communication can be slower; throttle slightly
             io_interval = active_config.simulationInterval
             if mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
                 # Use a minimum interval of 100ms
                 io_interval = max(0.1, active_config.simulationInterval)
-            
+
             # Throttle calculations and data exchange
             if (time.time() - timeLastUpdate) > io_interval:
-                
+
                 # DEBUG: Log connection status every 5 seconds
-                if int(time.time()) % 5 == 0:
-                    logger.info(f"[MAIN] Connection: valid={validPlcConnection}, error={connectionErrorOccurred}, protocol={mainConfig.plcProtocol}")
-                
+                # if int(time.time()) % 5 == 0:
+                #    logger.info(f"[MAIN] Connection: valid={validPlcConnection}, error={connectionErrorOccurred}, protocol={mainConfig.plcProtocol}")
+
                 # Get process control from PLC or GUI
                 # Only try to use connection if: valid AND no error has occurred
                 if validPlcConnection and not connectionErrorOccurred:
@@ -232,27 +234,29 @@ if __name__ == "__main__":
                         else:
                             # Connection OK - reset flag
                             connectionLostLogged = False
-                            
+
                             # Get forced values from GUI
                             forced_values = window.get_forced_io_values()
-                            
+
                             # Check if Manual mode is active (GUI controls valves/heater)
                             manual_mode = False
                             try:
                                 # Use generic method that works for any simulation
-                                manual_mode = window.is_manual_mode() if hasattr(window, 'is_manual_mode') else False
+                                manual_mode = window.is_manual_mode() if hasattr(
+                                    window, 'is_manual_mode') else False
                             except Exception:
                                 manual_mode = False
-                            
+
                             # DEBUG: Log manual mode status
-                            if int(time.time()) % 5 == 0:
-                                logger.info(f"[MAIN] manual_mode={manual_mode}, forced_values={len(forced_values)} items")
-                            
-                            # Update IO with force support
-                            # In Manual mode, don't read valve/heater from PLC (GUI controls them)
-                            # But still write sensor values to PLC
+                            # if int(time.time()) % 5 == 0:
+                                #    logger.info(f"[MAIN] manual_mode={manual_mode}, forced_values={len(forced_values)} items")
+
+                                # Update IO with force support
+                                # In Manual mode, don't read valve/heater from PLC (GUI controls them)
+                                # But still write sensor values to PLC
                             try:
-                                logger.debug(f"[MAIN] Calling ioHandler.updateIO (manual_mode={manual_mode})")
+                                logger.debug(
+                                    f"[MAIN] Calling ioHandler.updateIO (manual_mode={manual_mode})")
                                 ioHandler.updateIO(
                                     protocolManager.get_active_protocol(),
                                     mainConfig,
@@ -260,17 +264,18 @@ if __name__ == "__main__":
                                     active_status,
                                     forced_values=forced_values,
                                     manual_mode=manual_mode)
+
                             except:
                                 # Any error during IO - immediately trigger disconnection
                                 raise
-                    
+
                     except Exception as e:
                         # Set error flag immediately to prevent further attempts
                         connectionErrorOccurred = True
                         validPlcConnection = False
                         window.validPlcConnection = False
                         window.plc = None
-                        
+
                         # Auto-uncheck connect button on communication error
                         try:
                             window.pushButton_connect.blockSignals(True)
@@ -278,24 +283,26 @@ if __name__ == "__main__":
                             window.pushButton_connect.blockSignals(False)
                         except Exception:
                             pass
-                        
+
                         # Immediately disconnect to clean up the broken connection
                         try:
                             protocolManager.disconnect()
                         except:
                             pass
-                        
+
                         window.update_connection_status_icon()
-                        
+
                         # Get manual mode for reset
                         manual_mode = False
                         try:
-                            manual_mode = window.is_manual_mode() if hasattr(window, 'is_manual_mode') else False
+                            manual_mode = window.is_manual_mode() if hasattr(
+                                window, 'is_manual_mode') else False
                         except Exception:
                             manual_mode = False
-                        
-                        ioHandler.resetOutputs(mainConfig, active_config, active_status, manual_mode=manual_mode)
-                        
+
+                        ioHandler.resetOutputs(
+                            mainConfig, active_config, active_status, manual_mode=manual_mode)
+
                         # Log once
                         if not connectionLostLogged:
                             logger.warning("Connection lost to the PLC")
@@ -304,21 +311,22 @@ if __name__ == "__main__":
                 else:
                     # No PLC connection - but still process forced values from IO Config page!
                     # This allows users to control simulation via forced values even without PLC
-                    
+
                     # Get forced values from GUI (IO Config page)
                     forced_values = window.get_forced_io_values()
-                    
+
                     # DEBUG: Log status
-                    if int(time.time()) % 5 == 0:  # Every 5 seconds
-                        logger.info(f"[MAIN] NO PLC CONNECTION - Processing forced values: {len(forced_values)} items")
-                    
+                    # if int(time.time()) % 5 == 0:  # Every 5 seconds
+                    #    logger.info(f"[MAIN] NO PLC CONNECTION - Processing forced values: {len(forced_values)} items")
+
                     # Get manual mode status
                     manual_mode = False
                     try:
-                        manual_mode = window.is_manual_mode() if hasattr(window, 'is_manual_mode') else False
+                        manual_mode = window.is_manual_mode() if hasattr(
+                            window, 'is_manual_mode') else False
                     except Exception:
                         manual_mode = False
-                    
+
                     # Process forced values even without PLC connection
                     # This makes forced IO values work in GUI mode or when PLC is offline
                     if forced_values:
@@ -332,48 +340,55 @@ if __name__ == "__main__":
                                 active_status,
                                 forced_values=forced_values,
                                 manual_mode=manual_mode)
+
                         except Exception as e:
-                            logger.error(f"[MAIN] Error processing forced values: {e}")
+                            logger.error(
+                                f"[MAIN] Error processing forced values: {e}")
                     else:
                         # No forced values - reset outputs to 0
                         ioHandler.resetOutputs(
                             mainConfig, active_config, active_status, manual_mode=manual_mode)
-                
+
                 # Update button pulse timers
                 try:
                     if hasattr(window, '_button_pulse_manager'):
                         window._button_pulse_manager.update()
                 except Exception as e:
-                    logger.error(f"Error updating button pulse manager: {e}", exc_info=True)
-                
+                    logger.error(
+                        f"Error updating button pulse manager: {e}", exc_info=True)
+
                 # Write GUI values to status BEFORE simulation runs (Manual mode must update valves first)
                 try:
                     if hasattr(window, 'write_gui_values_to_status'):
                         window.write_gui_values_to_status()
                 except Exception as e:
-                    logger.error(f"Error in write_gui_values_to_status: {e}", exc_info=True)
-                
+                    logger.error(
+                        f"Error in write_gui_values_to_status: {e}", exc_info=True)
+
                 # Update process values (Run simulation)
                 # Using the simulation manager's update method
                 dt = time.time() - timeLastUpdate
-                simulationManager.update_simulation(dt)
-                
+                print(
+                    f"main 373: simRunning before update_simulation: {active_status.simRunning}")
+                simulationManager.update_simulation(dt, active_status)
+
                 # Update GUI display with new simulation results
                 try:
                     window.update_tanksim_display()
                 except Exception as e:
-                    logger.error(f"Error in update_tanksim_display: {e}", exc_info=True)
-                
+                    logger.error(
+                        f"Error in update_tanksim_display: {e}", exc_info=True)
+
                 timeLastUpdate = time.time()
-        
+
         # ===== EXIT CLEANUP =====
         logger.info("Exiting application...")
-        
+
         # Disconnect from PLC
         if validPlcConnection and protocolManager:
             protocolManager.disconnect()
             logger.info("Disconnected from PLC")
-        
+
         # Kill any remaining NetToPLCSim processes
         try:
             import subprocess
@@ -387,18 +402,18 @@ if __name__ == "__main__":
                 logger.info("Terminated NetToPLCSim.exe processes")
         except:
             pass
-        
+
         sys.exit(0)
-    
+
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received")
         mainConfig.doExit = True
-        
+
         # Cleanup
         if validPlcConnection and protocolManager:
             protocolManager.disconnect()
             logger.info("Disconnected from PLC (interrupt)")
-        
+
         # Kill any remaining NetToPLCSim processes
         try:
             import subprocess
@@ -410,9 +425,9 @@ if __name__ == "__main__":
             )
         except:
             pass
-        
+
         sys.exit(0)
-    
+
     except Exception as e:
         logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
         sys.exit(1)

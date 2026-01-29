@@ -86,21 +86,26 @@ class VatWidget(QWidget):
         try:
             # Try multiple paths to find SVGVat.svg (handles different architectures)
             possible_paths = [
-                Path(__file__).parent.parent.parent / "gui" / "media" / "SVGVat.svg",
-                Path(__file__).parent.parent / "guiCommon" / "media" / "SVGVat.svg",
-                Path(__file__).parent.parent.parent / "gui" / "media" / "icon" / "SVG vat.svg",
-                Path(__file__).parent.parent.parent / "guiCommon" / "media" / "SVGVat.svg",
+                Path(__file__).parent.parent.parent /
+                "gui" / "media" / "SVGVat.svg",
+                Path(__file__).parent.parent /
+                "guiCommon" / "media" / "SVGVat.svg",
+                Path(__file__).parent.parent.parent /
+                "gui" / "media" / "icon" / "SVG vat.svg",
+                Path(__file__).parent.parent.parent /
+                "guiCommon" / "media" / "SVGVat.svg",
             ]
-            
+
             svg_path = None
             for path in possible_paths:
                 if path.exists():
                     svg_path = path
                     break
-            
+
             if svg_path is None:
-                raise FileNotFoundError(f"SVG file not found in any of the expected locations: {possible_paths}")
-            
+                raise FileNotFoundError(
+                    f"SVG file not found in any of the expected locations: {possible_paths}")
+
             self.tree = ET.parse(svg_path)
             self.root = self.tree.getroot()
             self.ns = {"svg": "http://www.w3.org/2000/svg"}
@@ -243,7 +248,8 @@ class VatWidget(QWidget):
         global liquidVolume
 
         # Calculate percentage (0-100%) - maxVolume is in liters
-        level_percentage = min(100.0, (liquidVolume / self.maxVolume) * 100.0) if self.maxVolume > 0 else 0
+        level_percentage = min(
+            100.0, (liquidVolume / self.maxVolume) * 100.0) if self.maxVolume > 0 else 0
 
         # Level switches trigger at percentage of tank
         level_fraction = liquidVolume / self.maxVolume if self.maxVolume > 0 else 0
@@ -257,7 +263,8 @@ class VatWidget(QWidget):
             self.setGroupColor("levelSwitchMin", red)
 
         # Calculate GUI height: percentage (0-100) mapped to max GUI height
-        realGUIHeight = min(self.maxheightGUI, (level_percentage / 100.0) * self.maxheightGUI)
+        realGUIHeight = min(self.maxheightGUI,
+                            (level_percentage / 100.0) * self.maxheightGUI)
         newY = self.lowestY - realGUIHeight
 
         if self.waterInVat is not None:
@@ -313,7 +320,7 @@ class VatWidget(QWidget):
         for btn_name in [
             'pushButton_PidValveStart', 'pushButton_PidValveStop',
             'radioButton_PidTankValveAItemp', 'radioButton_PidTankValveDItemp',
-            'radioButton_PidTankValveAIlevel', 'radioButton_PidTankValveDIlevel']:
+                'radioButton_PidTankValveAIlevel', 'radioButton_PidTankValveDIlevel']:
             btn = getattr(self, btn_name, None)
             if btn:
                 btn.setCheckable(True)
@@ -321,57 +328,63 @@ class VatWidget(QWidget):
 
     def init_mainwindow_controls(self, mainwindow):
         """Initialize all MainWindow controls (buttons, toggles) from gui.py.
-        
+
         This centralizes all simulation screen logic in gui.py to maintain architecture.
         Called from settingsGui.py with MainWindow reference.
-        
+
         Args:
             mainwindow: Reference to MainWindow object containing the buttons
         """
         self.mainwindow = mainwindow
         self._init_pid_valve_mode_toggle()
         self._init_valve_control_handlers()
-    
+
     def _init_valve_control_handlers(self):
         """Connect valve control widgets to event handlers for real-time SVG updates."""
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return
-        
+
         try:
             # Valve In Entry (analog control)
             valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
             if valve_in_entry and hasattr(valve_in_entry, 'textChanged'):
                 try:
-                    valve_in_entry.textChanged.connect(self._on_valve_in_entry_changed)
+                    valve_in_entry.textChanged.connect(
+                        self._on_valve_in_entry_changed)
                 except Exception:
                     pass
-            
+
             # Valve Out Entry (analog control)
             valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
             if valve_out_entry and hasattr(valve_out_entry, 'textChanged'):
                 try:
-                    valve_out_entry.textChanged.connect(self._on_valve_out_entry_changed)
+                    valve_out_entry.textChanged.connect(
+                        self._on_valve_out_entry_changed)
                 except Exception:
                     pass
-            
+
             # Valve In CheckBox (digital control)
-            valve_in_checkbox = getattr(self.mainwindow, 'valveInCheckBox', None)
+            valve_in_checkbox = getattr(
+                self.mainwindow, 'valveInCheckBox', None)
             if valve_in_checkbox and hasattr(valve_in_checkbox, 'stateChanged'):
                 try:
-                    valve_in_checkbox.stateChanged.connect(self._on_valve_in_checkbox_changed)
+                    valve_in_checkbox.stateChanged.connect(
+                        self._on_valve_in_checkbox_changed)
                 except Exception:
                     pass
-            
+
             # Valve Out CheckBox (digital control)
-            valve_out_checkbox = getattr(self.mainwindow, 'valveOutCheckBox', None)
+            valve_out_checkbox = getattr(
+                self.mainwindow, 'valveOutCheckBox', None)
             if valve_out_checkbox and hasattr(valve_out_checkbox, 'stateChanged'):
                 try:
-                    valve_out_checkbox.stateChanged.connect(self._on_valve_out_checkbox_changed)
+                    valve_out_checkbox.stateChanged.connect(
+                        self._on_valve_out_checkbox_changed)
                 except Exception:
                     pass
         except Exception:
             pass
-    
+
     def _on_valve_in_entry_changed(self, text):
         """Handle valve in entry text change - update SVG immediately.
         Only updates adjustableValveInValue for display.
@@ -383,7 +396,7 @@ class VatWidget(QWidget):
             self.rebuild()
         except (ValueError, AttributeError):
             pass
-    
+
     def _on_valve_out_entry_changed(self, text):
         """Handle valve out entry text change - update SVG immediately.
         Only updates adjustableValveOutValue for display.
@@ -395,33 +408,35 @@ class VatWidget(QWidget):
             self.rebuild()
         except (ValueError, AttributeError):
             pass
-    
+
     def _on_valve_in_checkbox_changed(self, state):
         """Handle valve in checkbox state change."""
         try:
             self.rebuild()
         except Exception:
             pass
-    
+
     def _on_valve_out_checkbox_changed(self, state):
         """Handle valve out checkbox state change."""
         try:
             self.rebuild()
         except Exception:
             pass
-    
+
     def _init_pid_valve_mode_toggle(self):
         """Initialize PID Valve Auto/Manual mode toggle buttons."""
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             print("[DEBUG TOGGLE] No mainwindow available")
             return
-        
+
         try:
-            auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
+            auto_btn = getattr(
+                self.mainwindow, 'pushButton_PidValveAuto', None)
             man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-            
-            print(f"[DEBUG TOGGLE] Found buttons: Auto={auto_btn is not None}, Manual={man_btn is not None}")
-            
+
+            print(
+                f"[DEBUG TOGGLE] Found buttons: Auto={auto_btn is not None}, Manual={man_btn is not None}")
+
             if auto_btn:
                 auto_btn.setCheckable(True)
                 # Disconnect any existing connections first
@@ -432,7 +447,7 @@ class VatWidget(QWidget):
                 # Use clicked signal for direct response
                 auto_btn.clicked.connect(self._on_auto_button_clicked)
                 print("[DEBUG TOGGLE] Auto button connected")
-            
+
             if man_btn:
                 man_btn.setCheckable(True)
                 # Disconnect any existing connections first
@@ -443,7 +458,7 @@ class VatWidget(QWidget):
                 # Use clicked signal for direct response
                 man_btn.clicked.connect(self._on_manual_button_clicked)
                 print("[DEBUG TOGGLE] Manual button connected")
-            
+
             # Start with Auto active (block signals to prevent triggering callbacks)
             if auto_btn:
                 auto_btn.blockSignals(True)
@@ -461,7 +476,7 @@ class VatWidget(QWidget):
                         padding: 8px 12px;
                     }
                 """)
-            
+
             if man_btn:
                 man_btn.blockSignals(True)
                 man_btn.setChecked(False)
@@ -490,19 +505,19 @@ class VatWidget(QWidget):
                                                           stop:1 rgba(120, 120, 120, 255));
                     }
                 """)
-            
+
             # Gray out controls on startup if in Auto mode AND PLC control mode
             # Use QTimer to delay the check until mainConfig is fully initialized
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(100, self._apply_startup_control_state)
         except Exception as e:
             print(f"Error initializing PID valve mode toggle: {e}")
-    
+
     def _apply_startup_control_state(self):
         """Apply control groupbox state after mainConfig is initialized."""
         try:
-            gui_mode = (hasattr(self.mainwindow, 'mainConfig') and 
-                        self.mainwindow.mainConfig and 
+            gui_mode = (hasattr(self.mainwindow, 'mainConfig') and
+                        self.mainwindow.mainConfig and
                         hasattr(self.mainwindow.mainConfig, 'plcGuiControl') and
                         self.mainwindow.mainConfig.plcGuiControl == "gui")
             if not gui_mode:
@@ -510,56 +525,57 @@ class VatWidget(QWidget):
                 self._update_control_groupboxes(enabled=False)
         except Exception as e:
             print(f"Error applying startup control state: {e}")
-    
+
     def _on_auto_button_clicked(self):
         """Handle Auto button click - switch to automatic mode."""
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-        
+
         # Guard: if already in Auto mode, don't re-trigger
         if auto_btn and auto_btn.isChecked() and man_btn and not man_btn.isChecked():
             return
-        
+
         # Force button states
         if auto_btn:
             auto_btn.setChecked(True)
         if man_btn:
             man_btn.setChecked(False)
-        
+
         # Apply Auto mode
         self._toggle_auto_mode()
-    
+
     def _on_manual_button_clicked(self):
         """Handle Manual button click - switch to manual mode."""
         import logging
         logger = logging.getLogger(__name__)
-        logger.warning(f"[GUI] ⚠⚠⚠ MANUAL BUTTON CLICKED - User triggered manual mode")
-        
+        logger.warning(
+            f"[GUI] ⚠⚠⚠ MANUAL BUTTON CLICKED - User triggered manual mode")
+
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-        
+
         # Guard: if already in Manual mode, don't re-trigger
         if man_btn and man_btn.isChecked() and auto_btn and not auto_btn.isChecked():
             logger.info(f"[GUI] Manual mode already active - ignoring click")
             return
-        
+
         # Force button states
         if man_btn:
             man_btn.setChecked(True)
         if auto_btn:
             auto_btn.setChecked(False)
-        
+
         # Apply Manual mode
         self._toggle_manual_mode()
-    
+
     def _toggle_auto_mode(self):
         """Set Auto as active, Manual as inactive."""
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return
-            
+
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-        
+
         # Update button styles
         if auto_btn:
             auto_btn.setStyleSheet("""
@@ -574,7 +590,7 @@ class VatWidget(QWidget):
                     padding: 8px 12px;
                 }
             """)
-        
+
         if man_btn:
             man_btn.setStyleSheet("""
                 QPushButton {
@@ -600,12 +616,12 @@ class VatWidget(QWidget):
                                                       stop:1 rgba(120, 120, 120, 255));
                 }
             """)
-        
+
         # Update status (but DON'T save these)
         if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
             self.mainwindow.tanksim_status.pidPidValveAutoCmd = True
             self.mainwindow.tanksim_status.pidPidValveManCmd = False
-        
+
         # When switching to Auto, clear manual actuator inputs
         try:
             valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
@@ -618,12 +634,12 @@ class VatWidget(QWidget):
                 valve_out_entry.blockSignals(True)
                 valve_out_entry.setText("0")
                 valve_out_entry.blockSignals(False)
-            
+
             if hasattr(self, 'adjustableValveInValue'):
                 self.adjustableValveInValue = 0
             if hasattr(self, 'adjustableValveOutValue'):
                 self.adjustableValveOutValue = 0
-            
+
             for slider_name in ["heaterPowerSlider", "heaterPowerSlider_1", "heaterPowerSlider_2", "heaterPowerSlider_3"]:
                 slider = self.mainwindow.findChild(QSlider, slider_name)
                 if slider:
@@ -631,33 +647,35 @@ class VatWidget(QWidget):
                     slider.setValue(0)
                     slider.blockSignals(False)
                     break
-            
+
             # CRITICAL: Also clear status values so PLC can take over immediately
             if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.info(f"[GUI] Clearing status actuator values for Auto mode takeover")
+                logger.info(
+                    f"[GUI] Clearing status actuator values for Auto mode takeover")
+                print("[GUI] Clearing status actuator values for Auto mode takeover")
                 self.mainwindow.tanksim_status.valveInOpenFraction = 0.0
                 self.mainwindow.tanksim_status.valveOutOpenFraction = 0.0
                 self.mainwindow.tanksim_status.heaterPowerFraction = 0.0
         except Exception:
             pass
-        
+
         # Gray out control groupboxes in Auto mode ONLY if in PLC control mode
-        gui_mode = (hasattr(self.mainwindow, 'mainConfig') and 
-                    self.mainwindow.mainConfig and 
+        gui_mode = (hasattr(self.mainwindow, 'mainConfig') and
+                    self.mainwindow.mainConfig and
                     self.mainwindow.mainConfig.plcGuiControl == "gui")
         if not gui_mode:
             self._update_control_groupboxes(enabled=False)
-    
+
     def _toggle_manual_mode(self):
         """Set Manual as active, Auto as inactive."""
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return
-            
+
         auto_btn = getattr(self.mainwindow, 'pushButton_PidValveAuto', None)
         man_btn = getattr(self.mainwindow, 'pushButton_PidValveMan', None)
-        
+
         # Update button styles
         if man_btn:
             man_btn.setStyleSheet("""
@@ -672,7 +690,7 @@ class VatWidget(QWidget):
                     padding: 8px 12px;
                 }
             """)
-        
+
         if auto_btn:
             auto_btn.setStyleSheet("""
                 QPushButton {
@@ -698,28 +716,29 @@ class VatWidget(QWidget):
                                                       stop:1 rgba(120, 120, 120, 255));
                 }
             """)
-        
+
         # Update status (but DON'T save these)
         if hasattr(self.mainwindow, 'tanksim_status') and self.mainwindow.tanksim_status:
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"[GUI] ⚠⚠⚠ MANUAL MODE ACTIVATED - Setting pidPidValveManCmd=True")
+            logger.warning(
+                f"[GUI] ⚠⚠⚠ MANUAL MODE ACTIVATED - Setting pidPidValveManCmd=True")
             self.mainwindow.tanksim_status.pidPidValveAutoCmd = False
             self.mainwindow.tanksim_status.pidPidValveManCmd = True
-        
+
         # IMPORTANT: Force write of manual control values to status on mode switch
         # This ensures that if the user already set values in manual mode, they are immediately active
         try:
             self._write_manual_control_values_to_status()
         except Exception:
             pass
-        
+
         # Enable control groupboxes in Manual mode (allows override of PLC)
         self._update_control_groupboxes(enabled=True)
-    
+
     def _write_manual_control_values_to_status(self):
         """Write current manual control values (valve positions, heater) to status.
-        
+
         Called when switching from Auto to Manual mode to ensure already-set manual
         values are immediately active without requiring a user change.
         """
@@ -727,14 +746,14 @@ class VatWidget(QWidget):
             return
         if not hasattr(self.mainwindow, 'tanksim_status') or self.mainwindow.tanksim_status is None:
             return
-        
+
         status = self.mainwindow.tanksim_status
-        
+
         try:
             # Read valve positions from GUI entry fields
             valve_in_pct = 0
             valve_out_pct = 0
-            
+
             # Try to read from entry fields
             valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
             if valve_in_entry:
@@ -742,24 +761,25 @@ class VatWidget(QWidget):
                     valve_in_pct = int(valve_in_entry.text() or 0)
                 except ValueError:
                     valve_in_pct = 0
-            
+
             valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
             if valve_out_entry:
                 try:
                     valve_out_pct = int(valve_out_entry.text() or 0)
                 except ValueError:
                     valve_out_pct = 0
-            
+
             # Write to status
             status.valveInOpenFraction = valve_in_pct / 100.0
+
             status.valveOutOpenFraction = valve_out_pct / 100.0
-            
+
             # Also update VatWidget properties for display consistency
             self.adjustableValveInValue = valve_in_pct
             self.adjustableValveOutValue = valve_out_pct
         except Exception as e:
             pass
-        
+
         try:
             # Read heater power from slider (try all possible slider names)
             slider_val = None
@@ -768,53 +788,55 @@ class VatWidget(QWidget):
                 if slider is not None:
                     slider_val = slider.value()
                     break
-            
+
             if slider_val is not None:
                 status.heaterPowerFraction = slider_val / 100.0
         except Exception as e:
             pass
-    
+
     def _update_control_groupboxes(self, enabled):
         """Enable or disable control groupboxes based on Auto/Manual mode.
-        
+
         Args:
             enabled: True for Manual mode (controls enabled), False for Auto mode (grayed out)
         """
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return
-        
+
         try:
             from PyQt5.QtWidgets import QGroupBox
-            
+
             # Find and update groupBox_simControls
-            groupbox1 = self.mainwindow.findChild(QGroupBox, 'groupBox_simControls')
+            groupbox1 = self.mainwindow.findChild(
+                QGroupBox, 'groupBox_simControls')
             if groupbox1:
                 groupbox1.setEnabled(enabled)
-            
+
             # Find and update groupBox_simControls2
-            groupbox2 = self.mainwindow.findChild(QGroupBox, 'groupBox_simControls2')
+            groupbox2 = self.mainwindow.findChild(
+                QGroupBox, 'groupBox_simControls2')
             if groupbox2:
                 groupbox2.setEnabled(enabled)
         except Exception:
             pass
-    
+
     def is_manual_mode(self):
         """Check if currently in Manual mode.
-        
+
         AUTHORITATIVE SOURCE: Status object (not button state)
         This ensures consistency after loading state files.
-        
+
         In both GUI and PLC modes, manual button allows user override of actuators.
         - GUI mode + Manual: User controls actuators
         - PLC mode + Auto: PLC controls actuators  
         - PLC mode + Manual: User controls actuators (manual override of PLC)
-        
+
         Returns:
             bool: True if Manual mode is active, False if Auto mode
         """
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return False
-        
+
         # Use STATUS as authoritative source (not button state)
         # This ensures correct behavior after loading state files
         status = getattr(self.mainwindow, 'tanksim_status', None)
@@ -823,15 +845,17 @@ class VatWidget(QWidget):
             man_cmd = getattr(status, 'pidPidValveManCmd', False)
             auto_cmd = getattr(status, 'pidPidValveAutoCmd', True)
             result = man_cmd and not auto_cmd
-            
+
             # Log state changes to track unexpected mode switches
             prev_state = getattr(self, '_last_manual_mode_state', None)
             if prev_state is not None and prev_state != result:
                 import traceback
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.warning(f"[is_manual_mode] MODE CHANGED: {prev_state} -> {result}, AutoCmd={auto_cmd}, ManCmd={man_cmd}")
-                logger.warning(f"[is_manual_mode] Call stack:\n{''.join(traceback.format_stack()[-5:-1])}")
+                logger.warning(
+                    f"[is_manual_mode] MODE CHANGED: {prev_state} -> {result}, AutoCmd={auto_cmd}, ManCmd={man_cmd}")
+                logger.warning(
+                    f"[is_manual_mode] Call stack:\n{''.join(traceback.format_stack()[-5:-1])}")
             self._last_manual_mode_state = result
             return result
         return False

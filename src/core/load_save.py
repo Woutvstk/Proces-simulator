@@ -35,35 +35,37 @@ class StateManager:
     Core state management: serialize/deserialize application state.
     Handles: configuration, simulation data, IO settings, status.
     """
-    
+
     VERSION = "2.0"
-    
+
     def __init__(self):
         """Initialize state manager."""
         pass
-    
+
     # =========================================================================
     # SERIALIZATION HELPERS
     # =========================================================================
-    
+
     @staticmethod
     def _serialize_object_to_dict(obj: Any) -> Dict[str, Any]:
         """Convert object to JSON-serializable dictionary."""
         result = {}
         export_list = getattr(obj, 'importExportVariableList', None)
-        
+
         if export_list:
             for var in export_list:
                 if hasattr(obj, var):
                     value = getattr(obj, var)
-                    result[var] = value.copy() if isinstance(value, dict) else value
+                    result[var] = value.copy() if isinstance(
+                        value, dict) else value
         else:
             for key, value in obj.__dict__.items():
                 if not key.startswith('_'):
-                    result[key] = value.copy() if isinstance(value, dict) else value
-        
+                    result[key] = value.copy() if isinstance(
+                        value, dict) else value
+
         return result
-    
+
     @staticmethod
     def _deserialize_dict_to_object(obj: Any, data: Dict[str, Any]) -> None:
         """Restore object attributes from dictionary."""
@@ -72,7 +74,7 @@ class StateManager:
                 try:
                     current_value = getattr(obj, key)
                     current_type = type(current_value)
-                    
+
                     if isinstance(current_value, dict) and isinstance(value, dict):
                         setattr(obj, key, value.copy())
                     elif current_type in (int, float, str, bool):
@@ -82,11 +84,11 @@ class StateManager:
                 except (TypeError, ValueError) as e:
                     logger.warning(f"Could not convert {key}={value}: {e}")
                     setattr(obj, key, value)
-    
+
     # =========================================================================
     # CORE SAVE/LOAD (NO GUI)
     # =========================================================================
-    
+
     def save_state(
         self,
         main_config: 'configuration',
@@ -96,20 +98,21 @@ class StateManager:
     ) -> bool:
         """
         CORE SAVE: Serialize all state to JSON file.
-        
+
         Saves: main_config, simulation (config+status), IO configuration
         Returns: True if success, False if failure
         """
         try:
             logger.info(f"[SAVE] Serializing state to: {save_file_path}")
-            
+
             # Make IO path relative for portability
             try:
-                io_config_relative = Path(io_config_path).relative_to(Path(__file__).parent.parent)
+                io_config_relative = Path(io_config_path).relative_to(
+                    Path(__file__).parent.parent)
                 io_config_path_str = str(io_config_relative).replace('\\', '/')
             except (ValueError, AttributeError):
                 io_config_path_str = Path(io_config_path).name
-            
+
             state_data = {
                 "version": self.VERSION,
                 "timestamp": datetime.now().isoformat(),
@@ -121,29 +124,34 @@ class StateManager:
                 "io_config": None,
                 "io_config_original_path": io_config_path_str
             }
-            
+
             # 1. Main configuration
             if hasattr(main_config, 'importExportVariableList'):
                 for var in main_config.importExportVariableList:
                     if hasattr(main_config, var):
-                        state_data["main_config"][var] = getattr(main_config, var)
-            
+                        state_data["main_config"][var] = getattr(
+                            main_config, var)
+
             # 2. Simulation state
             if simulation_manager:
                 sim_name = simulation_manager.get_active_simulation_name()
                 active_sim = simulation_manager.get_active_simulation()
-                
+
                 if active_sim and sim_name:
                     state_data["active_simulation"] = sim_name
-                    
+
                     if hasattr(active_sim, 'config'):
-                        state_data["simulation_config"] = self._serialize_object_to_dict(active_sim.config)
-                        logger.info(f"[SAVE]   Config: {len(state_data['simulation_config'])} vars")
-                    
+                        state_data["simulation_config"] = self._serialize_object_to_dict(
+                            active_sim.config)
+                        logger.info(
+                            f"[SAVE]   Config: {len(state_data['simulation_config'])} vars")
+
                     if hasattr(active_sim, 'status'):
-                        state_data["simulation_status"] = self._serialize_object_to_dict(active_sim.status)
-                        logger.info(f"[SAVE]   Status: {len(state_data['simulation_status'])} vars")
-            
+                        state_data["simulation_status"] = self._serialize_object_to_dict(
+                            active_sim.status)
+                        logger.info(
+                            f"[SAVE]   Status: {len(state_data['simulation_status'])} vars")
+
             # 3. IO configuration
             io_path = Path(io_config_path)
             if io_path.exists():
@@ -153,21 +161,21 @@ class StateManager:
                     logger.info(f"[SAVE]   IO Config: embedded")
                 except Exception as e:
                     logger.warning(f"[SAVE]   IO Config: failed to load ({e})")
-            
+
             # 4. Write JSON
             save_path = Path(save_file_path)
             save_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             with open(save_path, 'w') as f:
                 json.dump(state_data, f, indent=2)
-            
+
             logger.info(f"[SAVE] ✓ Success ({save_path.stat().st_size} bytes)")
             return True
-            
+
         except Exception as e:
             logger.error(f"[SAVE] ✗ Failed: {e}", exc_info=True)
             return False
-    
+
     def load_state(
         self,
         main_config: 'configuration',
@@ -177,19 +185,19 @@ class StateManager:
     ) -> tuple[bool, Optional[Dict[str, Any]]]:
         """
         CORE LOAD: Deserialize state from JSON file.
-        
+
         Returns: (success: bool, state_data: dict or None)
         Caller must handle GUI sync + IO reload.
         """
         try:
             load_path = Path(load_file_path)
-            
+
             if not load_path.exists():
                 logger.error(f"[LOAD] ✗ File not found: {load_file_path}")
                 return False, None
-            
+
             logger.info(f"[LOAD] Reading state from: {load_file_path}")
-            
+
             # Load JSON
             try:
                 with open(load_path, 'r') as f:
@@ -197,18 +205,18 @@ class StateManager:
             except json.JSONDecodeError as e:
                 logger.error(f"[LOAD] ✗ Invalid JSON: {e}")
                 return False, None
-            
+
             # Validate
             if not all(k in state_data for k in ["version", "main_config"]):
                 logger.error(f"[LOAD] ✗ Invalid structure")
                 return False, None
-            
+
             logger.info(f"[LOAD] Version: {state_data.get('version')}")
-            
+
             # Load main config
             logger.info(f"[LOAD] Restoring main_config...")
             main_config_data = state_data.get("main_config", {})
-            
+
             if hasattr(main_config, 'importExportVariableList'):
                 for var in main_config.importExportVariableList:
                     if var in main_config_data:
@@ -221,40 +229,43 @@ class StateManager:
                             except Exception:
                                 converted = new_value
                             setattr(main_config, var, converted)
-                            logger.info(f"[LOAD]   {var} = {getattr(main_config, var)!r}")
+                            logger.info(
+                                f"[LOAD]   {var} = {getattr(main_config, var)!r}")
                         except Exception as e:
                             logger.warning(f"[LOAD]   {var}: failed ({e})")
-            
+
             logger.info(f"[LOAD] Main config restored")
-            
+
             # Extract IO config
             if state_data.get("io_config"):
                 try:
                     io_output_path = Path(io_config_output_path)
                     io_output_path.parent.mkdir(parents=True, exist_ok=True)
-                    
+
                     with open(io_output_path, 'w') as f:
                         json.dump(state_data["io_config"], f, indent=2)
-                    
+
                     logger.info(f"[LOAD] IO config extracted")
                 except Exception as e:
                     logger.error(f"[LOAD] ✗ Failed to extract IO config: {e}")
                     return False, None
-            
+
             # Load simulation
             if simulation_manager and state_data.get("active_simulation"):
                 sim_name = state_data["active_simulation"]
-                
+
                 if sim_name not in simulation_manager.get_registered_simulations():
-                    logger.error(f"[LOAD] ✗ Simulation not registered: {sim_name}")
+                    logger.error(
+                        f"[LOAD] ✗ Simulation not registered: {sim_name}")
                     return False, None
-                
+
                 if not simulation_manager.load_simulation(sim_name, sim_name + "_loaded"):
-                    logger.error(f"[LOAD] ✗ Failed to load simulation: {sim_name}")
+                    logger.error(
+                        f"[LOAD] ✗ Failed to load simulation: {sim_name}")
                     return False, None
-                
+
                 logger.info(f"[LOAD] Simulation '{sim_name}' loaded")
-                
+
                 active_sim = simulation_manager.get_active_simulation()
                 if active_sim:
                     # Restore config
@@ -264,7 +275,7 @@ class StateManager:
                             state_data["simulation_config"]
                         )
                         logger.info(f"[LOAD]   Config restored")
-                    
+
                     # Restore status + apply load fixes
                     if state_data.get("simulation_status") and hasattr(active_sim, 'status'):
                         self._deserialize_dict_to_object(
@@ -272,11 +283,12 @@ class StateManager:
                             state_data["simulation_status"]
                         )
                         logger.info(f"[LOAD]   Status restored")
-                        
+
                         # CRITICAL FIX: PLC mode → clear manual values + lock flags
                         if hasattr(main_config, 'plcGuiControl') and main_config.plcGuiControl == 'plc':
-                            logger.info(f"[LOAD] PLC mode detected - clearing manual actuator values")
-                            
+                            logger.info(
+                                f"[LOAD] PLC mode detected - clearing manual actuator values")
+
                             # Clear manual values
                             if hasattr(active_sim.status, 'valveInOpenFraction'):
                                 active_sim.status.valveInOpenFraction = 0.0
@@ -284,56 +296,57 @@ class StateManager:
                                 active_sim.status.valveOutOpenFraction = 0.0
                             if hasattr(active_sim.status, 'heaterPowerFraction'):
                                 active_sim.status.heaterPowerFraction = 0.0
-                            
+
                             # Force Auto mode
                             if hasattr(active_sim.status, 'pidPidValveManCmd'):
                                 active_sim.status.pidPidValveManCmd = False
                             if hasattr(active_sim.status, 'pidPidValveAutoCmd'):
                                 active_sim.status.pidPidValveAutoCmd = True
-                            
+
                             # Lock flags for 5 seconds - always set, don't check hasattr
                             active_sim.status._lock_status_flags_until = time.monotonic() + 5.0
-                            
-                            logger.info(f"[LOAD] ✓ Manual values cleared + flags locked for 5 sec")
-            
+
+                            logger.info(
+                                f"[LOAD] ✓ Manual values cleared + flags locked for 5 sec")
+
             logger.info(f"[LOAD] ✓ Success")
             return True, state_data
-            
+
         except Exception as e:
             logger.error(f"[LOAD] ✗ Failed: {e}", exc_info=True)
             return False, None
-    
+
     def validate_state_file(self, file_path: str) -> tuple[bool, str]:
         """Check if file is valid state file."""
         try:
             file_path_obj = Path(file_path)
-            
+
             if not file_path_obj.exists():
                 return False, f"File not found"
-            
+
             try:
                 with open(file_path_obj, 'r') as f:
                     state_data = json.load(f)
             except json.JSONDecodeError as e:
                 return False, f"Invalid JSON: {str(e)}"
-            
+
             if not all(k in state_data for k in ["version", "main_config"]):
                 return False, f"Invalid structure"
-            
+
             version = state_data.get("version", "unknown")
             timestamp = state_data.get("timestamp", "unknown")
             sim_name = state_data.get("active_simulation", "None")
             has_io = state_data.get("io_config") is not None
-            
+
             message = (
                 f"Valid state file (v{version})\n"
                 f"Timestamp: {timestamp}\n"
                 f"Simulation: {sim_name}\n"
                 f"IO Config: {'Included' if has_io else 'Not included'}"
             )
-            
+
             return True, message
-            
+
         except Exception as e:
             return False, f"Error: {str(e)}"
 
@@ -345,43 +358,43 @@ class StateManager:
 def save_state_interactive(main_window: Any) -> bool:
     """
     INTERACTIVE SAVE: Show dialog + save + show result.
-    
+
     Args:
         main_window: Qt MainWindow instance (has mainConfig, simulation refs)
-        
+
     Returns: True if saved, False if cancelled/failed
     """
     try:
         from PyQt5.QtWidgets import QFileDialog, QMessageBox
-        
+
         # Show file dialog
         default_path = Path.cwd() / "saved_states"
         default_path.mkdir(exist_ok=True)
-        
+
         file_path, _ = QFileDialog.getSaveFileName(
             main_window,
             "Save Application State",
             str(default_path / "simulation_state.json"),
             "JSON Files (*.json);;All Files (*.*)"
         )
-        
+
         if not file_path:
             return False
-        
+
         if not file_path.endswith('.json'):
             file_path += '.json'
-        
+
         # Sync GUI → Status (capture current user inputs)
         _sync_gui_to_status_before_save(main_window)
-        
+
         # Save
         src_dir = Path(__file__).resolve().parent.parent
         io_config_path = src_dir / "IO" / "IO_configuration.json"
-        
+
         simulation_manager = None
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'simulationManager'):
             simulation_manager = main_window.mainConfig.simulationManager
-        
+
         manager = StateManager()
         success = manager.save_state(
             main_config=main_window.mainConfig,
@@ -389,7 +402,7 @@ def save_state_interactive(main_window: Any) -> bool:
             io_config_path=str(io_config_path),
             save_file_path=file_path
         )
-        
+
         if success:
             QMessageBox.information(
                 main_window,
@@ -402,9 +415,9 @@ def save_state_interactive(main_window: Any) -> bool:
                 "Save Failed",
                 f"Failed to save state.\nSee log for details."
             )
-        
+
         return success
-        
+
     except Exception as e:
         logger.error(f"save_state_interactive failed: {e}", exc_info=True)
         return False
@@ -413,33 +426,33 @@ def save_state_interactive(main_window: Any) -> bool:
 def load_state_interactive(main_window: Any) -> bool:
     """
     INTERACTIVE LOAD: Show dialog + load + sync GUI + reload IO.
-    
+
     Args:
         main_window: Qt MainWindow instance
-        
+
     Returns: True if loaded, False if cancelled/failed
     """
     try:
         from PyQt5.QtWidgets import QFileDialog, QMessageBox
-        
+
         # Show file dialog
         default_path = Path.cwd() / "saved_states"
         default_path.mkdir(exist_ok=True)
-        
+
         file_path, _ = QFileDialog.getOpenFileName(
             main_window,
             "Load Application State",
             str(default_path),
             "JSON Files (*.json);;All Files (*.*)"
         )
-        
+
         if not file_path:
             return False
-        
+
         # Validate
         manager = StateManager()
         is_valid, message = manager.validate_state_file(file_path)
-        
+
         if not is_valid:
             QMessageBox.critical(
                 main_window,
@@ -447,22 +460,22 @@ def load_state_interactive(main_window: Any) -> bool:
                 f"File is not a valid state file:\n\n{message}"
             )
             return False
-        
+
         # Load
         src_dir = Path(__file__).resolve().parent.parent
         io_config_output_path = src_dir / "IO" / "IO_configuration.json"
-        
+
         simulation_manager = None
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'simulationManager'):
             simulation_manager = main_window.mainConfig.simulationManager
-        
+
         success, state_data = manager.load_state(
             main_config=main_window.mainConfig,
             simulation_manager=simulation_manager,
             io_config_output_path=str(io_config_output_path),
             load_file_path=file_path
         )
-        
+
         if not success:
             QMessageBox.critical(
                 main_window,
@@ -470,25 +483,26 @@ def load_state_interactive(main_window: Any) -> bool:
                 f"Failed to load state.\nSee log for details."
             )
             return False
-        
+
         # Post-load operations
         try:
             # 0. FIRST: Clear GUI inputs in Auto mode to prevent timer writes with stale values
             # This MUST happen before any other GUI sync to prevent race conditions
             _clear_gui_inputs_in_auto_mode(main_window, state_data)
-            
+
             # 1. Activate protocol from loaded config (must be second to set up protocolManager)
             _activate_protocol_after_load(main_window)
-            
+
             # 2. Reload IO configuration
-            _reload_io_config_after_load(main_window, str(io_config_output_path))
-            
+            _reload_io_config_after_load(
+                main_window, str(io_config_output_path))
+
             # 3. Sync GUI widgets with loaded status
             _sync_status_to_gui_after_load(main_window, state_data)
-            
+
             # 4. Apply visual updates (buttons, controls) - NO clearing here, done in step 0
             _apply_gui_mode_visuals_after_load(main_window)
-            
+
             # 5. Auto-connect if PLC mode was active
             _auto_connect_after_load(main_window)
         except Exception as e:
@@ -499,15 +513,15 @@ def load_state_interactive(main_window: Any) -> bool:
                 f"State loaded but GUI sync had issues.\nSee log for details."
             )
             return True
-        
+
         QMessageBox.information(
             main_window,
             "Load Successful",
             f"State loaded from:\n{file_path}\n\n{message}"
         )
-        
+
         return True
-        
+
     except Exception as e:
         logger.error(f"load_state_interactive failed: {e}", exc_info=True)
         return False
@@ -524,68 +538,76 @@ def _sync_gui_to_status_before_save(main_window: Any) -> None:
     """
     try:
         from PyQt5.QtWidgets import QLineEdit, QSlider, QRadioButton, QPushButton
-        
+
         if not hasattr(main_window, 'mainConfig'):
             return
-        
-        simulation_manager = getattr(main_window.mainConfig, 'simulationManager', None)
+
+        simulation_manager = getattr(
+            main_window.mainConfig, 'simulationManager', None)
         if not simulation_manager:
             return
-        
+
         active_sim = simulation_manager.get_active_simulation()
         if not active_sim or not hasattr(active_sim, 'status'):
             return
-        
+
         status = active_sim.status
-        
+
         logger.info("[SAVE] Syncing GUI values to status...")
-        
+
         # Auto/Manual buttons
-        auto_btn = main_window.findChild(QPushButton, "pushButton_PidValveAuto")
+        auto_btn = main_window.findChild(
+            QPushButton, "pushButton_PidValveAuto")
         man_btn = main_window.findChild(QPushButton, "pushButton_PidValveMan")
         if auto_btn and man_btn:
             status.pidPidValveAutoCmd = auto_btn.isChecked()
             status.pidPidValveManCmd = man_btn.isChecked()
-            logger.info(f"[SAVE]   Auto/Man: {auto_btn.isChecked()}/{man_btn.isChecked()}")
-        
+            logger.info(
+                f"[SAVE]   Auto/Man: {auto_btn.isChecked()}/{man_btn.isChecked()}")
+
         # Analog/Digital radios
-        radio_ai_temp = main_window.findChild(QRadioButton, "radioButton_PidTankValveAItemp")
-        radio_di_temp = main_window.findChild(QRadioButton, "radioButton_PidTankValveDItemp")
+        radio_ai_temp = main_window.findChild(
+            QRadioButton, "radioButton_PidTankValveAItemp")
+        radio_di_temp = main_window.findChild(
+            QRadioButton, "radioButton_PidTankValveDItemp")
         if radio_ai_temp:
             status.pidPidTankValveAItempCmd = radio_ai_temp.isChecked()
             status.pidPidTankValveDItempCmd = not radio_ai_temp.isChecked()
-        
-        radio_ai_level = main_window.findChild(QRadioButton, "radioButton_PidTankValveAIlevel")
-        radio_di_level = main_window.findChild(QRadioButton, "radioButton_PidTankValveDIlevel")
+
+        radio_ai_level = main_window.findChild(
+            QRadioButton, "radioButton_PidTankValveAIlevel")
+        radio_di_level = main_window.findChild(
+            QRadioButton, "radioButton_PidTankValveDIlevel")
         if radio_ai_level:
             status.pidPidTankValveAIlevelCmd = radio_ai_level.isChecked()
             status.pidPidTankValveDIlevelCmd = not radio_ai_level.isChecked()
-        
+
         # Heater slider
         for slider_name in ["heaterPowerSlider", "heaterPowerSlider_1", "heaterPowerSlider_2", "heaterPowerSlider_3"]:
             slider = main_window.findChild(QSlider, slider_name)
             if slider:
                 status.heaterPowerFraction = slider.value() / 100.0
                 break
-        
+
         # Setpoint sliders
         slider_temp = main_window.findChild(QSlider, "slider_PidTankTempSP")
         if slider_temp:
             status.pidPidTankTempSPValue = slider_temp.value()
-        
+
         slider_level = main_window.findChild(QSlider, "slider_PidTankLevelSP")
         if slider_level:
             status.pidPidTankLevelSPValue = slider_level.value()
-        
+
         # Valve entries
         valve_in_entry = main_window.findChild(QLineEdit, "valveInEntry")
         if valve_in_entry:
             try:
                 val = float(valve_in_entry.text() or 0)
                 status.valveInOpenFraction = val / 100.0
+
             except ValueError:
                 pass
-        
+
         valve_out_entry = main_window.findChild(QLineEdit, "valveOutEntry")
         if valve_out_entry:
             try:
@@ -593,9 +615,9 @@ def _sync_gui_to_status_before_save(main_window: Any) -> None:
                 status.valveOutOpenFraction = val / 100.0
             except ValueError:
                 pass
-        
+
         logger.info("[SAVE]   ✓ GUI sync complete")
-        
+
     except Exception as e:
         logger.warning(f"[SAVE] GUI sync failed: {e}", exc_info=True)
 
@@ -604,44 +626,44 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
     """Reload IO configuration and update tables."""
     try:
         logger.info("[LOAD] Reloading IO configuration...")
-        
+
         simulation_manager = None
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'simulationManager'):
             simulation_manager = main_window.mainConfig.simulationManager
-        
+
         if not simulation_manager:
             return
-        
+
         active_sim = simulation_manager.get_active_simulation()
         if not active_sim or not hasattr(active_sim, 'config'):
             return
-        
+
         # Load IO config
         active_sim.config.load_io_config_from_file(io_config_path)
         logger.info("[LOAD]   IO config loaded")
-        
+
         # Update GUI refs
         if hasattr(main_window, 'tanksim_config'):
             main_window.tanksim_config = active_sim.config
         if hasattr(main_window, 'set_simulation_status'):
             main_window.set_simulation_status(active_sim.status)
-        
+
         # Reload IO tree and table
         if hasattr(main_window, 'load_io_tree'):
             main_window.load_io_tree()
-        
+
         if hasattr(main_window, 'load_all_tags_to_table'):
             main_window.load_all_tags_to_table()
-        
+
         if hasattr(main_window, '_update_table_from_config'):
             main_window._update_table_from_config()
-        
+
         # Start forced write period
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'ioHandler'):
             main_window.mainConfig.ioHandler.start_force_write_period()
-        
+
         logger.info("[LOAD]   ✓ IO reloaded")
-        
+
     except Exception as e:
         logger.warning(f"[LOAD] IO reload failed: {e}", exc_info=True)
 
@@ -650,31 +672,31 @@ def _sync_status_to_gui_after_load(main_window: Any, state_data: Dict[str, Any])
     """Sync loaded status values back to GUI widgets."""
     try:
         from PyQt5.QtWidgets import QLineEdit, QSlider, QComboBox, QCheckBox, QRadioButton, QPushButton
-        
+
         logger.info("[LOAD] Syncing status to GUI...")
-        
+
         simulation_manager = None
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'simulationManager'):
             simulation_manager = main_window.mainConfig.simulationManager
-        
+
         if not simulation_manager:
             return
-        
+
         active_sim = simulation_manager.get_active_simulation()
         if not active_sim:
             return
-        
+
         # Update GUI from config
         if hasattr(active_sim, 'config'):
             config = active_sim.config
-            
+
             # Tank volume
             volume_entry = main_window.findChild(QLineEdit, "volumeEntry")
             if volume_entry and hasattr(config, 'tankVolume'):
                 volume_entry.blockSignals(True)
                 volume_entry.setText(str(config.tankVolume / 1000.0))
                 volume_entry.blockSignals(False)
-            
+
             # Max flows
             for entry_name, config_attr in [
                 ('maxFlowInEntry', 'valveInMaxFlow'),
@@ -686,24 +708,26 @@ def _sync_status_to_gui_after_load(main_window: Any, state_data: Dict[str, Any])
                     entry.blockSignals(True)
                     entry.setText(str(getattr(config, config_attr)))
                     entry.blockSignals(False)
-            
+
             # Display checkboxes
-            level_cb = main_window.findChild(QCheckBox, "levelSwitchesCheckBox")
+            level_cb = main_window.findChild(
+                QCheckBox, "levelSwitchesCheckBox")
             if level_cb and hasattr(config, 'displayLevelSwitches'):
                 level_cb.blockSignals(True)
                 level_cb.setChecked(config.displayLevelSwitches)
                 level_cb.blockSignals(False)
-            
-            temp_cb = main_window.findChild(QCheckBox, "analogValueTempCheckBox")
+
+            temp_cb = main_window.findChild(
+                QCheckBox, "analogValueTempCheckBox")
             if temp_cb and hasattr(config, 'displayTemperature'):
                 temp_cb.blockSignals(True)
                 temp_cb.setChecked(config.displayTemperature)
                 temp_cb.blockSignals(False)
-        
+
         # Update GUI from status
         if hasattr(active_sim, 'status'):
             status = active_sim.status
-            
+
             # Heater slider
             for slider_name in ["heaterPowerSlider", "heaterPowerSlider_1", "heaterPowerSlider_2"]:
                 slider = main_window.findChild(QSlider, slider_name)
@@ -712,53 +736,57 @@ def _sync_status_to_gui_after_load(main_window: Any, state_data: Dict[str, Any])
                     slider.setValue(int(status.heaterPowerFraction * 100))
                     slider.blockSignals(False)
                     break
-            
+
             # Setpoint sliders
-            slider_temp = main_window.findChild(QSlider, "slider_PidTankTempSP")
+            slider_temp = main_window.findChild(
+                QSlider, "slider_PidTankTempSP")
             if slider_temp and hasattr(status, 'pidPidTankTempSPValue'):
                 slider_temp.blockSignals(True)
                 slider_temp.setValue(status.pidPidTankTempSPValue)
                 slider_temp.blockSignals(False)
-            
-            slider_level = main_window.findChild(QSlider, "slider_PidTankLevelSP")
+
+            slider_level = main_window.findChild(
+                QSlider, "slider_PidTankLevelSP")
             if slider_level and hasattr(status, 'pidPidTankLevelSPValue'):
                 slider_level.blockSignals(True)
                 slider_level.setValue(status.pidPidTankLevelSPValue)
                 slider_level.blockSignals(False)
-        
+
         logger.info("[LOAD]   ✓ GUI sync complete")
-        
+
     except Exception as e:
         logger.warning(f"[LOAD] GUI sync failed: {e}", exc_info=True)
 
 
 def _activate_protocol_after_load(main_window: Any) -> None:
     """Activate protocol after loading state - COMPLETE protocol initialization.
-    
+
     This function replicates the EXACT sequence that happens when:
     1. User selects protocol from dropdown (on_controller_changed)
     2. User clicks connect button (creates protocol instance in protocolManager)
-    
+
     Critical: This builds the actual protocol instance and activates it in protocolManager,
     not just UI updates!
     """
     try:
-        logger.info("[LOAD] ========== ACTIVATING PROTOCOL FROM LOADED CONFIG ==========")
-        
+        logger.info(
+            "[LOAD] ========== ACTIVATING PROTOCOL FROM LOADED CONFIG ==========")
+
         if not hasattr(main_window, 'mainConfig') or not main_window.mainConfig:
             logger.warning("[LOAD] No mainConfig available")
             return
-        
+
         config = main_window.mainConfig
         protocol_name = getattr(config, 'plcProtocol', 'GUI')
         plc_gui_control = getattr(config, 'plcGuiControl', 'gui')
-        
-        logger.info(f"[LOAD]   Protocol: {protocol_name}, Mode: {plc_gui_control}")
-        
+
+        logger.info(
+            f"[LOAD]   Protocol: {protocol_name}, Mode: {plc_gui_control}")
+
         # STEP 1: Sync dropdown to match loaded protocol (UI sync)
         if hasattr(main_window, 'controlerDropDown'):
             dropdown = main_window.controlerDropDown
-            
+
             # Find matching item in dropdown
             # Dropdown items are in format "ProtocolName (MODE)" or just "ProtocolName"
             for i in range(dropdown.count()):
@@ -768,14 +796,14 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                     base_name = item_text[:item_text.rfind('(')].strip()
                 else:
                     base_name = item_text
-                
+
                 if base_name == protocol_name:
                     dropdown.blockSignals(True)
                     dropdown.setCurrentIndex(i)
                     dropdown.blockSignals(False)
                     logger.info(f"[LOAD]   Dropdown synced to: {item_text}")
                     break
-        
+
         # STEP 2: Disconnect and deactivate existing protocol (if any)
         # This is CRITICAL - we need to clean up the old protocol completely
         if hasattr(main_window, 'validPlcConnection') and main_window.validPlcConnection:
@@ -789,7 +817,7 @@ def _activate_protocol_after_load(main_window: Any) -> None:
             main_window.plc = None
             if hasattr(main_window, 'update_connection_status_icon'):
                 main_window.update_connection_status_icon()
-            
+
             # Uncheck connect button
             if hasattr(main_window, 'pushButton_connect'):
                 try:
@@ -798,16 +826,18 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                     main_window.pushButton_connect.blockSignals(False)
                 except:
                     pass
-        
+
         # STEP 3: Deactivate old protocol in protocolManager
         # This is what was MISSING - we need to clean up protocolManager!
         if hasattr(config, 'protocolManager') and config.protocolManager:
             try:
                 config.protocolManager.deactivate()
-                logger.info("[LOAD]   Deactivated old protocol in protocolManager")
+                logger.info(
+                    "[LOAD]   Deactivated old protocol in protocolManager")
             except Exception as e:
-                logger.warning(f"[LOAD]   Could not deactivate old protocol: {e}")
-        
+                logger.warning(
+                    f"[LOAD]   Could not deactivate old protocol: {e}")
+
         # STEP 4: Configure UI based on protocol type (same as on_controller_changed)
         if protocol_name == "GUI":
             # GUI mode - disable connect button and IP field
@@ -830,34 +860,42 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                     main_window.lineEdit_IPAddress.setEnabled(True)
             except:
                 pass
-            
+
             # STEP 5: BUILD AND ACTIVATE PROTOCOL IN PROTOCOLMANAGER
             # This is the CRITICAL step that was missing!
             # We need to create the actual protocol instance like main.py does
             if hasattr(config, 'protocolManager') and config.protocolManager:
                 protocol_manager = config.protocolManager
-                
+
                 try:
                     # Build protocol instance from config (same as initialize_and_connect does)
-                    logger.info(f"[LOAD]   Building protocol instance: {protocol_name}")
-                    protocol_instance = protocol_manager.build_protocol_from_config(config)
-                    
+                    logger.info(
+                        f"[LOAD]   Building protocol instance: {protocol_name}")
+                    protocol_instance = protocol_manager.build_protocol_from_config(
+                        config)
+
                     if protocol_instance:
                         # Activate protocol in manager (same as initialize_and_connect does)
                         if protocol_manager.activate_protocol(protocol_name, protocol_instance):
-                            logger.info(f"[LOAD]   ✓✓✓ Protocol instance ACTIVATED in protocolManager: {protocol_name}")
+                            logger.info(
+                                f"[LOAD]   ✓✓✓ Protocol instance ACTIVATED in protocolManager: {protocol_name}")
                         else:
-                            logger.error(f"[LOAD]   ✗ Failed to activate protocol in protocolManager")
+                            logger.error(
+                                f"[LOAD]   ✗ Failed to activate protocol in protocolManager")
                     else:
-                        logger.error(f"[LOAD]   ✗ Failed to build protocol instance")
-                        
+                        logger.error(
+                            f"[LOAD]   ✗ Failed to build protocol instance")
+
                 except Exception as e:
-                    logger.error(f"[LOAD]   ✗ Exception building/activating protocol: {e}", exc_info=True)
+                    logger.error(
+                        f"[LOAD]   ✗ Exception building/activating protocol: {e}", exc_info=True)
             else:
-                logger.warning("[LOAD]   No protocolManager available in config")
-            
-            logger.info("[LOAD]   PLC mode - connection enabled, protocol instance created")
-        
+                logger.warning(
+                    "[LOAD]   No protocolManager available in config")
+
+            logger.info(
+                "[LOAD]   PLC mode - connection enabled, protocol instance created")
+
         # STEP 6: Update IP address field to match loaded config
         if hasattr(main_window, 'lineEdit_IPAddress'):
             loaded_ip = getattr(config, 'plcIpAdress', '192.168.0.1')
@@ -868,7 +906,7 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                 logger.info(f"[LOAD]   IP address: {loaded_ip}")
             except:
                 pass
-        
+
         # STEP 7: Update active method label if available
         if hasattr(main_window, '_update_active_method_label'):
             try:
@@ -876,7 +914,7 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                 logger.info(f"[LOAD]   Active method label updated")
             except:
                 pass
-        
+
         # STEP 8: Update vat_widget controller mode if it exists
         if hasattr(main_window, 'vat_widget'):
             try:
@@ -890,58 +928,64 @@ def _activate_protocol_after_load(main_window: Any) -> None:
                 logger.info(f"[LOAD]   VatWidget controller updated")
             except:
                 pass
-        
-        logger.info(f"[LOAD] ========== ✓ PROTOCOL ACTIVATION COMPLETE: {protocol_name} ==========")
-        
+
+        logger.info(
+            f"[LOAD] ========== ✓ PROTOCOL ACTIVATION COMPLETE: {protocol_name} ==========")
+
     except Exception as e:
-        logger.error(f"[LOAD] ✗✗✗ Protocol activation FAILED: {e}", exc_info=True)
+        logger.error(
+            f"[LOAD] ✗✗✗ Protocol activation FAILED: {e}", exc_info=True)
 
 
 def _clear_gui_inputs_in_auto_mode(main_window: Any, state_data: dict) -> None:
     """CRITICAL FIRST STEP: Clear valve/heater GUI inputs in Auto mode BEFORE any other GUI operations.
-    
+
     This prevents race conditions where timer-based callbacks (_on_update_all_settings) 
     read stale GUI values and write them to status before we can clear them.
     """
     try:
         from PyQt5.QtWidgets import QLineEdit, QSlider
-        
+
         # Determine if in Auto mode
-        gui_mode = (hasattr(main_window, 'mainConfig') and 
-                    main_window.mainConfig and 
+        gui_mode = (hasattr(main_window, 'mainConfig') and
+                    main_window.mainConfig and
                     main_window.mainConfig.plcGuiControl == "gui")
-        
+
         # Get Auto/Man state from loaded status
         auto_state = True  # Default to Auto
         manual_state = False
-        
+
         try:
-            simulation_manager = main_window.mainConfig.simulationManager if hasattr(main_window, 'mainConfig') else None
+            simulation_manager = main_window.mainConfig.simulationManager if hasattr(
+                main_window, 'mainConfig') else None
             if simulation_manager:
                 active_sim = simulation_manager.get_active_simulation()
                 if active_sim and hasattr(active_sim, 'status'):
-                    auto_state = getattr(active_sim.status, 'pidPidValveAutoCmd', True)
-                    manual_state = getattr(active_sim.status, 'pidPidValveManCmd', False)
+                    auto_state = getattr(
+                        active_sim.status, 'pidPidValveAutoCmd', True)
+                    manual_state = getattr(
+                        active_sim.status, 'pidPidValveManCmd', False)
         except Exception:
             pass
-        
+
         # Only clear if in PLC Auto mode (not GUI mode, and Auto is active)
         if not gui_mode and auto_state and not manual_state:
-            logger.info("[LOAD] ⚠ CLEARING GUI inputs FIRST (PLC Auto mode) to prevent timer writes")
-            
+            logger.info(
+                "[LOAD] ⚠ CLEARING GUI inputs FIRST (PLC Auto mode) to prevent timer writes")
+
             # Clear valve entry fields
             valve_in_entry = main_window.findChild(QLineEdit, "valveInEntry")
             if valve_in_entry:
                 valve_in_entry.blockSignals(True)
                 valve_in_entry.setText("0")
                 valve_in_entry.blockSignals(False)
-            
+
             valve_out_entry = main_window.findChild(QLineEdit, "valveOutEntry")
             if valve_out_entry:
                 valve_out_entry.blockSignals(True)
                 valve_out_entry.setText("0")
                 valve_out_entry.blockSignals(False)
-            
+
             # Clear heater slider
             for slider_name in ["heaterPowerSlider", "heaterPowerSlider_1", "heaterPowerSlider_2", "heaterPowerSlider_3"]:
                 slider = main_window.findChild(QSlider, slider_name)
@@ -950,51 +994,54 @@ def _clear_gui_inputs_in_auto_mode(main_window: Any, state_data: dict) -> None:
                     slider.setValue(0)
                     slider.blockSignals(False)
                     break
-            
+
             # Clear VatWidget values IMMEDIATELY
             if hasattr(main_window, 'vat_widget') and main_window.vat_widget:
                 main_window.vat_widget.adjustableValveInValue = 0
                 main_window.vat_widget.adjustableValveOutValue = 0
                 main_window.vat_widget.heaterPowerFraction = 0.0
-                logger.info("[LOAD]   ✓ VatWidget values cleared (valveIn=0, valveOut=0, heater=0)")
-            
-            logger.info("[LOAD]   ✓ GUI inputs cleared BEFORE any timer callbacks")
+                logger.info(
+                    "[LOAD]   ✓ VatWidget values cleared (valveIn=0, valveOut=0, heater=0)")
+
+            logger.info(
+                "[LOAD]   ✓ GUI inputs cleared BEFORE any timer callbacks")
         else:
-            logger.info(f"[LOAD] No clearing needed (gui_mode={gui_mode}, auto={auto_state}, man={manual_state})")
-            
+            logger.info(
+                f"[LOAD] No clearing needed (gui_mode={gui_mode}, auto={auto_state}, man={manual_state})")
+
     except Exception as e:
         logger.warning(f"[LOAD] GUI input clearing failed: {e}", exc_info=True)
 
 
 def _auto_connect_after_load(main_window: Any) -> None:
     """Auto-connect to PLC if loaded state had PLC protocol active.
-    
+
     This triggers the same connection process as clicking the Connect button,
     ensuring that PLC outputs are immediately read after loading.
     """
     try:
         if not hasattr(main_window, 'mainConfig') or not main_window.mainConfig:
             return
-        
+
         config = main_window.mainConfig
-        
+
         # Only auto-connect if in PLC mode (not GUI mode)
         if config.plcGuiControl != "plc":
             logger.info("[LOAD] GUI mode - skipping auto-connect")
             return
-        
+
         # Check if protocol is configured
         if not config.plcProtocol or config.plcProtocol == "GUI (offline simulation)":
             logger.info("[LOAD] No PLC protocol - skipping auto-connect")
             return
-        
+
         logger.info(f"[LOAD] ========== AUTO-CONNECTING TO PLC ==========")
         logger.info(f"[LOAD]   Protocol: {config.plcProtocol}")
         logger.info(f"[LOAD]   IP: {config.plcIpAdress}")
-        
+
         # Trigger connection via tryConnect flag (same as Connect button)
         config.tryConnect = True
-        
+
         # Also check the connect button to reflect connection attempt
         from PyQt5.QtWidgets import QPushButton
         connect_btn = main_window.findChild(QPushButton, "pushButton_connect")
@@ -1003,78 +1050,81 @@ def _auto_connect_after_load(main_window: Any) -> None:
             connect_btn.setChecked(True)
             connect_btn.blockSignals(False)
             logger.info("[LOAD]   Connect button checked")
-        
+
         logger.info("[LOAD] ========== ✓ AUTO-CONNECT TRIGGERED ==========")
         logger.info("[LOAD]   Connection will be established in main loop")
-        
+
     except Exception as e:
         logger.warning(f"[LOAD] Auto-connect failed: {e}", exc_info=True)
 
 
 def _apply_gui_mode_visuals_after_load(main_window: Any) -> None:
     """Apply Auto/Manual mode button visuals after load.
-    
+
     NOTE: Valve/heater clearing is now done in _clear_gui_inputs_in_auto_mode() 
     which runs FIRST to prevent race conditions.
     """
     try:
         from PyQt5.QtWidgets import QPushButton
-        
+
         logger.info("[LOAD] Applying mode visuals...")
-        
+
         simulation_manager = None
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'simulationManager'):
             simulation_manager = main_window.mainConfig.simulationManager
-        
+
         if not simulation_manager:
             return
-        
+
         active_sim = simulation_manager.get_active_simulation()
         if not active_sim or not hasattr(active_sim, 'status'):
             return
-        
+
         status = active_sim.status
-        
+
         # Start simulation page
         if hasattr(main_window, 'start_simulation'):
             sim_name = simulation_manager.get_active_simulation_name()
-            sim_name_to_index = {"PIDtankValve": 0, "dualTank": 1, "conveyor": 2}
+            sim_name_to_index = {"PIDtankValve": 0,
+                                 "dualTank": 1, "conveyor": 2}
             if sim_name in sim_name_to_index:
                 main_window.start_simulation(sim_name_to_index[sim_name])
-        
+
         # Sync button states
-        auto_btn = main_window.findChild(QPushButton, "pushButton_PidValveAuto")
+        auto_btn = main_window.findChild(
+            QPushButton, "pushButton_PidValveAuto")
         man_btn = main_window.findChild(QPushButton, "pushButton_PidValveMan")
-        
+
         if auto_btn and man_btn:
             auto_state = getattr(status, 'pidPidValveAutoCmd', True)
             man_state = getattr(status, 'pidPidValveManCmd', False)
-            
+
             auto_btn.blockSignals(True)
             man_btn.blockSignals(True)
             auto_btn.setChecked(auto_state)
             man_btn.setChecked(man_state)
             auto_btn.blockSignals(False)
             man_btn.blockSignals(False)
-            
+
             logger.info(f"[LOAD]   Auto/Man buttons: {auto_state}/{man_state}")
-        
+
         # NOTE: Valve/heater clearing is done FIRST in _clear_gui_inputs_in_auto_mode()
         # to prevent race conditions with timer callbacks
-        
+
         # Update control groupbox visuals - pass correct enabled state
         # In Auto mode (not manual), controls should be disabled (grayed out)
-        gui_mode = (hasattr(main_window, 'mainConfig') and 
-                    main_window.mainConfig and 
+        gui_mode = (hasattr(main_window, 'mainConfig') and
+                    main_window.mainConfig and
                     main_window.mainConfig.plcGuiControl == "gui")
         man_state = getattr(status, 'pidPidValveManCmd', False)
-        controls_enabled = gui_mode or man_state  # Enable if GUI mode or Manual override
-        
+        # Enable if GUI mode or Manual override
+        controls_enabled = gui_mode or man_state
+
         if hasattr(main_window, 'vat_widget') and hasattr(main_window.vat_widget, '_update_control_groupboxes'):
             main_window.vat_widget._update_control_groupboxes(controls_enabled)
-        
+
         logger.info("[LOAD]   ✓ Mode visuals applied")
-        
+
     except Exception as e:
         logger.warning(f"[LOAD] Mode visuals failed: {e}", exc_info=True)
 
@@ -1085,6 +1135,7 @@ def _apply_gui_mode_visuals_after_load(main_window: Any) -> None:
 
 _state_manager = StateManager()
 
+
 def save_application_state(
     main_config: 'configuration',
     simulation_manager: Optional['SimulationManager'],
@@ -1094,6 +1145,7 @@ def save_application_state(
     """Non-interactive save (for internal use)."""
     return _state_manager.save_state(main_config, simulation_manager, io_config_path, save_file_path)
 
+
 def load_application_state(
     main_config: 'configuration',
     simulation_manager: Optional['SimulationManager'],
@@ -1102,6 +1154,7 @@ def load_application_state(
 ) -> tuple[bool, Optional[Dict[str, Any]]]:
     """Non-interactive load (for internal use)."""
     return _state_manager.load_state(main_config, simulation_manager, io_config_output_path, load_file_path)
+
 
 def validate_state_file(file_path: str) -> tuple[bool, str]:
     """Validate state file."""
@@ -1114,32 +1167,32 @@ def validate_state_file(file_path: str) -> tuple[bool, str]:
 
 class SaveLoadMixin:
     """Qt Mixin for MainWindow - provides save/load button handlers."""
-    
+
     def init_save_load_page(self):
         """Initialize save/load button connections."""
         try:
             from PyQt5.QtWidgets import QPushButton
-            
+
             buttons = [
                 ('pushButton_Save', self.on_save_clicked),
                 ('pushButton_Save2', self.on_save_clicked),
                 ('pushButton_Load', self.on_load_clicked),
                 ('pushButton_Load2', self.on_load_clicked),
             ]
-            
+
             for button_name, callback in buttons:
                 btn = self.findChild(QPushButton, button_name)
                 if btn:
                     btn.clicked.connect(callback)
-            
+
             logger.info("[INIT] Save/Load buttons connected")
         except Exception as e:
             logger.error(f"[INIT] Failed to init save/load buttons: {e}")
-    
+
     def on_save_clicked(self):
         """Handle Save button click."""
         save_state_interactive(self)
-    
+
     def on_load_clicked(self):
         """Handle Load button click."""
         load_state_interactive(self)

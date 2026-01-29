@@ -53,7 +53,7 @@ class delayHandlerClass:
         """
         Returns the most recent (newest) stored value of the requested attribute
         that is still older than the configured delay time.
-        
+
         Each attribute uses its own delay time, independent of other attributes.
         """
         # Map attribute to config delay
@@ -70,22 +70,23 @@ class delayHandlerClass:
         # If NO delays at all, return current value
         if config.liquidVolumeTimeDelay <= 0 and config.liquidTempTimeDelay <= 0:
             return getattr(status, attrName)
-        
+
         # Get the specific delay for this attribute
         delayInSeconds = delayMap[attrName]
-        
+
         # If this specific attribute has no delay, return current value
         if delayInSeconds <= 0:
             return getattr(status, attrName)
-        
+
         # History exists and this attribute has a delay
         if len(self.statusHistory) > 0:
             # Calculate how many indices back we need to go for this specific attribute's delay
             delayInIndex = delayInSeconds / config.simulationInterval
-            
+
             # Find the delayed status index (oldest value still within delay window)
-            delayedStatusIndex = int((self.lastWriteIndex - delayInIndex + 1) % self.historySize)
-            
+            delayedStatusIndex = int(
+                (self.lastWriteIndex - delayInIndex + 1) % self.historySize)
+
             if len(self.statusHistory) > delayedStatusIndex:
                 return getattr(self.statusHistory[delayedStatusIndex], attrName)
             else:
@@ -122,6 +123,7 @@ class simulation:
 
     def doSimulation(self, config: configurationClass, status: statusClass) -> None:
         self.delayHandler.queueAdd(status, config)
+
         """check if simRunning before changing any data"""
         if (status.simRunning == True):
             """If simulation (re)starts, set _lastRun to current time and skip update at time 0"""
@@ -129,6 +131,7 @@ class simulation:
                 self._lastRun = time.time()
                 # remember sim was runnning during previous update
                 self._lastSimRunningState = status.simRunning
+                print("sim 135 returning because first run")
                 return
 
             """
@@ -166,8 +169,11 @@ class simulation:
                     f"doSimulation: valveIn={status.valveInOpenFraction:.2f}, valveOut={status.valveOutOpenFraction:.2f}, vol={status.liquidVolume:.1f}")
 
             # calculate new liquidVolume (net flow with proper clamping)
-            net_flow = (status.flowRateIn - status.flowRateOut) * self._timeSinceLastRun
-            status.liquidVolume = max(0, min(config.tankVolume, status.liquidVolume + net_flow))
+            net_flow = (status.flowRateIn - status.flowRateOut) * \
+                self._timeSinceLastRun
+
+            status.liquidVolume = max(
+                0, min(config.tankVolume, status.liquidVolume + net_flow))
 
             # check if digital liquid level sensors are triggered
             status.digitalLevelSensorHighTriggered = (
@@ -184,38 +190,39 @@ class simulation:
                 # The key insight: thermal response is exponential, not linear.
                 # We approach setpoint asymptotically, creating natural overshoot
                 # prevention and realistic transient behavior.
-                
+
                 # Use effective minimum volume to avoid extreme rates near empty tank
                 effective_volume = max(status.liquidVolume, 0.001)
-                
+
                 # Calculate thermal time constant (tau) in seconds
                 # Larger volumes and higher heat loss = longer response time
                 # This creates natural system damping
-                thermal_time_constant = (config.liquidSpecificHeatCapacity * 
-                                        config.liquidSpecificWeight * 
-                                        effective_volume) / config.tankHeatLoss
-                
+                thermal_time_constant = (config.liquidSpecificHeatCapacity *
+                                         config.liquidSpecificWeight *
+                                         effective_volume) / config.tankHeatLoss
+
                 # Calculate heat input rate (Joules/second = Watts)
                 heat_input_rate = config.heaterMaxPower * self.delayedHeaterPowerFraction
-                
+
                 # Calculate heat loss rate (proportional to temp difference)
                 # This creates exponential cooling behavior
                 temp_difference = status.liquidTemperature - config.ambientTemp
                 heat_loss_rate = config.tankHeatLoss * temp_difference
-                
+
                 # Net heat rate (Watts)
                 net_heat_rate = heat_input_rate - heat_loss_rate
-                
+
                 # Temperature change using exponential approach (first-order lag)
                 # This prevents overshoot and creates realistic "spongy" response
-                dT = (net_heat_rate / (config.liquidSpecificHeatCapacity * 
+                dT = (net_heat_rate / (config.liquidSpecificHeatCapacity *
                       config.liquidSpecificWeight * effective_volume)) * self._timeSinceLastRun
-                
+
                 # Apply first-order lag filter for smooth transitions
                 # The damping factor depends on thermal time constant
-                lag_factor = self._timeSinceLastRun / (thermal_time_constant + self._timeSinceLastRun)
+                lag_factor = self._timeSinceLastRun / \
+                    (thermal_time_constant + self._timeSinceLastRun)
                 dT_damped = dT * lag_factor
-                
+
                 # Update temperature with bounds
                 new_temp = status.liquidTemperature + dT_damped
                 status.liquidTemperature = max(
@@ -227,6 +234,7 @@ class simulation:
                 status.liquidTemperature = config.ambientTemp
 
         else:
+            # print("simulation 244: sim not running, not doing anything")
             # remember sim was NOT runnning during previous update
             self._lastSimRunningState = status.simRunning
 
@@ -234,45 +242,47 @@ class simulation:
 class PIDTankSimulation(SimulationInterface):
     """
     PID Tank Valve Simulation implementing SimulationInterface.
-    
+
     This wraps the original simulation class to provide a uniform interface
     for the simulation manager.
     """
-    
+
     def __init__(self, name: str):
         """Initialize the PID tank simulation."""
         self.name = name
         self.config = configurationClass()
         self.status = statusClass()
         self._simulation = simulation(name)
-    
+
     def start(self) -> None:
         """Start the simulation."""
         self.status.simRunning = True
-    
+
     def stop(self) -> None:
         """Stop the simulation."""
         self.status.simRunning = False
-    
+
     def reset(self) -> None:
         """Reset simulation to initial state."""
         self.status = statusClass()
         self._simulation = simulation(self.name)
-    
+
     def update(self, dt: float) -> None:
         """
         Update simulation state.
-        
+
         Args:
             dt: Time delta since last update (not used, internal timing used)
         """
+        if not self.status:
+            print("ERROR: simulation 278: no self.status instance")
+
         self._simulation.doSimulation(self.config, self.status)
 
     def get_name(self) -> str:
         """Get simulation name."""
         return self.name
-    
-    
+
     def get_status(self) -> Dict[str, Any]:
         """Get current simulation status as dictionary."""
         status_dict = {}
@@ -280,18 +290,18 @@ class PIDTankSimulation(SimulationInterface):
             if hasattr(self.status, attr):
                 status_dict[attr] = getattr(self.status, attr)
         return status_dict
-    
+
     def set_input(self, key: str, value: Any) -> None:
         """Set simulation input value."""
         if hasattr(self.status, key):
             setattr(self.status, key, value)
-    
+
     def get_output(self, key: str) -> Any:
         """Get simulation output value."""
         if hasattr(self.status, key):
             return getattr(self.status, key)
         return None
-    
+
     def get_config(self) -> Dict[str, Any]:
         """Get simulation configuration as dictionary."""
         config_dict = {}
@@ -300,18 +310,23 @@ class PIDTankSimulation(SimulationInterface):
             if not key.startswith('_'):
                 config_dict[key] = value
         return config_dict
-    
+
     def set_config(self, config: Dict[str, Any]) -> None:
         """Update simulation configuration."""
         for key, value in config.items():
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
-    
+
     def get_config_object(self):
         """Get the configuration object directly (for save/load)."""
         return self.config
-    
+
     def get_status_object(self):
         """Get the status object directly (for save/load)."""
         return self.status
 
+    def set_status_object(self, newStatus: statusClass):
+        self.status = newStatus
+
+    def set_config_object(self, newConfig: configurationClass):
+        self.config = newConfig
