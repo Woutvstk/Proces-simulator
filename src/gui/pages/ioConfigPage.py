@@ -744,14 +744,7 @@ class DroppableTableWidget(QTableWidget):
 
     def apply_force_analog(self, row, signal_name):
         """Apply force to an analog signal with dialog"""
-        max_value = 27648
-        if self.io_screen and hasattr(self.io_screen, 'main_window'):
-            main_window = self.io_screen.main_window
-            if (hasattr(main_window, 'validPlcConnection') and
-                main_window.validPlcConnection and
-                hasattr(main_window, 'plc') and
-                    main_window.plc):
-                max_value = main_window.plc.analogMax
+        max_value = 27648  # All analog signals use 0-27648 range
 
         current_value = 0
         status_item = self.item(row, 5)
@@ -2335,8 +2328,8 @@ class IOConfigMixin:
                 
                 if io_config_path.exists():
                     logger.info(f"        Loading IO config from file: {io_config_path}")
-                    # Use the load_io_config method which fully rebuilds the table
-                    self.load_io_config(io_config_path)
+                    # Use load_io_tree to rebuild the table from config
+                    self.load_io_tree()
                     logger.info(f"        ✓ IO config reloaded into table from file")
                 else:
                     logger.warning(f"        IO config file not found: {io_config_path}")
@@ -2463,8 +2456,7 @@ class IOConfigMixin:
 
                 if value is None:
                     # Fallback to simulation status if not forced and not from PLC
-                    plc_analog_max = self.plc.analogMax if has_plc and hasattr(
-                        self.plc, 'analogMax') else 27648
+                    plc_analog_max = 27648  # All analog signals use 0-27648 range
 
                     if attr_name == "DQValveIn":
                         value = (status.valveInOpenFraction > 0)
@@ -2501,10 +2493,11 @@ class IOConfigMixin:
                         value = status.digitalLevelSensorLowTriggered
                     elif attr_name == "AILevelSensor":
                         value = int(
-                            (status.liquidVolume / config.tankVolume) * plc_analog_max)
+                            (status.liquidVolume / config.tankVolume) * 27648)
                     elif attr_name == "AITemperatureSensor":
-                        value = int(
-                            ((status.liquidTemperature + 50) / 300) * plc_analog_max)
+                        # Map temperature 0-100°C to analog 0-27648 (consistent with handler.py)
+                        boiling_temp = getattr(config, 'liquidBoilingTemp', 100.0)
+                        value = int((status.liquidTemperature / boiling_temp) * 27648)
                     # General Controls - PLC Outputs (from PLC to GUI indicators)
                     elif attr_name == "DQIndicator1":
                         value = bool(getattr(status, 'indicator1', False))

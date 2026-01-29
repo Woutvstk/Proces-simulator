@@ -14,6 +14,7 @@ import os
 import time
 import logging
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 # Suppress Qt warnings about invalid font sizes
 os.environ['QT_LOGGING_RULES'] = '*=false'
@@ -89,8 +90,8 @@ io_config_path = src_dir / "IO" / "IO_configuration.json"
 if io_config_path.exists():
     active_config.load_io_config_from_file(io_config_path)
     logger.info(f"IO configuration loaded from: {io_config_path}")
-    # Start forced write period after loading config (500ms)
-    ioHandler.start_force_write_period()
+    # Reset IO state for initial sensor sync (500ms force write period)
+    # This is called at startup - actual PLC connection happens later
 else:
     logger.warning(f"IO configuration not found: {io_config_path}")
 
@@ -125,6 +126,11 @@ lastConnectionLossTime = 0  # Track when connection was last lost
 CONNECTION_LOSS_COOLDOWN = 2.0  # Wait 2 seconds before trying to recover
 connectionErrorOccurred = False  # Flag to prevent reconnection loop after error
 
+# Thread pool for non-blocking IO operations (prevents GUI freeze)
+# Will be initialized inside if __name__ == "__main__" block
+io_executor = None
+io_future = None
+
 
 # ============================================================================
 # MAIN LOOP
@@ -134,6 +140,10 @@ timeLastUpdate = 0
 connectionLostLogged = False
 
 if __name__ == "__main__":
+    # Initialize thread pool
+    io_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="IO-Worker")
+    io_future = None
+    
     try:
         logger.info("Starting main loop...")
         
@@ -178,9 +188,9 @@ if __name__ == "__main__":
                         except Exception:
                             pass
                     else:
-                        # Connection successful - start forced write period (500ms)
-                        ioHandler.start_force_write_period()
-                        logger.info("Connection established - starting 500ms IO initialization period")
+                        # Connection successful - reset IO state for initial sensor sync (500ms)
+                        ioHandler.reset_io_state_for_connection()
+                        logger.info("Connection established - starting 500ms IO initialization period with sensor sync")
 
                 # Update GUI connection status
                 window.validPlcConnection = validPlcConnection
@@ -240,20 +250,30 @@ if __name__ == "__main__":
                             except Exception:
                                 manual_mode = False
                             
-                            # Update IO with force support
-                            # In Manual mode, don't read valve/heater from PLC (GUI controls them)
-                            # But still write sensor values to PLC
-                            try:
-                                ioHandler.updateIO(
-                                    protocolManager.get_active_protocol(),
-                                    mainConfig,
-                                    active_config,
-                                    active_status,
-                                    forced_values=forced_values,
-                                    manual_mode=manual_mode)
-                            except:
-                                # Any error during IO - immediately trigger disconnection
-                                raise
+                            # Schedule IO update on thread pool (non-blocking)
+                            # Only start new IO if previous operation completed
+                            if io_future is None or io_future.done():
+                                try:
+                                    io_future = io_executor.submit(
+                                        ioHandler.updateIO,
+                                        protocolManager.get_active_protocol(),
+                                        mainConfig,
+                                        active_config,
+                                        active_status,
+                                        forced_values=forced_values,
+                                        manual_mode=manual_mode
+                                    )
+                                except Exception:
+                                    # Any error during IO scheduling - immediately trigger disconnection
+                                    raise
+                            
+                            # Check if previous IO operation has an exception
+                            if io_future and io_future.done():
+                                try:
+                                    io_future.result()  # Re-raise any exception from the IO thread
+                                except Exception:
+                                    # IO thread had an error - trigger disconnection
+                                    raise
                     
                     except Exception as e:
                         # Set error flag immediately to prevent further attempts
@@ -319,6 +339,16 @@ if __name__ == "__main__":
         # ===== EXIT CLEANUP =====
         logger.info("Exiting application...")
         
+        # Wait for pending IO operations to complete
+        if io_future and not io_future.done():
+            try:
+                logger.info("Waiting for pending IO operation to complete...")
+                io_future.result(timeout=2)
+            except Exception as e:
+                logger.warning(f"IO operation did not complete: {e}")
+        
+        io_executor.shutdown(wait=False)
+        
         # Disconnect from PLC
         if validPlcConnection and protocolManager:
             protocolManager.disconnect()
@@ -343,6 +373,14 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received")
         mainConfig.doExit = True
+        
+        # Wait for pending IO operations
+        if io_future and not io_future.done():
+            try:
+                io_future.result(timeout=2)
+            except Exception:
+                pass
+        io_executor.shutdown(wait=False)
         
         # Cleanup
         if validPlcConnection and protocolManager:

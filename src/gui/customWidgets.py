@@ -461,14 +461,7 @@ class DroppableTableWidget(QTableWidget):
 
     def apply_force_analog(self, row, signal_name):
         """Apply force to an analog signal with dialog"""
-        max_value = 27648
-        if self.io_screen and hasattr(self.io_screen, 'main_window'):
-            main_window = self.io_screen.main_window
-            if (hasattr(main_window, 'validPlcConnection') and 
-                main_window.validPlcConnection and 
-                hasattr(main_window, 'plc') and 
-                main_window.plc):
-                max_value = main_window.plc.analogMax
+        max_value = 27648  # All analog signals use 0-27648 range
         
         current_value = 0
         status_item = self.item(row, 5)

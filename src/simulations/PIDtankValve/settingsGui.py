@@ -915,21 +915,6 @@ class TankSimSettingsMixin:
                             level_percent / 100.0) * tank_volume
             except Exception:
                 pass
-        else:
-            # In PLC mode, convert IO value to levelSetpoint
-            # The IO handler reads pidPidTankLevelSPValue from PLC (0-27648)
-            # Convert it to levelSetpoint in liters for simulation
-            try:
-                if hasattr(self.tanksim_status, 'pidPidTankLevelSPValue') and hasattr(self, 'tanksim_config') and self.tanksim_config:
-                    level_analog = float(
-                        self.tanksim_status.pidPidTankLevelSPValue)
-                    # Convert 0-27648 to 0-100% then to liters
-                    level_percent = (level_analog / 27648.0) * 100.0
-                    tank_volume = self.tanksim_config.tankVolume
-                    self.tanksim_status.levelSetpoint = (
-                        level_percent / 100.0) * tank_volume
-            except Exception as e:
-                logger.debug(f"Error converting PLC level setpoint: {e}")
 
             # Write valve positions - CRITICAL: Always write these in GUI mode or Manual mode
             try:
@@ -963,6 +948,21 @@ class TankSimSettingsMixin:
                     self.tanksim_status.heaterPowerFraction = 0.0
             except Exception as e:
                 logger.error(f"Error writing heater state: {e}")
+        else:
+            # In PLC mode (automatic), convert IO value to levelSetpoint
+            # The IO handler reads pidPidTankLevelSPValue from PLC (0-27648)
+            # Convert it to levelSetpoint in liters for simulation
+            try:
+                if hasattr(self.tanksim_status, 'pidPidTankLevelSPValue') and hasattr(self, 'tanksim_config') and self.tanksim_config:
+                    level_analog = float(
+                        self.tanksim_status.pidPidTankLevelSPValue)
+                    # Convert 0-27648 to 0-100% then to liters
+                    level_percent = (level_analog / 27648.0) * 100.0
+                    tank_volume = self.tanksim_config.tankVolume
+                    self.tanksim_status.levelSetpoint = (
+                        level_percent / 100.0) * tank_volume
+            except Exception as e:
+                logger.debug(f"Error converting PLC level setpoint: {e}")
 
         # Also push key limits from GUI into the simulation configuration
         # so changes to max flows and heater power affect the physics.

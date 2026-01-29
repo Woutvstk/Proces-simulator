@@ -101,6 +101,8 @@ class VatWidget(QWidget):
         self._last_warning_shown = None
         # Track last checked state to prevent duplicate warnings
         self._last_checked_state = None
+        # Boiling temp snooze timer (timestamp when warning can be shown again)
+        self._boiling_temp_snooze_until = 0
 
         self.waterInVat = None
         self.originalY = 0.0
@@ -454,15 +456,50 @@ class VatWidget(QWidget):
                 except Exception as e:
                     logger.error(f"Error showing warning dialog: {e}")
             elif warning_key == "boiling_temperature":
+                # Check if snooze is still active
+                import time
+                current_time = time.time()
+                if current_time < self._boiling_temp_snooze_until:
+                    # Snooze is active, don't show warning
+                    return
+                
                 try:
-                    QMessageBox.warning(
-                        None,
-                        "Tank Warning",
-                        f"⚠️ Warning: Water temperature ({tempVat:.1f}°C) exceeds boiling point ({BOILING_TEMPERATURE}°C)!",
-                        QMessageBox.Ok
-                    )
+                    from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+                    from PyQt5.QtCore import Qt
+                    
+                    # Create custom dialog with Snooze button
+                    dialog = QDialog(None)
+                    dialog.setWindowTitle("Tank Warning")
+                    dialog.setModal(True)
+                    
+                    layout = QVBoxLayout(dialog)
+                    
+                    label = QLabel(
+                        f"⚠️ Warning: Water temperature ({tempVat:.1f}°C) exceeds boiling point ({BOILING_TEMPERATURE}°C)!")
+                    layout.addWidget(label)
+                    
+                    button_layout = QHBoxLayout()
+                    
+                    ok_btn = QPushButton("OK")
+                    snooze_btn = QPushButton("Snooze 5 min")
+                    
+                    def on_ok():
+                        dialog.accept()
+                    
+                    def on_snooze():
+                        self._boiling_temp_snooze_until = current_time + (5 * 60)  # 5 minutes
+                        dialog.accept()
+                    
+                    ok_btn.clicked.connect(on_ok)
+                    snooze_btn.clicked.connect(on_snooze)
+                    
+                    button_layout.addWidget(ok_btn)
+                    button_layout.addWidget(snooze_btn)
+                    layout.addLayout(button_layout)
+                    
+                    dialog.exec_()
                 except Exception as e:
-                    logger.error(f"Error showing warning dialog: {e}")
+                    logger.error(f"Error showing custom warning dialog: {e}")
 
     def LevelChangeVat(self):
         """Fill the tank based on liquidVolume"""
@@ -861,6 +898,11 @@ class VatWidget(QWidget):
 
         Called when switching from Auto to Manual mode to ensure already-set manual
         values are immediately active without requiring a user change.
+        
+        This reads from:
+        - valveInEntry and valveOutEntry fields (analog control)
+        - valveInCheckBox and valveOutCheckBox (digital control)
+        - heater power sliders (coil W)
         """
         if not hasattr(self, 'mainwindow') or self.mainwindow is None:
             return
@@ -869,37 +911,80 @@ class VatWidget(QWidget):
 
         status = self.mainwindow.tanksim_status
 
+        # Read valve positions from entry fields (analog control)
         try:
-            # Write valve positions from VatWidget adjustable values
-            status.valveInOpenFraction = self.adjustableValveInValue / 100.0
-            status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+            valve_in_entry = getattr(self.mainwindow, 'valveInEntry', None)
+            if valve_in_entry and hasattr(valve_in_entry, 'text'):
+                try:
+                    valve_in_value = int(valve_in_entry.text()) if valve_in_entry.text() else 0
+                    self.adjustableValveInValue = max(0, min(100, valve_in_value))
+                    status.valveInOpenFraction = self.adjustableValveInValue / 100.0
+                except (ValueError, AttributeError):
+                    status.valveInOpenFraction = self.adjustableValveInValue / 100.0
+            else:
+                status.valveInOpenFraction = self.adjustableValveInValue / 100.0
         except Exception:
-            pass
+            status.valveInOpenFraction = self.adjustableValveInValue / 100.0
 
         try:
-            # Write heater power from slider (if available)
-            # Get the first visible heater power slider, or the first available one
+            valve_out_entry = getattr(self.mainwindow, 'valveOutEntry', None)
+            if valve_out_entry and hasattr(valve_out_entry, 'text'):
+                try:
+                    valve_out_value = int(valve_out_entry.text()) if valve_out_entry.text() else 0
+                    self.adjustableValveOutValue = max(0, min(100, valve_out_value))
+                    status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+                except (ValueError, AttributeError):
+                    status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+            else:
+                status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+        except Exception:
+            status.valveOutOpenFraction = self.adjustableValveOutValue / 100.0
+
+        # Read heater power from slider (if available)
+        try:
             slider_val = None
-            try:
-                for slider in getattr(self.mainwindow, '_heater_power_sliders', []):
+            
+            # Try to find heater power sliders in mainwindow
+            heater_sliders = getattr(self.mainwindow, '_heater_power_sliders', [])
+            
+            if heater_sliders:
+                # Look for visible slider first
+                for slider in heater_sliders:
                     if slider is None:
                         continue
-                    if slider.isVisible():
-                        slider_val = int(slider.value())
-                        break
+                    try:
+                        if hasattr(slider, 'isVisible') and slider.isVisible():
+                            slider_val = int(slider.value())
+                            break
+                    except Exception:
+                        pass
+                
+                # If no visible slider found, use first available
                 if slider_val is None:
-                    first_slider = next((s for s in getattr(
-                        self.mainwindow, '_heater_power_sliders', []) if s is not None), None)
-                    if first_slider is not None:
-                        slider_val = int(first_slider.value())
-            except Exception:
-                pass
-
-            if slider_val is not None:
-                status.heaterPowerFraction = max(
-                    0.0, min(1.0, slider_val / 100.0))
-        except Exception:
-            pass
+                    for slider in heater_sliders:
+                        if slider is not None:
+                            try:
+                                slider_val = int(slider.value())
+                                break
+                            except Exception:
+                                pass
+            
+            # Default to 0 if nothing found
+            if slider_val is None:
+                slider_val = 0
+            
+            heater_fraction = max(0.0, min(1.0, slider_val / 100.0))
+            status.heaterPowerFraction = heater_fraction
+            # Also update VatWidget's own heaterPowerFraction so SVG display reflects it
+            self.heaterPowerFraction = heater_fraction
+        except Exception as e:
+            logger.debug(f"Error reading heater slider in manual mode init: {e}")
+        
+        # Refresh SVG display to show updated values (coil color, heater label, etc.)
+        try:
+            self.rebuild()
+        except Exception as e:
+            logger.debug(f"Error refreshing SVG display in manual mode: {e}")
 
     def _update_control_groupboxes(self, enabled):
         """Enable or disable control groupboxes based on Auto/Manual mode.

@@ -60,6 +60,15 @@ class IOHandler:
         """Start a 500ms period where all IO values are force-written regardless of change."""
         self._force_write_until = time.monotonic() + 0.5  # 500ms from now
     
+    def reset_io_state_for_connection(self):
+        """Reset IO state after connection to ensure sensors send initial values.
+        
+        This ensures that digital/analog inputs that are already in their "true" state
+        are written to the PLC immediately, rather than waiting for a change.
+        """
+        self._first_update = True  # Force all values to be written on next updateIO
+        self.start_force_write_period()  # Also enable 500ms force write period
+    
     def _should_force_write(self) -> bool:
         """Check if we're in the forced write period (500ms after init/connect/reload)."""
         if self._force_write_until is None:
@@ -174,39 +183,40 @@ class IOHandler:
                 status.valveInOpenFraction = float(1 if forced_values["DQValveIn"] else 0)
             elif "AQValveInFraction" in forced_values:
                 status.valveInOpenFraction = self.mapValue(
-                    0, plc.analogMax, 0, 1, forced_values["AQValveInFraction"])
+                    0, 27648, 0, 1, forced_values["AQValveInFraction"])
             elif (mainConfig.plcGuiControl == "plc") and (config.DQValveIn or config.AQValveInFraction):
-                if config.DQValveIn and plc.GetDO(config.DQValveIn["byte"], config.DQValveIn["bit"]):
-                    status.valveInOpenFraction = float(1)
-                elif config.AQValveInFraction:
+                if config.AQValveInFraction:
                     status.valveInOpenFraction = self.mapValue(
-                        0, plc.analogMax, 0, 1, plc.GetAO(config.AQValveInFraction["byte"]))
+                        0, 27648, 0, 1, plc.GetAO(config.AQValveInFraction["byte"]))
+                elif config.DQValveIn and plc.GetDO(config.DQValveIn["byte"], config.DQValveIn["bit"]):
+                    status.valveInOpenFraction = float(1)
             
             # Valve Out
             if "DQValveOut" in forced_values:
                 status.valveOutOpenFraction = float(1 if forced_values["DQValveOut"] else 0)
             elif "AQValveOutFraction" in forced_values:
                 status.valveOutOpenFraction = self.mapValue(
-                    0, plc.analogMax, 0, 1, forced_values["AQValveOutFraction"])
+                    0, 27648, 0, 1, forced_values["AQValveOutFraction"])
             elif (mainConfig.plcGuiControl == "plc") and (config.DQValveOut or config.AQValveOutFraction):
+                # If digital output is TRUE, set to 100% (force open). Otherwise use analog value.
                 if config.DQValveOut and plc.GetDO(config.DQValveOut["byte"], config.DQValveOut["bit"]):
-                    status.valveOutOpenFraction = 1
+                    status.valveOutOpenFraction = 1.0
                 elif config.AQValveOutFraction:
                     status.valveOutOpenFraction = self.mapValue(
-                        0, plc.analogMax, 0, 1, plc.GetAO(config.AQValveOutFraction["byte"]))
+                        0, 27648, 0, 1, plc.GetAO(config.AQValveOutFraction["byte"]))
             
             # Heater
             if "DQHeater" in forced_values:
                 status.heaterPowerFraction = float(1 if forced_values["DQHeater"] else 0)
             elif "AQHeaterFraction" in forced_values:
                 status.heaterPowerFraction = self.mapValue(
-                    0, plc.analogMax, 0, 1, forced_values["AQHeaterFraction"])
+                    0, 27648, 0, 1, forced_values["AQHeaterFraction"])
             elif (mainConfig.plcGuiControl == "plc") and (config.DQHeater or config.AQHeaterFraction):
-                if config.DQHeater and plc.GetDO(config.DQHeater["byte"], config.DQHeater["bit"]):
-                    status.heaterPowerFraction = 1
-                elif config.AQHeaterFraction:
+                if config.AQHeaterFraction:
                     status.heaterPowerFraction = self.mapValue(
-                        0, plc.analogMax, 0, 1, plc.GetAO(config.AQHeaterFraction["byte"]))
+                        0, 27648, 0, 1, plc.GetAO(config.AQHeaterFraction["byte"]))
+                elif config.DQHeater and plc.GetDO(config.DQHeater["byte"], config.DQHeater["bit"]):
+                    status.heaterPowerFraction = 1
         
         # General Controls - PLC outputs: Indicators and analog values (read into status)
         self._update_indicators(plc, mainConfig, config, status, forced_values)
@@ -310,7 +320,8 @@ class IOHandler:
             value = int(forced_values["AILevelSensor"])
         else:
             if hasattr(status, 'liquidVolume') and hasattr(config, 'tankVolume'):
-                value = int(self.mapValue(0, config.tankVolume, 0, plc.analogMax, status.liquidVolume))
+                # Map tank volume (0 to tankVolume liters) to analog range 0-27648
+                value = int(self.mapValue(0, config.tankVolume, 0, 27648, status.liquidVolume))
             else:
                 value = 0
         
