@@ -591,11 +591,17 @@ class TankSimSettingsMixin:
             # Use GUI fields in GUI mode; otherwise use live config/status values
             if gui_mode:
                 if hasattr(self, 'maxFlowInEntry'):
-                    self.vat_widget.valveInMaxFlowValue = int(
-                        self.maxFlowInEntry.text() or 5)
+                    try:
+                        self.vat_widget.valveInMaxFlowValue = int(float(
+                            self.maxFlowInEntry.text() or 5))
+                    except ValueError:
+                        self.vat_widget.valveInMaxFlowValue = 5
                 if hasattr(self, 'maxFlowOutEntry'):
-                    self.vat_widget.valveOutMaxFlowValue = int(
-                        self.maxFlowOutEntry.text() or 2)
+                    try:
+                        self.vat_widget.valveOutMaxFlowValue = int(float(
+                            self.maxFlowOutEntry.text() or 2))
+                    except ValueError:
+                        self.vat_widget.valveOutMaxFlowValue = 2
                 if hasattr(self, 'powerHeatingCoilEntry'):
                     self.vat_widget.powerValue = float(
                         self.powerHeatingCoilEntry.text() or 10000.0)

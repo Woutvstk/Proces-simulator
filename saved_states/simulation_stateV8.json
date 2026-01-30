@@ -1,0 +1,413 @@
+{
+  "version": "2.0",
+  "timestamp": "2026-01-30T02:12:47.648150",
+  "description": "PLC Simulator - Complete State Snapshot",
+  "main_config": {
+    "plcGuiControl": "gui",
+    "plcProtocol": "GUI",
+    "plcIpAdress": "192.168.0.1",
+    "plcPort": 502,
+    "plcRack": 0,
+    "plcSlot": 1,
+    "tsapLogo": 768,
+    "tsapServer": 512,
+    "selectedNetworkAdapter": "auto"
+  },
+  "active_simulation": "PIDtankValve",
+  "simulation_config": {
+    "simulationInterval": 0.2,
+    "tankVolume": 400.0,
+    "valveInMaxFlow": 5.0,
+    "valveOutMaxFlow": 5.0,
+    "ambientTemp": 21.0,
+    "digitalLevelSensorHighTriggerLevel": 360.0,
+    "digitalLevelSensorLowTriggerLevel": 40.0,
+    "heaterMaxPower": 20000.0,
+    "tankHeatLoss": 150.0,
+    "liquidSpecificHeatCapacity": 0.997,
+    "liquidBoilingTemp": 100.0,
+    "liquidSpecificWeight": 4.186,
+    "liquidVolumeTimeDelay": 0.0,
+    "liquidTempTimeDelay": 1.5,
+    "tankColor": "#0000FF",
+    "displayLevelSwitches": true,
+    "displayTemperature": true
+  },
+  "simulation_status": {
+    "liquidVolume": 100.0,
+    "liquidTemperature": 0.0,
+    "valveInOpenFraction": 0.0,
+    "valveOutOpenFraction": 0.0,
+    "heaterPowerFraction": 0.0,
+    "generalStartCmd": false,
+    "generalStopCmd": false,
+    "generalResetCmd": false,
+    "generalControl1Value": 0,
+    "generalControl2Value": 0,
+    "generalControl3Value": 0,
+    "indicator1": false,
+    "indicator2": false,
+    "indicator3": false,
+    "indicator4": false,
+    "analog1": 0,
+    "analog2": 0,
+    "analog3": 0,
+    "pidStartCmd": false,
+    "pidStopCmd": false,
+    "pidResetCmd": false,
+    "temperatureSetpoint": 0.0,
+    "levelSetpoint": 0.0
+  },
+  "io_config": {
+    "offsets": {
+      "BoolInput": 0,
+      "BoolOutput": 0,
+      "DWORDInput": 2,
+      "DWORDOutput": 2
+    },
+    "signals": [
+      {
+        "name": "Sim_WaterLevelHigh",
+        "type": "bool",
+        "byte": "0",
+        "bit": "0",
+        "address": "I0.0",
+        "status": "FALSE",
+        "description": "Water level is HIGH (above threshold = true)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelLow",
+        "type": "bool",
+        "byte": "0",
+        "bit": "1",
+        "address": "I0.1",
+        "status": "FALSE",
+        "description": "Water level is LOW (above threshold = true)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelMeasurement",
+        "type": "int",
+        "byte": "2",
+        "bit": "",
+        "address": "IW2",
+        "status": "5529",
+        "description": "Current water level in tank (0-100%)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_WaterTemperatureMeasurement",
+        "type": "int",
+        "byte": "4",
+        "bit": "",
+        "address": "IW4",
+        "status": "4608",
+        "description": "Current water temperature (\u00c2\u00b0C)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_InletValveOnOff",
+        "type": "bool",
+        "byte": "0",
+        "bit": "0",
+        "address": "Q0.0",
+        "status": "FALSE",
+        "description": "Upper inlet valve - Pump water IN (ON/OFF)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_OutletValveOnOff",
+        "type": "bool",
+        "byte": "0",
+        "bit": "1",
+        "address": "Q0.1",
+        "status": "FALSE",
+        "description": "Lower outlet valve - Drain water OUT (ON/OFF)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_HeaterOnOff",
+        "type": "bool",
+        "byte": "0",
+        "bit": "2",
+        "address": "Q0.2",
+        "status": "FALSE",
+        "description": "Heater - Heat the water (ON/OFF)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_InletValvePosition",
+        "type": "int",
+        "byte": "2",
+        "bit": "",
+        "address": "QW2",
+        "status": "0",
+        "description": "Upper inlet valve position (0-100% open)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_OutletValvePosition",
+        "type": "int",
+        "byte": "4",
+        "bit": "",
+        "address": "QW4",
+        "status": "0",
+        "description": "Lower outlet valve position (0-100% open)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_HeaterPowerLevel",
+        "type": "int",
+        "byte": "6",
+        "bit": "",
+        "address": "QW6",
+        "status": "0",
+        "description": "Heater power level (0-100%)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_PidValveStartButton",
+        "type": "bool",
+        "byte": "0",
+        "bit": "2",
+        "address": "I0.2",
+        "status": "FALSE",
+        "description": "Start button",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_PidValveStopButton",
+        "type": "bool",
+        "byte": "0",
+        "bit": "3",
+        "address": "I0.3",
+        "status": "FALSE",
+        "description": "Stop button",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_PidValveResetButton",
+        "type": "bool",
+        "byte": "0",
+        "bit": "4",
+        "address": "I0.4",
+        "status": "FALSE",
+        "description": "Reset button",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_AutomaticMode",
+        "type": "bool",
+        "byte": "0",
+        "bit": "5",
+        "address": "I0.5",
+        "status": "TRUE",
+        "description": "Mode: Automatic (controller adjusts valve and coil wattage)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_ManualMode",
+        "type": "bool",
+        "byte": "0",
+        "bit": "6",
+        "address": "I0.6",
+        "status": "FALSE",
+        "description": "Mode: Manual (user adjusts valve and coil wattage)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_TemperatureAnalogControl",
+        "type": "bool",
+        "byte": "0",
+        "bit": "7",
+        "address": "I0.7",
+        "status": "TRUE",
+        "description": "General bit to tell the plc to use analog temperature controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_TemperatureDigitalControl",
+        "type": "bool",
+        "byte": "1",
+        "bit": "0",
+        "address": "I1.0",
+        "status": "FALSE",
+        "description": "General bit to tell the plc to use digital temperature controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelAnalogControl",
+        "type": "bool",
+        "byte": "1",
+        "bit": "1",
+        "address": "I1.1",
+        "status": "TRUE",
+        "description": "General bit to tell the plc to use analog valve controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelDigitalControl",
+        "type": "bool",
+        "byte": "1",
+        "bit": "2",
+        "address": "I1.2",
+        "status": "FALSE",
+        "description": "General bit to tell the plc to use digital valve controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_TemperatureSetpoint",
+        "type": "int",
+        "byte": "6",
+        "bit": "",
+        "address": "IW6",
+        "status": "0",
+        "description": "Desired water temperature (-50 to 100\u00c2\u00b0C)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_WaterLevelSetpoint",
+        "type": "int",
+        "byte": "8",
+        "bit": "",
+        "address": "IW8",
+        "status": "0",
+        "description": "Desired water level (0-100%)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Start",
+        "type": "bool",
+        "byte": "1",
+        "bit": "3",
+        "address": "I1.3",
+        "status": "FALSE",
+        "description": "General Start command",
+        "range": "0-1"
+      },
+      {
+        "name": "Stop",
+        "type": "bool",
+        "byte": "1",
+        "bit": "4",
+        "address": "I1.4",
+        "status": "FALSE",
+        "description": "General Stop command",
+        "range": "0-1"
+      },
+      {
+        "name": "Reset",
+        "type": "bool",
+        "byte": "1",
+        "bit": "5",
+        "address": "I1.5",
+        "status": "FALSE",
+        "description": "General Reset command",
+        "range": "0-1"
+      },
+      {
+        "name": "Control1",
+        "type": "int",
+        "byte": "10",
+        "bit": "",
+        "address": "IW10",
+        "status": "0",
+        "description": "General Control slider 1 value",
+        "range": "0-27648"
+      },
+      {
+        "name": "Control2",
+        "type": "int",
+        "byte": "12",
+        "bit": "",
+        "address": "IW12",
+        "status": "0",
+        "description": "General Control slider 2 value",
+        "range": "0-27648"
+      },
+      {
+        "name": "Control3",
+        "type": "int",
+        "byte": "14",
+        "bit": "",
+        "address": "IW14",
+        "status": "0",
+        "description": "General Control slider 3 value",
+        "range": "0-27648"
+      },
+      {
+        "name": "Indicator1",
+        "type": "bool",
+        "byte": "0",
+        "bit": "3",
+        "address": "Q0.3",
+        "status": "FALSE",
+        "description": "General Status indicator 1",
+        "range": "0-1"
+      },
+      {
+        "name": "Indicator2",
+        "type": "bool",
+        "byte": "0",
+        "bit": "4",
+        "address": "Q0.4",
+        "status": "FALSE",
+        "description": "General Status indicator 2",
+        "range": "0-1"
+      },
+      {
+        "name": "Indicator3",
+        "type": "bool",
+        "byte": "0",
+        "bit": "5",
+        "address": "Q0.5",
+        "status": "FALSE",
+        "description": "General Status indicator 3",
+        "range": "0-1"
+      },
+      {
+        "name": "Indicator4",
+        "type": "bool",
+        "byte": "0",
+        "bit": "6",
+        "address": "Q0.6",
+        "status": "FALSE",
+        "description": "General Status indicator 4",
+        "range": "0-1"
+      },
+      {
+        "name": "Analog1",
+        "type": "int",
+        "byte": "8",
+        "bit": "",
+        "address": "QW8",
+        "status": "0",
+        "description": "General Analog value 1",
+        "range": "0-27648"
+      },
+      {
+        "name": "Analog2",
+        "type": "int",
+        "byte": "10",
+        "bit": "",
+        "address": "QW10",
+        "status": "0",
+        "description": "General Analog value 2",
+        "range": "0-27648"
+      },
+      {
+        "name": "Analog3",
+        "type": "int",
+        "byte": "12",
+        "bit": "",
+        "address": "QW12",
+        "status": "0",
+        "description": "General Analog value 3",
+        "range": "0-27648"
+      }
+    ],
+    "custom_signal_names": {}
+  },
+  "io_config_original_path": "IO/IO_configuration.json"
+}

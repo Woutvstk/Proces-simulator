@@ -171,23 +171,20 @@ class SaveLoadMixin:
                     if active_sim and hasattr(active_sim, 'config'):
                         try:
                             # Tank color from dropdown
-                            colorDropDown = self.findChild(QWidget, "colorDropDown")
-                            if colorDropDown:
-                                tank_color = colorDropDown.currentData()
+                            if hasattr(self, 'colorDropDown') and self.colorDropDown:
+                                tank_color = self.colorDropDown.currentData()
                                 if tank_color:
                                     active_sim.config.tankColor = tank_color
                                     logger.info(f"    ✓ Synced tankColor: {tank_color}")
                             
                             # Display checkboxes
-                            levelSwitchesCheckBox = self.findChild(QWidget, "levelSwitchesCheckBox")
-                            if levelSwitchesCheckBox:
-                                active_sim.config.displayLevelSwitches = levelSwitchesCheckBox.isChecked()
-                                logger.info(f"    ✓ Synced displayLevelSwitches: {levelSwitchesCheckBox.isChecked()}")
+                            if hasattr(self, 'levelSwitchesCheckBox') and self.levelSwitchesCheckBox:
+                                active_sim.config.displayLevelSwitches = self.levelSwitchesCheckBox.isChecked()
+                                logger.info(f"    ✓ Synced displayLevelSwitches: {self.levelSwitchesCheckBox.isChecked()}")
                             
-                            analogValueTempCheckBox = self.findChild(QWidget, "analogValueTempCheckBox")
-                            if analogValueTempCheckBox:
-                                active_sim.config.displayTemperature = analogValueTempCheckBox.isChecked()
-                                logger.info(f"    ✓ Synced displayTemperature: {analogValueTempCheckBox.isChecked()}")
+                            if hasattr(self, 'analogValueTempCheckBox') and self.analogValueTempCheckBox:
+                                active_sim.config.displayTemperature = self.analogValueTempCheckBox.isChecked()
+                                logger.info(f"    ✓ Synced displayTemperature: {self.analogValueTempCheckBox.isChecked()}")
                         except Exception as e:
                             logger.warning(f"    Could not sync GUI display settings: {e}", exc_info=True)
             except Exception as e:
@@ -507,3 +504,124 @@ class SaveLoadMixin:
             
         except Exception as e:
             logger.error(f"Failed to update GUI after load: {e}", exc_info=True)
+    
+    def apply_loaded_state_to_gui(self, config, status):
+        """
+        Apply loaded simulation config and status to GUI fields.
+        
+        This function populates the GUI with values from the loaded configuration
+        and status objects, ensuring the display reflects the saved state.
+        
+        Args:
+            config: Loaded simulation configuration object
+            status: Loaded simulation status object
+        """
+        try:
+            if not config and not status:
+                logger.warning("apply_loaded_state_to_gui: No config or status provided")
+                return
+            
+            logger.info(">>> apply_loaded_state_to_gui: Starting to apply loaded config/status to GUI fields...")
+            
+            # SECTION 1: Apply configuration values to entry fields
+            if config:
+                try:
+                    count = 0
+                    
+                    # Tank volume (convert liters to m³)
+                    if hasattr(config, 'tankVolume') and hasattr(self, 'volumeEntry'):
+                        volume_m3 = config.tankVolume / 1000.0
+                        self.volumeEntry.blockSignals(True)
+                        self.volumeEntry.setText(str(round(volume_m3, 2)))
+                        self.volumeEntry.blockSignals(False)
+                        logger.info(f"    ✓ tankVolume: {config.tankVolume} L")
+                        count += 1
+                    
+                    # Flow rates
+                    if hasattr(config, 'valveInMaxFlow') and hasattr(self, 'maxFlowInEntry'):
+                        self.maxFlowInEntry.blockSignals(True)
+                        self.maxFlowInEntry.setText(str(config.valveInMaxFlow))
+                        self.maxFlowInEntry.blockSignals(False)
+                        logger.info(f"    ✓ valveInMaxFlow: {config.valveInMaxFlow}")
+                        count += 1
+                    
+                    if hasattr(config, 'valveOutMaxFlow') and hasattr(self, 'maxFlowOutEntry'):
+                        self.maxFlowOutEntry.blockSignals(True)
+                        self.maxFlowOutEntry.setText(str(config.valveOutMaxFlow))
+                        self.maxFlowOutEntry.blockSignals(False)
+                        logger.info(f"    ✓ valveOutMaxFlow: {config.valveOutMaxFlow}")
+                        count += 1
+                    
+                    # Ambient temperature
+                    if hasattr(config, 'ambientTemp') and hasattr(self, 'ambientTempEntry'):
+                        self.ambientTempEntry.blockSignals(True)
+                        self.ambientTempEntry.setText(str(config.ambientTemp))
+                        self.ambientTempEntry.blockSignals(False)
+                        logger.info(f"    ✓ ambientTemp: {config.ambientTemp}")
+                        count += 1
+                    
+                    # Heater power (convert W to kW)
+                    if hasattr(config, 'heaterMaxPower') and hasattr(self, 'powerHeatingCoilEntry'):
+                        power_kw = config.heaterMaxPower / 1000.0
+                        self.powerHeatingCoilEntry.blockSignals(True)
+                        self.powerHeatingCoilEntry.setText(str(round(power_kw, 2)))
+                        self.powerHeatingCoilEntry.blockSignals(False)
+                        logger.info(f"    ✓ heaterMaxPower: {config.heaterMaxPower} W")
+                        count += 1
+                    
+                    # Tank color
+                    if hasattr(config, 'tankColor') and hasattr(self, 'colorDropDown'):
+                        for i in range(self.colorDropDown.count()):
+                            if self.colorDropDown.itemData(i) == config.tankColor:
+                                self.colorDropDown.blockSignals(True)
+                                self.colorDropDown.setCurrentIndex(i)
+                                self.colorDropDown.blockSignals(False)
+                                logger.info(f"    ✓ tankColor: {config.tankColor}")
+                                count += 1
+                                break
+                    
+                    # Display checkboxes
+                    if hasattr(config, 'displayLevelSwitches') and hasattr(self, 'levelSwitchesCheckBox'):
+                        self.levelSwitchesCheckBox.blockSignals(True)
+                        self.levelSwitchesCheckBox.setChecked(config.displayLevelSwitches)
+                        self.levelSwitchesCheckBox.blockSignals(False)
+                        logger.info(f"    ✓ displayLevelSwitches: {config.displayLevelSwitches}")
+                        count += 1
+                    
+                    if hasattr(config, 'displayTemperature') and hasattr(self, 'analogValueTempCheckBox'):
+                        self.analogValueTempCheckBox.blockSignals(True)
+                        self.analogValueTempCheckBox.setChecked(config.displayTemperature)
+                        self.analogValueTempCheckBox.blockSignals(False)
+                        logger.info(f"    ✓ displayTemperature: {config.displayTemperature}")
+                        count += 1
+                    
+                    logger.info(f">>> Config values applied: {count} fields updated")
+                    
+                except Exception as e:
+                    logger.error(f"Error applying config to GUI: {e}", exc_info=True)
+            
+            # SECTION 2: Apply status values to process displays
+            if status:
+                try:
+                    count = 0
+                    
+                    # Liquid parameters
+                    if hasattr(status, 'liquidVolume') and hasattr(self, 'vat_widget'):
+                        self.vat_widget.currentVolume = status.liquidVolume
+                        logger.info(f"    ✓ liquidVolume: {status.liquidVolume:.2f} L")
+                        count += 1
+                    
+                    if hasattr(status, 'liquidTemperature') and hasattr(self, 'vat_widget'):
+                        self.vat_widget.currentTemp = status.liquidTemperature
+                        logger.info(f"    ✓ liquidTemperature: {status.liquidTemperature:.2f} °C")
+                        count += 1
+                    
+                    logger.info(f">>> Status values applied: {count} fields updated")
+                    
+                except Exception as e:
+                    logger.error(f"Error applying status to GUI: {e}", exc_info=True)
+            
+            logger.info(">>> ✓ apply_loaded_state_to_gui completed successfully")
+            
+        except Exception as e:
+            logger.error(f"ERROR in apply_loaded_state_to_gui: {e}", exc_info=True)
