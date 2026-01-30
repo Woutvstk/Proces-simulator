@@ -1,428 +1,230 @@
-# Project Restructuring - Industrial Simulation Framework
+# Architecture Overview
 
-## Overview
+## What This Thing Does
 
-This document describes the modular architecture implemented for the Industrial Simulation Framework. The application manages multiple simulations (PLC tank controls, conveyors, etc.) with different protocols (Logo S7, PLC S7, PLCSimAPI) and provides a GUI interface for monitoring and control.
+This is a PLC simulator that can run different process simulations (tank control, conveyors, etc) and talk to real/simulated PLCs via multiple protocols (S7-1200/1500, LOGO!, PLCSim). Built with PyQt5 for the GUI and structured to make adding new simulations relatively painless.
 
-### Directory Structure
+## Directory Layout
 
-````
+```
 /src/
-├── main.py                      # architecture entry point
-├── requirements.txt
-├── core/                        # Core module - Central configuration and managers
-│   ├── __init__.py
-│   ├── configuration.py         # Main config with Save/Load functionality
-│   ├── interface.py             # Abstract base class for simulations
-│   ├── simulationManager.py     # Manages simulation instances
-│   └── protocolManager.py       # Protocol activation and lifecycle
-├── IO/                          # IO module - All input/output operations
-│   ├── __init__.py
-│   ├── handler.py               # Generic IO handler (simulation-agnostic)
-│   ├── IO_treeList_*.xml        # Per-simulation IO trees (PIDtankValve, conveyor)
-│   ├── IO_configuration.json    # IO configuration data
-│   └── protocols/               # Communication protocols
-│       ├── __init__.py
-│       ├── logoS7.py            # Logo S7 protocol
-│       ├── plcS7.py             # PLC S7 protocol
-│       ├── PLCSimAPI/           # PLCSimAPI protocols
-│       │    ├── PLCSimAPI.py
-│       │    └── SiemensAPI.DLL
-│       └── PLCSimS7/
-│            ├── PLCSimS7.py
-│            └── NetToPLCsim/    # includes hidden EXE
-├── gui/                         # GUI module (refactored)
-│   ├── mainGui.py               # Main window bootstraps UI, delegates to pages
-│   ├── pages/                   # Page mixins (modular logic)
-│   │   ├── generalSettings.py   # Process settings UI + logic
-│   │   ├── ioConfigPage.py      # IO tree loader (per simulation)
-│   │   ├── generalControls.py   # General controls dock + handlers
-│   │   └── simPage.py           # Navigation + simulation page controls
-│   └── media/                   # GUI assets, icons, styles, .ui, .qrc
-├── simulations/                 # Simulations module
-│   ├── __init__.py
-│   └── PIDtankValve/            # Tank simulation
-│       ├── __init__.py
-│       ├── simulation.py        # Implements SimulationInterface
-│       ├── status.py            # Runtime status
-│       ├── config.py            # Configuration parameters
-│       ├── SimGui.py            # Visualization widget
-│       └── media/               # Simulation-specific assets
+├── main.py                      # Entry point - main loop lives here
+├── core/                        # Config, simulation registry, protocol manager
+│   ├── configuration.py         # Main app config + save/load state
+│   ├── interface.py             # Base class all simulations inherit from
+│   ├── simulationManager.py     # Handles loading/switching simulations
+│   └── protocolManager.py       # Manages PLC protocol connections
+├── IO/                          # Everything related to PLC communication
+│   ├── handler.py               # Generic IO handler (works with any simulation)
+│   ├── IO_configuration.json    # IO mapping config
+│   ├── IO_treeList_*.xml        # Per-simulation IO trees
+│   └── protocols/               # Protocol implementations
+│       ├── logoS7.py           # LOGO! S7 protocol
+│       ├── plcS7.py            # PLC S7 protocol
+│       ├── PLCSimAPI/          # PLCSim Advanced (requires DLL)
+│       └── PLCSimS7/           # PLCSim via NetToPLCsim bridge
+├── gui/                         # GUI stuff
+│   ├── mainGui.py              # Main window - loads UI, delegates to pages
+│   ├── pages/                  # Page logic split into mixins
+│   │   ├── generalSettings.py  # Network/protocol settings
+│   │   ├── ioConfigPage.py    # IO configuration table
+│   │   ├── generalControls.py  # Start/Stop/Reset controls dock
+│   │   └── simPage.py         # Simulation page navigation
+│   └── media/                  # Icons, styles, Qt UI files
+└── simulations/                # Simulation implementations
+    └── PIDtankValve/          # Tank temperature/level control sim
+        ├── simulation.py      # Main simulation logic
+        ├── config.py          # Configuration parameters
+        ├── status.py          # Runtime state
+        └── gui.py             # Visualization widget
+```
 
-## Key Components
+## Core Module
 
-### 1. Core Module (`/src/core/`)
+### configuration.py
 
-#### `configuration.py`
-Central configuration with enhanced Save/Load functionality:
+Central config manager that handles:
 
-**Features:**
-- PLC connection settings management
-- **JSON-based state persistence**
-- Complete application state save/load
-- Validation on load
+- PLC connection settings (IP, protocol, rack/slot)
+- Control mode (GUI vs PLC control)
+- Complete state save/load to JSON
 
-**Usage:**
+Save/load includes everything - main config, active simulation, process values, IO mapping. Makes it easy to restore exact state after restart.
+
 ```python
-from core.configuration import configuration
-from core.simulationManager import SimulationManager
-
 config = configuration()
+config.Save(sim_mgr, "my_state.json", "IO/IO_configuration.json")
+# Later...
+config.Load(sim_mgr, "my_state.json")  # Auto-loads saved simulation
+```
+
+### simulationManager.py
+
+Keeps track of available simulations and manages the active one. You register simulation classes, then load/unload them as needed.
+
+```python
 sim_mgr = SimulationManager()
+sim_mgr.register_simulation('PIDtankValve', PIDTankSimulation)
+sim_mgr.load_simulation('PIDtankValve', 'tank1')
+sim_mgr.start_simulation()
+```
 
-# Save complete state
-config.Save(sim_mgr, "saved_state.json", "IO/IO_configuration.json")
+### protocolManager.py
 
-# Load complete state (auto-opens simulation)
-config.Load(sim_mgr, "saved_state.json")
-````
-
-**Saved State Includes:**
-
-- Main configuration (PLC protocol, IP, control mode)
-- Active simulation name
-- Simulation configuration (all parameters)
-- Simulation status (all process values)
-- IO configuration path reference
-
-#### `simulationManager.py`
-
-Manages simulation lifecycle:
-
-- Register available simulations
-- Load/unload simulations
-- Start/stop/reset operations
-- Provide status to other modules
-
-#### `protocolManager.py`
-
-Manages PLC protocol connections:
-
-- Activate specific protocol
-- Connect/disconnect operations
-- Protocol state management
-- Convenience helpers to build/activate/connect from `configuration` and prime IO ranges
-
-**Helpers:**
-
-- `build_protocol_from_config(config)`: creates the appropriate protocol instance using `config.plcProtocol` and related fields.
-- `initialize_and_connect(config, lowest_byte, highest_byte)`: builds, activates, connects, and resets IO ranges.
-
-**Usage (helpers):**
+Handles protocol lifecycle - building, connecting, disconnecting. Has some helper methods to make it easier to get a protocol up and running from config settings.
 
 ```python
-from core.protocolManager import ProtocolManager
-from core.configuration import configuration
-
-config = configuration()
 pm = ProtocolManager()
-
-ok = pm.initialize_and_connect(config, lowest_byte=0, highest_byte=10)
-if ok:
-  plc = pm.get_active_protocol()
-  # ... use IO handler with plc
+pm.initialize_and_connect(config, lowest_byte=0, highest_byte=10)
+plc = pm.get_active_protocol()
 ```
 
-#### `interface.py`
+### interface.py
 
-Abstract base class defining the contract all simulations must implement:
+Abstract base class that defines what every simulation needs to implement:
 
-```python
-class SimulationInterface(ABC):
-    def start(self) -> None
-    def stop(self) -> None
-    def reset(self) -> None
-    def update(self, dt: float) -> None
-    def get_status(self) -> Dict[str, Any]
-    def set_input(self, key: str, value: Any) -> None
-    def get_output(self, key: str) -> Any
-    def get_config(self) -> Dict[str, Any]
-    def set_config(self, config: Dict[str, Any]) -> None
-    def get_name(self) -> str
+- start/stop/reset
+- update(dt) - main simulation step
+- get/set config and status
+- IO getters/setters
+
+## IO Module
+
+### handler.py
+
+Generic IO handler that works with any simulation. Reads outputs from PLC (or GUI), writes inputs to PLC. Handles forced values, manual mode, all that jazz. Simulation-agnostic - uses the config/status objects passed to it.
+
+Key thing: In manual mode, GUI values override PLC outputs so you can test stuff manually even when connected.
+
+### protocols/
+
+Each protocol file (logoS7.py, plcS7.py, PLCSimAPI.py, etc) implements the same interface:
+
+- GetDI/SetDI, GetDO/SetDO for digital IO
+- GetAI/SetAI, GetAO/SetAO for analog IO
+- connect/disconnect/isConnected
+
+The actual protocol implementations are pretty much unchanged from the original code.
+
+**Important note for PLCSim:** PLCSim mode can be sluggish in manual mode when sending coil commands. This is a known quirk - each C# API call through pythonnet has overhead, and when you stack 15-20 of them per cycle it adds up. Still usable, just don't expect 60fps GUI updates.
+
+## GUI Module
+
+Refactored to separate the main window bootstrap logic from actual page logic.
+
+**mainGui.py** - Loads the Qt UI file, compiles resources if needed, creates the main window. Delegates all the actual work to page mixins. Basically just glue code.
+
+**Page mixins:**
+
+- **generalSettings.py** - Protocol/network settings page
+- **ioConfigPage.py** - IO tree with drag/drop, address editing, conflict detection. Auto-loads the right XML file when you switch simulations. Has special handling for LOGO mode address translation (internal format vs LOGO display format).
+- **generalControls.py** - Floating dock with Start/Stop/Reset and manual control sliders
+- **simPage.py** - Handles switching between simulations and updating the IO tree when you change sims
+
+## Simulations Module
+
+Each simulation follows the same pattern:
+
+```
+simulation_name/
+  ├── simulation.py    # Implements SimulationInterface
+  ├── config.py        # Parameters (volumes, flow rates, etc)
+  ├── status.py        # Runtime state (current temp, level, etc)
+  └── gui.py           # Qt widget for visualization
 ```
 
-### 2. IO Module (`/src/IO/`)
+### PIDtankValve Example
 
-#### `handler.py`
+Tank simulation with:
 
-Generic IO handler that works with any simulation:
+- Inlet/outlet valves (digital or analog control)
+- Heater (digital or analog)
+- Temperature control with heat loss
+- Level sensors (digital + analog)
+- Liquid physics (specific heat, boiling point, etc)
 
-- Reads from PLC or GUI
-- Writes to PLC or GUI
-- Force value support
-- Simulation-agnostic design
+The gui.py uses SVG manipulation to animate the tank visually - liquid level, temperature color coding, valve states, etc.
 
-#### `protocols/`
+## Data Flow
 
-All protocol files **remain unchanged** from original implementation:
+**Control Modes:**
 
-- `logoS7.py` - Logo S7 communication
-- `plcS7.py` - PLC S7 communication
-- `PLCSimAPI/` - PLCSimAPI implementations
+- **GUI mode**: GUI widgets write to status, those values drive the simulation and optionally get sent to PLC as inputs
+- **PLC mode**: PLC outputs control the simulation, GUI shows feedback
+- **Manual mode** (while connected): GUI overrides PLC outputs, but sensors still go to PLC. Useful for testing.
 
-### 3. GUI Module (`/src/gui/`)
+**Main Loop (main.py):**
 
-Refactored to separate window bootstrapping from page logic.
+1. Process Qt events
+2. Update simulation physics: `sim_mgr.update_simulation(dt)`
+3. If PLC connected: Exchange IO via handler
+4. Update GUI displays
+5. Repeat
 
-- **mainGui.py**: Loads Qt `.ui`, compiles `.qrc` to `Resource_rc.py` if available, constructs `MainWindow` and delegates behavior to page mixins. Holds only orchestration and app-level timers.
-- **pages/generalSettings.py**: `ProcessSettingsMixin` sets up process/network controls; updates `configuration`.
-- **pages/ioConfigPage.py**: `IOConfigMixin` provides `load_io_tree()` which selects `IO/IO_treeList_<simulation>.xml` based on active simulation and repopulates the IO tree. Loads common “GeneralControls” plus simulation-specific nodes. Legacy `IO_treeList.xml` supported as fallback.
-- **pages/generalControls.py**: `GeneralControlsMixin` manages the floating dock, Start/Stop/Reset buttons, analog slider ranges and status writes, plus status-driven UI updates (indicators, LCDs). Honors GUI vs PLC control mode.
-- **pages/simPage.py**: `SimPageMixin` owns navigation (`settings`, `IO`, `sim`, `sim settings`), start/close of simulations, float/dock of sim pages, and keeps `MainScreen` content switched to active page. On simulation change, updates `simulationManager`’s active name and triggers `load_io_tree()`.
-- **media/**: `mainWindowPIDRegelaarSim.ui`, `style.qss`, `Resource.qrc`, icons. `pyrcc5` compiles resources to `Resource_rc.py` at runtime; falls back gracefully if missing.
+**Simulation Switching:**
+When you click a different simulation in the nav menu, it:
 
-### 4. Simulations Module (`/src/simulations/`)
+1. Stops current simulation
+2. Loads new simulation via SimulationManager
+3. Reloads IO tree from the new sim's XML file
+4. Switches the GUI page
 
-Each simulation follows standard structure:
+## Save/Load Format
 
-#### `PIDtankValve/`
-
-- `simulation.py` - Implements `SimulationInterface`
-- `config.py` - Configuration parameters (tankVolume, flowRates, etc.)
-- `status.py` - Runtime status (liquidVolume, temperature, etc.)
-- `SimGui.py` - Qt widget for visualization
-
-### 5. IO Module (`/src/IO/`)
-
-- **IO*treeList*\*.xml**: Per-simulation IO trees, e.g. `IO_treeList_PIDtankValve.xml`, `IO_treeList_conveyor.xml`. Loader merges common GeneralControls with sim-specific sections. The IO tree reloads when the active simulation changes.
-- **IO_configuration.json**: IO address/range configuration loaded on startup; used by the IO handler.
-
-### 6. Entry Point (`/src/main.py`)
-
-- Initializes `configuration`, `SimulationManager`, `ProtocolManager`, `IOHandler`.
-- Registers and loads default simulation (`PIDtankValve`).
-- Starts `QApplication`, builds `MainWindow`, assigns `mainConfig`, `tanksim_config`, `tanksim_status` for legacy compatibility.
-- Runs the main loop: processes Qt events, handles PLC connect/disconnect via `ProtocolManager.initialize_and_connect()`, updates simulation and IO, and refreshes the GUI. Legacy bridging variables have been removed in favor of `active_config`/`active_status` from `SimulationManager`.
-
-## GUI ↔ IO ↔ PLC ↔ Simulation Data Flow
-
-- **Control Mode**: `configuration.plcGuiControl` selects `$gui$` vs `$plc$`.
-  - $gui$: GUI widgets write into `tanksim_status` (e.g., general controls sliders/buttons). IO handler publishes these as PLC inputs where applicable.
-  - $plc$: PLC outputs override GUI controls; `generalControls` sliders reflect PLC-driven values.
-- **Simulation Selection**: `SimPageMixin.start_simulation(index)` sets `simulationManager._active_simulation_name` (or loads if registered) and calls `IOConfigMixin.load_io_tree()` to reload per-simulation IO tree.
-- **Main Loop (main.py)**:
-  - Updates simulation via `simulationManager.update_simulation(dt)`.
-  - If PLC connected: `ProtocolManager` exchanges IO; `IOHandler.updateIO()` transfers values between PLC and `tanksim_status` with force support.
-  - GUI timer `MainWindow.update_all_values()` refreshes widgets: simulation display, IO status, general controls dock, and connection icon.
-- **Resources/UI**: `mainGui.py` loads `.ui`, compiles `.qrc` if present, and applies `style.qss`.
-- **Save/Load**: `configuration.Save(sim_mgr, path, io_config)` persists complete app state; `Load()` restores and auto-loads the saved simulation.
-
-## Save/Load Functionality
-
-### JSON Structure
-
-The saved state file has the following structure:
+Saves to JSON with this structure:
 
 ```json
 {
   "version": "1.0",
-  "timestamp": "2025-12-19T16:05:30.974135",
+  "timestamp": "...",
   "main_config": {
-    "plcGuiControl": "gui",
-    "plcProtocol": "PLC S7-1500/1200/400/300/ET 200SP",
-    "plcIpAdress": "192.168.1.100",
-    ...
+    /* PLC settings, protocol, IP, etc */
   },
   "active_simulation": "PIDtankValve",
   "simulation_config": {
-    "simulationInterval": 0.1,
-    "tankVolume": 2000.0,
-    "valveInMaxFlow": 10.0,
-    ...
+    /* Tank volume, flow rates, etc */
   },
   "simulation_status": {
-    "liquidVolume": 750.5,
-    "liquidTemperature": 45.3,
-    "simRunning": true,
-    ...
+    /* Current liquid level, temp, etc */
   },
   "io_config_path": "IO/IO_configuration.json"
 }
 ```
 
-### Testing Save/Load
+Pretty straightforward. Load() restores everything and auto-switches to the saved simulation.
 
-Run the test script to verify functionality:
+## LOGO Mode Quirks
 
-```bash
-cd src
-python test_save_load.py
-```
+LOGO addresses use a different format than standard S7:
 
-Expected output:
+- Inputs: V0.0, V0.1 instead of I0.0, I0.1
+- Outputs: Q1, Q2 instead of Q0.0, Q0.1
+- Analog: VW2, AQ1 instead of IW2, QW2
 
-```
-✓✓✓ ALL TESTS PASSED ✓✓✓
+The IO config page has an "interpolator" that translates between internal format (used for communication) and LOGO display format (shown in table). This runs automatically when in LOGO mode.
 
-The Save/Load functionality is working correctly:
-  ✓ JSON file created with complete state
-  ✓ Simulation auto-loaded from saved name
-  ✓ All configuration values restored
-  ✓ All status/process values restored
-  ✓ IO configuration path preserved
-```
-
-## Usage Examples
-
-### Basic Simulation Loading
-
-```python
-from core.simulationManager import SimulationManager
-from simulations.PIDtankValve.simulation import PIDTankSimulation
-
-# Create manager
-sim_mgr = SimulationManager()
-
-# Register simulation types
-sim_mgr.register_simulation('PIDtankValve', PIDTankSimulation)
-
-# Load a simulation
-sim_mgr.load_simulation('PIDtankValve', 'my_tank_sim')
-
-# Control simulation
-sim_mgr.start_simulation()
-sim_mgr.update_simulation(dt=0.1)
-sim_mgr.stop_simulation()
-
-# Get status
-status = sim_mgr.get_status()
-print(f"Liquid volume: {status['liquidVolume']}")
-```
-
-### Protocol Management
-
-```python
-from core.protocolManager import ProtocolManager
-from IO.protocols.plcS7 import plcS7
-
-# Create manager
-protocol_mgr = ProtocolManager()
-
-# Create protocol instance
-plc = plcS7("192.168.0.1", rack=0, slot=1)
-
-# Activate and connect
-protocol_mgr.activate_protocol("PLC S7", plc)
-if protocol_mgr.connect():
-    print("Connected to PLC")
-
-    # Reset IO ranges
-    protocol_mgr.reset_inputs(0, 10)
-    protocol_mgr.reset_outputs(0, 10)
-
-    # Later...
-    protocol_mgr.disconnect()
-```
-
-### Complete Application Flow
-
-```python
-from core.configuration import configuration
-from core.simulationManager import SimulationManager
-from core.protocolManager import ProtocolManager
-from IO.handler import IOHandler
-from simulations.PIDtankValve.simulation import PIDTankSimulation
-
-# Initialize core components
-config = configuration()
-sim_mgr = SimulationManager()
-protocol_mgr = ProtocolManager()
-io_handler = IOHandler()
-
-# Register and load simulation
-sim_mgr.register_simulation('PIDtankValve', PIDTankSimulation)
-sim_mgr.load_simulation('PIDtankValve', 'tank1')
-
-# Get simulation objects
-active_sim = sim_mgr.get_active_simulation()
-
-# Main loop
-while True:
-    # Update simulation
-    sim_mgr.update_simulation(dt=0.1)
-
-    # Handle IO if protocol connected
-    if protocol_mgr.is_connected():
-        plc = protocol_mgr.get_active_protocol()
-        io_handler.updateIO(
-            plc, config,
-            active_sim.config,
-            active_sim.status
-        )
-```
-
-## Migration Status
-
-### ✅ Completed
-
-- Core module fully implemented
-- IO module restructured with protocols moved
-- Simulations module created with PIDtankValve
-- Save/Load functionality implemented and tested
-- Protocol files preserved unchanged
-- New main.py created with architecture integration
-
-### 🔄 In Progress
-
-- GUI page modularization: completed for navigation, IO tree, general controls
-- Conveyor simulation migration
-- Import path updates as new pages/sims land
-
-### ⏳ Pending
-
-- Full GUI refactoring to new structure
-- Conveyor simulation migration
-- Legacy folder cleanup
-- Complete integration testing
-
-## Benefits of New Architecture
-
-1. **Modularity**: Clear separation of concerns
-2. **Extensibility**: Easy to add new simulations or protocols
-3. **Maintainability**: Uniform interfaces and structure
-4. **State Persistence**: Complete save/load with validation
-5. **Testability**: Components can be tested independently
+Conflict detection had to be fixed to compare LOGO format addresses, not internal format. Byte offsets also needed special handling per signal type (digital input uses BoolInput offset, analog output uses DWORDOutput offset, etc).
 
 ## Testing
 
-### Unit Tests
+Run `python test_save_load.py` to verify save/load works correctly. It creates a temp file, saves state, loads it back, and validates everything matches.
 
-```bash
-# Test core components
-python -c "from core.configuration import configuration; c = configuration()"
+For GUI testing just run `python main.py` and click around.
 
-# Test Save/Load
-python test_save_load.py
+## Known Issues & Fixes
 
-# Test simulation loading
-python -c "
-from core.simulationManager import SimulationManager
-from simulations.PIDtankValve.simulation import PIDTankSimulation
-m = SimulationManager()
-m.register_simulation('PIDtankValve', PIDTankSimulation)
-m.load_simulation('PIDtankValve', 'test')
-"
-```
+- **PLCSim manual mode flickering**: Fixed by restructuring when GUI events process and fixing forced_values priority
+- **LOGO address conflicts**: Fixed by running interpolator before conflict checks
+- **Trend window gaps during drag**: Fixed by adding moveEvent/resizeEvent handlers
+- **GUI sluggish in PLCSim mode**: Reduced IO interval from 100ms to 50ms, added processEvents() after update cycle
 
-### Integration Test
+## Adding New Simulations
 
-```bash
-# Run the main (requires PyQt5)
-python main.py
-```
+1. Create folder in `simulations/`
+2. Implement simulation.py with SimulationInterface
+3. Create config.py, status.py, gui.py
+4. Create IO_treeList_yoursim.xml in IO/
+5. Register in main.py: `sim_mgr.register_simulation('yoursim', YourSimClass)`
+6. Add nav button in Qt Designer
 
-## Notes
-
-- Protocol files in `/IO/protocols/` are **unchanged** from original
-- Old directory structure temporarily preserved for backward compatibility
-- GUI modularization active: `MainWindow` delegates to page mixins; no legacy bridging in `main.py`
-- All simulation data (config, status) properly serialized in JSON format
-
-## Future Enhancements
-
-1. Page registry to construct/register content widgets programmatically
-2. Add conveyor simulation
-3. Enhanced simulation switching with transitions
-4. Add more comprehensive validation in Load()
-5. Support for multiple simultaneous simulations
-6. Plugin architecture for custom simulations
+That's pretty much it. The IO handler and protocol stuff all work automatically once you have the config/status structure set up right.

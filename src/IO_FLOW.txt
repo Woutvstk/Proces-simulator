@@ -1,223 +1,165 @@
-================================================================================
-IO FLOW DOCUMENTATION - PLC Simulator
-================================================================================
+# IO Flow - How Signals Get From GUI to PLC and Back
 
-OVERVIEW
---------
-This document describes the flow from IO tree XML files to the IO handler,
-including configuration, force functionality, and PLC communication.
+## The Basic Idea
 
+Signals defined in XML → User maps them to addresses in GUI → IO handler exchanges data with PLC → Simulation sees the values
 
-1. IO TREE XML FILES (Source Definition)
------------------------------------------
-Location: src/IO/IO_treeList_<simulation>.xml
+Force functionality lets you override any signal for testing.
 
-Structure:
-  <Simulation>
-    <GeneralControls>       # Common signals for all simulations
-      <Inputs>              # PLC Inputs = Simulator Outputs
-        <Digital>           # Boolean signals
-        <Analog>            # Integer/Word signals
-      <Outputs>             # PLC Outputs = Simulator Inputs
-        <Digital>
-        <Analog>
-    <PIDtankValve>          # Simulation-specific signals
-      <Inputs>
-      <Outputs>
-    <ConveyorSim>
-      <Inputs>
-      <Outputs>
+## 1. Signal Definitions (XML Files)
 
-Each signal has:
-  - description: Human-readable name
-  - type: "bool" or "int"
-  - range: Value range (e.g., "0-1" or "0-27648")
-  - io_prefix: "I" (input) or "Q" (output)
-  - status: Default value
+Files: `IO/IO_treeList_<simulation>.xml`
 
-Purpose: Define available signals per simulation type
+Each simulation has its own XML with:
+- **GeneralControls** - Common stuff (Start/Stop/Reset, general sliders)
+- **Simulation-specific** - Tank valves, level sensors, etc
 
+Each signal lists:
+- Name (e.g., "DQValveIn")
+- Type (bool/int)
+- Range (0-1 for digital, 0-27648 for analog)
+- IO prefix ("I" for inputs, "Q" for outputs)
 
-2. LOADING IO TREE (GUI)
--------------------------
-File: src/gui/pages/ioConfigPage.py -> load_io_tree()
+When you switch simulations, the GUI loads the matching XML file automatically.
 
-Flow:
-  a) Get active simulation name from simulationManager
-  b) Select corresponding XML file (IO_treeList_PIDtankValve.xml or IO_treeList_conveyor.xml)
-  c) Parse XML and populate treeWidget_IO with available signals
-  d) Tree shows: GeneralControls + Simulation-specific nodes
+## 2. User Mapping (IO Config Page)
 
-When: Called when simulation is started/switched via start_simulation()
+The IO config page (`ioConfigPage.py`) shows two parts:
+- Left tree: Available signals from XML
+- Right table: Mapped signals with addresses
 
+User workflow:
+1. Drag signal from tree to table
+2. Assign byte/bit address (or use auto-assignment)
+3. Optionally set byte offsets
+4. Save to `IO_configuration.json`
 
-3. IO MAPPING (User Configuration)
------------------------------------
-File: src/gui/pages/ioConfigPage.py -> Drag & Drop
+**LOGO mode quirk**: Addresses display in LOGO format (V0.0, Q1, AQ2) but internally use standard S7 format (I0.0, Q0.0, QW2). The interpolator handles translation before conflict checks and after any address changes.
 
-User actions:
-  a) Drag signal from treeWidget_IO (available signals)
-  b) Drop onto tableWidget_IO (IO mapping table)
-  c) Assign byte/bit address in table
-  d) Optionally set offset values
+## 3. Force Functionality
 
-Table columns:
-  - Signal Name
-  - Type (Digital/Analog)
-  - IO Prefix (I/Q)
-  - Byte Address
-  - Bit Position
-  - Offset
-  - Force Checkbox
-  - Force Value
+Force lets you override any signal value for testing. Super useful for debugging without changing PLC code.
 
-Configuration storage: IO_configuration.json
-
-
-4. IO CONFIGURATION FILE
--------------------------
-Location: src/IO/IO_configuration.json
-
-Contains:
-  - Mapped signals with addresses
-  - Offset values
-  - Byte range (lowestByte, highestByte)
-
-Loading:
-  - At startup: active_config.load_io_config_from_file()
-  - Stores in simulation config object
-
-Purpose: Persist IO mapping between sessions
-
-
-5. FORCE FUNCTIONALITY
------------------------
-Files: 
-  - src/gui/pages/ioConfigPage.py -> Force checkboxes/values in table
-  - src/gui/mainGui.py -> get_forced_io_values()
-
-Flow:
-  a) User enables force checkbox in IO table for specific signal
-  b) User enters force value
-  c) get_forced_io_values() collects all forced signals into dict
-  d) Dict passed to IOHandler.updateIO()
-  e) Forced values override normal simulation/PLC values
+How it works:
+- Enable force checkbox in IO table
+- Set force value
+- `get_forced_io_values()` collects all forced signals
+- IO handler checks forced values FIRST, before PLC/simulation values
 
 Force dict format:
-  {
-    "signal_name": {
-      "value": <forced_value>,
-      "type": "digital" or "analog"
-    }
-  }
+```python
+{
+    "DQValveIn": True,       # Forced to ON
+    "AQHeaterFraction": 15000  # Forced to specific analog value
+}
+```
 
-Clear forces: clear_all_forces() unchecks all force checkboxes
+Clears with one click via `clear_all_forces()`.
 
+## 4. IO Handler (The Middleman)
 
-6. IO HANDLER (Data Exchange)
-------------------------------
-File: src/IO/handler.py
+File: `IO/handler.py`
 
-Main method: updateIO(protocol, config, active_config, active_status, forced_values)
+Main job: Exchange data between PLC and simulation status
 
-Flow:
-  a) Read PLC outputs → Write to simulation inputs
-     - Protocol reads bytes from PLC
-     - Extract signal values using byte/bit addresses
-     - Apply force overrides if present
-     - Write to simulation status object
-  
-  b) Read simulation outputs → Write to PLC inputs
-     - Read from simulation status object
-     - Apply offsets
-     - Apply force overrides if present
-     - Pack into bytes
-     - Protocol writes to PLC
+`updateIO()` does two things:
 
-Offset handling:
-  - Added to analog values before writing to PLC
-  - Allows value shifting/scaling
+**A) PLC → Simulation (Read actuators):**
+1. Read PLC outputs (Q bytes)
+2. Check forced values first
+3. Extract signal values using byte/bit addresses
+4. Write to simulation status
 
-resetOutputs():
-  - Called when PLC disconnects
-  - Sets all simulation inputs to 0/FALSE
+**B) Simulation → PLC (Write sensors):**
+1. Read simulation status (temperatures, levels, etc)
+2. Check forced values first  
+3. Apply byte offsets if configured
+4. Write to PLC inputs (I bytes)
 
+**Manual mode handling**: When manual mode is active, GUI values override PLC actuator outputs. The check looks like: `forced_values → manual mode values → PLC values` in that priority order.
 
-7. PROTOCOL MANAGER
---------------------
-File: src/core/protocolManager.py
+**Important**: In manual mode with PLC connected, sensors still go to the PLC (so your PLC program can read them), but actuators come from GUI/forced values.
 
-Responsibilities:
-  - Initialize PLC protocol (Logo S7, PLC S7, etc.)
-  - Manage connection state
-  - Provide read/write interface to IO handler
+## 5. Protocol Manager
 
-Protocol selection: Based on mainConfig.plcProtocol
+File: `core/protocolManager.py`
 
+Handles the actual PLC communication. Abstracts away protocol differences so IO handler doesn't care if you're using LOGO, S7-1500, or PLCSim.
 
-8. MAIN LOOP INTEGRATION
--------------------------
-File: src/main.py
+Each protocol implements:
+- `GetDI/SetDI, GetDO/SetDO` - Digital IO
+- `GetAI/SetAI, GetAO/SetAO` - Analog IO
+- `connect/disconnect/isConnected` - Connection management
 
-Update cycle (every simulationInterval):
-  
-  if PLC connected:
-    forced_values = window.get_forced_io_values()
-    ioHandler.updateIO(protocol, mainConfig, active_config, active_status, forced_values)
-  else:
-    ioHandler.resetOutputs(mainConfig, active_config, active_status)
-  
-  simulationManager.update_simulation(dt)
-  window.update_tanksim_display()
+## 6. Main Loop Integration
 
+File: `main.py`
 
-9. GUI MODE (No PLC)
---------------------
-When mainConfig.plcGuiControl == "gui":
-  - No PLC connection attempted
-  - General Controls dock provides manual input
-  - IO Handler resetOutputs() keeps simulation inputs at 0
-  - User controls simulation via GUI widgets
+The main loop ties everything together:
 
+```
+while running:
+    Process Qt events
+    
+    if PLC connected:
+        forced_values = get_forced_io_values()
+        ioHandler.updateIO(plc, config, status, forced_values, manual_mode)
+    else:
+        ioHandler.resetOutputs()  # Zero out actuators
+    
+    sim_mgr.update_simulation(dt)  # Run physics
+    update_tanksim_display()       # Refresh GUI
+    
+    # PLCSim gets extra processEvents() here for responsiveness
+    if PLCSim_mode:
+        app.processEvents()
+```
 
-SIGNAL DIRECTION SUMMARY
--------------------------
-PLC Perspective:
-  - PLC Inputs (I) = Simulator reads/writes these = Simulator OUTPUTS to PLC
-  - PLC Outputs (Q) = Simulator reads these = Simulator INPUTS from PLC
+**Timing quirk**: PLCSim uses min 50ms interval (vs 100ms+ for simulation) to keep GUI responsive. Each PLCSim API call through pythonnet has ~40-50ms overhead, so with 15-20 calls per cycle things can get sluggish without the extra processEvents().
 
-Data Flow:
-  Simulation Status → IO Handler → PLC Inputs (I)
-  PLC Outputs (Q) → IO Handler → Simulation Status
+## 7. GUI Mode (No PLC)
 
-Force Override:
-  Can override ANY value at IO Handler level before reading/writing
+When `plcGuiControl == "gui"`:
+- No PLC connection
+- General Controls dock provides manual inputs
+- Simulation runs standalone
+- Good for testing simulation logic without hardware
 
+## Signal Direction (Always Confusing)
 
-KEY FILES
----------
-XML Definitions:    src/IO/IO_treeList_*.xml
-Configuration:      src/IO/IO_configuration.json
-IO Handler:         src/IO/handler.py
-GUI IO Config:      src/gui/pages/ioConfigPage.py
-Protocol Manager:   src/core/protocolManager.py
-Main Loop:          src/main.py
-Simulation Config:  src/simulations/PIDtankValve/config.py
-Simulation Status:  src/simulations/PIDtankValve/status.py
+From PLC perspective:
+- **PLC Inputs (I)**: Simulator WRITES here (sensors going TO the PLC)
+- **PLC Outputs (Q)**: Simulator READS here (actuators coming FROM the PLC)
 
+Data flow:
+```
+Simulation sensors → IO Handler → PLC Inputs (I)
+PLC Outputs (Q) → IO Handler → Simulation actuators
+```
 
-TYPICAL WORKFLOW
-----------------
-1. User starts application → Default simulation loaded (PIDtankValve)
-2. IO tree XML loaded → Signals shown in treeWidget_IO
-3. User drags signals to tableWidget_IO → Assigns addresses
-4. Configuration saved to IO_configuration.json
-5. User connects to PLC → Protocol initialized
+Force overrides can intercept at any point.
+
+## Typical Workflow
+
+1. Start app → Load PIDtankValve simulation
+2. XML loaded → Signals appear in IO tree
+3. Drag signals to table → Assign addresses (or let auto-assignment handle it)
+4. Save config → Stored in IO_configuration.json
+5. Connect to PLC → Protocol manager initializes
 6. Main loop runs:
-   - IO Handler reads PLC outputs → Updates simulation inputs (with forces)
-   - Simulation calculates new state
-   - IO Handler writes simulation outputs → PLC inputs (with offsets & forces)
-7. User can force values in GUI → Overrides normal flow
-8. User disconnects → resetOutputs() called
+   - Read PLC outputs (with force overrides)
+   - Update simulation physics
+   - Write sensors to PLC (with offsets & force overrides)
+7. User can force values anytime for testing
+8. Disconnect → All actuators reset to 0
 
-================================================================================
+## Key Files Reference
+
+- **XML Definitions**: `IO/IO_treeList_*.xml`
+- **Config Storage**: `IO/IO_configuration.json`
+- **IO Logic**: `IO/handler.py`
+- **GUI Mapping**: `gui/pages/ioConfigPage.py`
+- **Protocol Layer**: `core/protocolManager.py`
+- **Main Loop**: `main.py`
+- **Sim Config**: `simulations/PIDtankValve/config.py`
+- **Sim State**: `simulations/PIDtankValve/status.py`

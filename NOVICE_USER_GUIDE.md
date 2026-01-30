@@ -1,285 +1,202 @@
-# Novice User Guide - Adding New Simulations
+# Getting Started - Adding Your Own Simulation
 
-## Quick Start Guide for Beginners
+## What You Need to Know
 
-This guide helps you add new simulations to the Industrial Simulation Framework. It assumes basic Python knowledge but no advanced programming experience.
+You should be comfortable with basic Python. If you can write classes and functions, you're good to go. The framework handles all the PLC communication and GUI stuff - you just write the simulation logic.
 
-## Overview
-
-The framework follows a clear structure defined in `src/ARCHITECTURE.md`. All simulations use the same pattern, making it easy to add new ones by following existing examples.
-
-## File Structure for a New Simulation
-
-Every simulation needs exactly 5 files in its own folder:
+## The 5 Files Every Simulation Needs
 
 ```
-src/simulations/[your_simulation_name]/
-├── __init__.py          # Module initialization (copy from existing)
-├── simulation.py        # Core logic (REQUIRED - implements SimulationInterface)
-├── config.py            # Settings and parameters
-├── status.py            # Runtime state and values
-└── gui.py               # Visual display widget (if needed)
+simulations/your_sim_name/
+├── __init__.py          # Just copy from an existing sim
+├── simulation.py        # Your main logic lives here
+├── config.py            # Parameters users can tweak
+├── status.py            # Current state (temps, levels, etc)
+└── gui.py               # Visual widget (optional)
 ```
 
-## Step-by-Step: Creating Your First Simulation
+## Easiest Way to Start
 
-### Step 1: Choose a Name
-
-Pick a descriptive name using PascalCase (e.g., `ConveyorBelt`, `MixingTank`, `PressureValve`).
-
-### Step 2: Copy an Existing Simulation
-
-The easiest way to start is to copy the PIDtankValve simulation:
+Copy an existing simulation and modify it:
 
 ```bash
 cd src/simulations/
-cp -r PIDtankValve MyNewSimulation
-cd MyNewSimulation
+cp -r PIDtankValve MyNewSim
+cd MyNewSim
+# Now edit the files
 ```
 
-### Step 3: Understand Each File
+## What Goes in Each File
 
-#### `simulation.py` - The Brain (REQUIRED)
+### simulation.py - The Main Logic
 
-This file contains your simulation logic. It **must** implement these methods:
+Your simulation class needs these methods. The framework calls them automatically:
 
 ```python
-class MySimulation(SimulationInterface):
-    def start(self) -> None:
+from core.interface import SimulationInterface
+
+class MyNewSim(SimulationInterface):
+    def start(self):
+        # Called when user hits Start button
         pass
-    
-    def stop(self) -> None:
+
+    def stop(self):
+        # Called when user hits Stop button
         pass
-    
-    def reset(self) -> None:
+
+    def reset(self):
+        # Reset everything to initial state
         pass
-    
-    def update(self, dt: float) -> None:
-        """Called every simulation cycle (e.g., every 0.1 seconds)
-        
-        dt: time since last update in seconds
-        
-        This is where you put your physics/logic:
-        - Read inputs from self.status
-        - Calculate new values
-        - Write outputs to self.status
-        """
+
+    def update(self, dt):
+        # Called every simulation cycle (usually 100ms)
+        # dt = time since last update in seconds
+        # This is where your physics/logic goes
         pass
-    
-    def get_name(self) -> str:
-        """Return simulation name"""
-        return "MyNewSimulation"
+
+    def get_name(self):
+        return "MyNewSim"
 ```
 
-#### `config.py` - The Settings
+The `update()` method is where you put your simulation logic. Read inputs from `self.status`, do your calculations, write outputs back to `self.status`.
 
-Define all configuration parameters that users can change:
+### config.py - Settings
+
+Put anything users might want to change here:
 
 ```python
 class configuration:
     def __init__(self):
-        # Physical parameters
-        self.maxSpeed = 100.0           # Maximum speed in m/s
+        self.max_speed = 100.0          # Max speed in m/s
         self.acceleration = 2.0         # Acceleration in m/s²
-        self.simulationInterval = 0.1   # Update every 0.1 seconds
-        
-        # IO addresses (where PLC reads/writes data)
-        self.DIStart = {"byte": 0, "bit": 0}  # Digital input
-        self.AQSpeed = {"byte": 2}             # Analog output
+        self.simulationInterval = 0.1   # How often to update
+
+        # IO addresses for PLC communication
+        self.DIStart = {"byte": 0, "bit": 0}  # Start button
+        self.AQSpeed = {"byte": 2}            # Speed output
 ```
 
-#### `status.py` - The Current State
+### status.py - Current State
 
-Define all runtime values that change during simulation:
+Everything that changes during the simulation:
 
 ```python
 class status:
     def __init__(self):
-        # Current state
-        self.currentSpeed = 0.0
-        self.isMoving = False
-        self.simRunning = False
-        
-        # Inputs from PLC/GUI
-        self.startCommand = False
-        self.targetSpeed = 0.0
+        self.current_speed = 0.0
+        self.is_moving = False
+        self.sim_running = False
+
+        # Values from PLC/GUI
+        self.start_command = False
+        self.target_speed = 0.0
 ```
 
-#### `gui.py` - The Visual Display (Optional)
+### gui.py - Visualization (Optional)
 
-Create a PyQt5 widget to show your simulation visually. Look at `PIDtankValve/gui.py` for examples of:
-- SVG graphics (tanks, valves, etc.)
-- Real-time updates
-- Color changes based on state
+PyQt5 widget to show your simulation visually. Check out PIDtankValve/gui.py for examples of SVG graphics and real-time updates.
 
-### Step 4: Register Your Simulation
+## Register Your Simulation
 
-Edit `src/main.py` to add your simulation:
+Edit `src/main.py`:
 
 ```python
-# Add import at top
-from simulations.MyNewSimulation.simulation import MyNewSimulation
+# Add import
+from simulations.MyNewSim.simulation import MyNewSim
 
-# Register it in the main() function
-def main():
-    # ... existing code ...
-    
-    # Register simulations
-    sim_mgr.register_simulation('PIDtankValve', PIDTankSimulation)
-    sim_mgr.register_simulation('MyNewSimulation', MyNewSimulation)  # ADD THIS
+# In main(), add registration
+sim_mgr.register_simulation('MyNewSim', MyNewSim)
 ```
 
-## Important Rules
+That's it. Now your simulation appears in the nav menu.
 
-### 1. Never Import from `protocols/` folder
+## Quick Test
 
-The `protocols/` folder contains PLC communication code that should not be modified.
+```bash
+# Check for syntax errors
+python -m py_compile src/simulations/MyNewSim/simulation.py
 
-### 2. Use Logging, Not print()
+# Test import
+cd src
+python -c "from simulations.MyNewSim.simulation import MyNewSim; print('Works!')"
+
+# Run the app
+python main.py
+```
+
+## Common Gotchas
+
+**Simulation doesn't appear in list**
+→ Did you register it in main.py?
+
+**"ModuleNotFoundError"**
+→ File names must be exactly: simulation.py, config.py, status.py, gui.py
+
+**"Can't instantiate abstract class"**
+→ You're missing required methods from SimulationInterface
+
+**Nothing in the logs**
+→ Use `logger.info()` instead of `print()`
+
+## Logging the Right Way
 
 ```python
-# BAD
-print("Speed is:", speed)
-
-# GOOD
 import logging
 logger = logging.getLogger(__name__)
-logger.info(f"Speed is: {speed}")
-logger.debug(f"Debug info: {speed}")  # Only shows when debugging
-logger.error(f"Error: {speed}")       # For errors
+
+# Use these instead of print()
+logger.info("Important stuff users should see")
+logger.debug("Detailed info for debugging")
+logger.error("Something broke")
 ```
 
-### 3. Use Clear Variable Names
+Debug messages only show when you're actively debugging. Info/error messages always show.
+
+## Writing Good Code (Quick Tips)
+
+**Use descriptive names:**
 
 ```python
-# BAD
+# Meh
 temp = 5
 data = process(temp)
-result = data * 2
 
-# GOOD
+# Better
 tank_capacity_liters = 5
-current_volume_liters = calculate_volume(tank_capacity_liters)
-doubled_volume = current_volume_liters * 2
+current_volume = calculate_volume(tank_capacity_liters)
 ```
 
-### 4. Keep Functions Short
-
-If a function is longer than 50 lines, split it into smaller functions:
+**Keep functions short:**
+If a function is getting huge, split it up:
 
 ```python
-# Instead of one huge function:
-def update(self, dt):
-    # 100 lines of code...
-    pass
-
-# Split into logical pieces:
 def update(self, dt):
     self._update_physics(dt)
     self._update_sensors()
     self._check_limits()
-
-def _update_physics(self, dt):
-    # 20 lines
-    pass
-
-def _update_sensors(self):
-    # 15 lines
-    pass
-
-def _check_limits(self):
-    # 10 lines
-    pass
 ```
 
-### 5. Add Docstrings
-
-Every function and class should explain what it does:
+**Add docstrings where helpful:**
 
 ```python
-def calculate_flow_rate(valve_opening, pressure_difference):
+def calculate_flow(valve_opening, pressure):
     """
-    Calculate liquid flow rate through a valve.
-    
-    Args:
-        valve_opening: Valve position from 0.0 (closed) to 1.0 (fully open)
-        pressure_difference: Pressure difference in bar
-        
-    Returns:
-        Flow rate in liters per second
+    Calculate flow rate through valve.
+
+    valve_opening: 0.0 (closed) to 1.0 (fully open)
+    pressure: Pressure difference in bar
+
+    Returns flow rate in L/s
     """
-    return valve_opening * pressure_difference * 10.0
+    return valve_opening * pressure * 10.0
 ```
 
-## Testing Your Simulation
+## Minimal Template
 
-### 1. Check for Syntax Errors
-
-```bash
-python3 -m py_compile src/simulations/MyNewSimulation/simulation.py
-```
-
-### 2. Test Imports
-
-```bash
-cd src
-python3 -c "from simulations.MyNewSimulation.simulation import MyNewSimulation; print('Success!')"
-```
-
-### 3. Run the Application
-
-```bash
-cd src
-python3 main.py
-```
-
-## Common Mistakes
-
-### Mistake 1: Forgetting to Update in main.py
-
-**Symptom**: Simulation doesn't appear in the list
-
-**Fix**: Add your simulation to the registration in `main.py`
-
-### Mistake 2: Wrong File Names
-
-**Symptom**: "ModuleNotFoundError"
-
-**Fix**: Make sure files are named exactly: `simulation.py`, `config.py`, `status.py`, `gui.py`
-
-### Mistake 3: Not Implementing All Methods
-
-**Symptom**: "TypeError: Can't instantiate abstract class"
-
-**Fix**: Your simulation class must have all required methods from `SimulationInterface`
-
-### Mistake 4: Using print() Instead of Logging
-
-**Symptom**: No output or cluttered console
-
-**Fix**: Use `logger.info()`, `logger.debug()`, `logger.error()`
-
-## Getting Help
-
-1. **Look at existing simulations**: `PIDtankValve` and `conveyor` are good examples
-2. **Read ARCHITECTURE.md**: Explains the complete structure
-3. **Check the interface**: `src/core/interface.py` shows what methods you need
-4. **Follow the pattern**: All simulations work the same way
-
-## Quick Reference: File Templates
-
-### Minimal `simulation.py`
+Here's the bare minimum `simulation.py`:
 
 ```python
-"""
-[Your Simulation Name] - Brief description.
-
-External Libraries Used:
-- typing (Python Standard Library) - Type hints
-"""
-
 import logging
-from typing import Dict, Any
 from core.interface import SimulationInterface
 from .config import configuration
 from .status import status
@@ -287,74 +204,70 @@ from .status import status
 logger = logging.getLogger(__name__)
 
 
-class MyNewSimulation(SimulationInterface):
-    """Your simulation description"""
-    
+class MyNewSim(SimulationInterface):
     def __init__(self):
         self.config = configuration()
         self.status = status()
         self._running = False
-    
-    def start(self) -> None:
-        """Start simulation"""
+
+    def start(self):
         self._running = True
         logger.info("Simulation started")
-    
-    def stop(self) -> None:
-        """Stop simulation"""
+
+    def stop(self):
         self._running = False
-        logger.info("Simulation stopped")
-    
-    def reset(self) -> None:
-        """Reset to initial state"""
+
+    def reset(self):
         self.status = status()
-        logger.info("Simulation reset")
-    
-    def update(self, dt: float) -> None:
-        """Update simulation (called every cycle)
-        
-        Args:
-            dt: Time since last update in seconds
-        """
+
+    def update(self, dt):
         if not self._running:
             return
-        
-        # Your simulation logic here
-        pass
-    
-    def get_status(self) -> Dict[str, Any]:
-        """Return current status as dictionary"""
+
+        # Your logic here
+        # Example: simple acceleration
+        if self.status.start_command:
+            self.status.current_speed += self.config.acceleration * dt
+            self.status.current_speed = min(
+                self.status.current_speed,
+                self.config.max_speed
+            )
+
+    def get_status(self):
         return vars(self.status)
-    
-    def get_config(self) -> Dict[str, Any]:
-        """Return current config as dictionary"""
+
+    def get_config(self):
         return vars(self.config)
-    
-    def set_config(self, config: Dict[str, Any]) -> None:
-        """Update config from dictionary"""
-        for key, value in config.items():
+
+    def set_config(self, config_dict):
+        for key, value in config_dict.items():
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
-    
-    def get_name(self) -> str:
-        """Return simulation name"""
-        return "MyNewSimulation"
-    
+
+    def get_name(self):
+        return "MyNewSim"
+
     def get_config_object(self):
-        """Return config object"""
         return self.config
-    
+
     def get_status_object(self):
-        """Return status object"""
         return self.status
 ```
+
+## Need More Examples?
+
+Look at the existing simulations:
+
+- **PIDtankValve/** - Complex physics with temperature and level control
+- **conveyor/** - Simpler example (if it exists)
+
+Check **ARCHITECTURE.md** for the big picture of how everything fits together.
 
 ## Summary
 
 1. Copy an existing simulation folder
-2. Modify the 5 files (simulation.py, config.py, status.py, gui.py, __init__.py)
+2. Edit the 5 files with your logic
 3. Register in main.py
-4. Test imports and run
-5. Use logging, clear names, short functions, and docstrings
+4. Test and run
 
-**Remember**: The framework does the heavy lifting. You just write the simulation logic!
+The framework handles PLC communication, GUI, IO mapping, save/load, and all the infrastructure. You just write the simulation update() logic.
