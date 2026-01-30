@@ -848,6 +848,10 @@ class TankSimSettingsMixin:
 
         DATAFLOW: GUI controls → status → simulation
         """
+        # CRITICAL: Don't overwrite config during state load (prevents race condition)
+        if getattr(self, '_loading_state', False):
+            return
+
         if not hasattr(self, 'tanksim_status') or self.tanksim_status is None:
             return
 
@@ -1110,7 +1114,13 @@ class TankSimSettingsMixin:
     def on_color_changed(self):
         """Callback when water color changes"""
         new_color = self.colorDropDown.currentData()
-        self.vat_widget.waterColor = new_color
+        if hasattr(self, 'vat_widget') and self.vat_widget:
+            self.vat_widget.waterColor = new_color
+            self.vat_widget.rebuild()  # Rebuild SVG to apply new color immediately
+        
+        # Also update config if available
+        if hasattr(self, 'tanksim_config') and self.tanksim_config:
+            self.tanksim_config.tankColor = new_color
 
     def on_tank_config_changed(self):
         """Callback when tank configuration changes"""

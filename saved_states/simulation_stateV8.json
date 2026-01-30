@@ -17,9 +17,9 @@
   "simulation_config": {
     "simulationInterval": 0.2,
     "tankVolume": 400.0,
-    "valveInMaxFlow": 5.0,
-    "valveOutMaxFlow": 5.0,
-    "ambientTemp": 21.0,
+    "valveInMaxFlow": 5.5,
+    "valveOutMaxFlow": 5.5,
+    "ambientTemp": 21.5,
     "digitalLevelSensorHighTriggerLevel": 360.0,
     "digitalLevelSensorLowTriggerLevel": 40.0,
     "heaterMaxPower": 20000.0,

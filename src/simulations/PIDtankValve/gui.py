@@ -226,9 +226,9 @@ class VatWidget(QWidget):
             if self.adjustableValveInValue > 0:
                 waterValveIn.set("visibility", "visible")
                 waterValveIn.set(
-                    "style", f"fill:{BLUE};fill-opacity:1;stroke:{BLUE}")
-                self.setGroupColor("valveIn", BLUE)
-                self.setGroupColor("tagValveIn", BLUE)
+                    "style", f"fill:{self.waterColor};fill-opacity:1;stroke:{self.waterColor}")
+                self.setGroupColor("valveIn", self.waterColor)
+                self.setGroupColor("tagValveIn", self.waterColor)
                 # Set the inlet water width based on actual flow
                 if liquidVolume > 0:
                     # Normal case: tank has water, scale by inlet valve opening
@@ -279,9 +279,9 @@ class VatWidget(QWidget):
                 # Then set visibility and color
                 waterValveOut.set("visibility", "visible")
                 waterValveOut.set(
-                    "style", f"fill:{BLUE};fill-opacity:1;stroke:{BLUE}")
-                self.setGroupColor("valveOut", BLUE)
-                self.setGroupColor("tagValveOut", BLUE)
+                    "style", f"fill:{self.waterColor};fill-opacity:1;stroke:{self.waterColor}")
+                self.setGroupColor("valveOut", self.waterColor)
+                self.setGroupColor("tagValveOut", self.waterColor)
             else:
                 waterValveOut.set("visibility", "hidden")
                 waterValveOut.set(

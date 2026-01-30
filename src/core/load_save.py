@@ -69,6 +69,7 @@ class StateManager:
     @staticmethod
     def _deserialize_dict_to_object(obj: Any, data: Dict[str, Any]) -> None:
         """Restore object attributes from dictionary."""
+        logger.info(f"[DESERIALIZE] Starting deserialization with {len(data)} attributes")
         for key, value in data.items():
             if hasattr(obj, key):
                 try:
@@ -77,13 +78,20 @@ class StateManager:
 
                     if isinstance(current_value, dict) and isinstance(value, dict):
                         setattr(obj, key, value.copy())
+                        logger.info(f"  [DESERIALIZE] {key} = {value} (dict)")
                     elif current_type in (int, float, str, bool):
-                        setattr(obj, key, current_type(value))
+                        converted_value = current_type(value)
+                        setattr(obj, key, converted_value)
+                        logger.info(f"  [DESERIALIZE] {key} = {converted_value} (from JSON: {value})")
                     else:
                         setattr(obj, key, value)
+                        logger.info(f"  [DESERIALIZE] {key} = {value} (direct)")
                 except (TypeError, ValueError) as e:
                     logger.warning(f"Could not convert {key}={value}: {e}")
                     setattr(obj, key, value)
+            else:
+                logger.info(f"  [DESERIALIZE] Skipping {key} (not in object)")
+        logger.info(f"[DESERIALIZE] Completed deserialization")
 
     # =========================================================================
     # CORE SAVE/LOAD (NO GUI)
@@ -486,6 +494,11 @@ def load_state_interactive(main_window: Any) -> bool:
 
         # Post-load operations
         try:
+            # CRITICAL: Set flag to prevent write_gui_values_to_status() from
+            # overwriting config during load (main loop race condition fix)
+            main_window._loading_state = True
+            logger.info("[LOAD] ✓ Loading flag set - blocking write_gui_values_to_status()")
+
             # 0. FIRST: Clear GUI inputs in Auto mode to prevent timer writes with stale values
             # This MUST happen before any other GUI sync to prevent race conditions
             _clear_gui_inputs_in_auto_mode(main_window, state_data)
@@ -500,11 +513,18 @@ def load_state_interactive(main_window: Any) -> bool:
             # 3. Sync GUI widgets with loaded status
             _sync_status_to_gui_after_load(main_window, state_data)
 
+            # 3.5. Populate ALL config parameters to entry fields (comprehensive)
+            _populate_all_config_to_gui(main_window)
+
             # 4. Apply visual updates (buttons, controls) - NO clearing here, done in step 0
             _apply_gui_mode_visuals_after_load(main_window)
 
             # 5. Auto-connect if PLC mode was active
             _auto_connect_after_load(main_window)
+
+            # CRITICAL: Clear flag to re-enable write_gui_values_to_status()
+            main_window._loading_state = False
+            logger.info("[LOAD] ✓ Loading flag cleared - write_gui_values_to_status() re-enabled")
         except Exception as e:
             logger.error(f"Post-load sync failed: {e}", exc_info=True)
             QMessageBox.warning(
@@ -638,13 +658,35 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
         if not active_sim or not hasattr(active_sim, 'config'):
             return
 
-        # Load IO config
+        # CRITICAL FIX: Save config values BEFORE IO reload (which resets them)
+        saved_config_values = {}
+        if hasattr(active_sim, 'config'):
+            config = active_sim.config
+            if hasattr(config, 'importExportVariableList'):
+                for var in config.importExportVariableList:
+                    if hasattr(config, var):
+                        saved_config_values[var] = getattr(config, var)
+                logger.info(f"[LOAD]   Saved {len(saved_config_values)} config values before IO reload")
+
+        # Load IO config (WARNING: This may reset config values!)
         active_sim.config.load_io_config_from_file(io_config_path)
         logger.info("[LOAD]   IO config loaded")
 
-        # Update GUI refs
+        # CRITICAL FIX: Restore config values AFTER IO reload
+        if saved_config_values and hasattr(active_sim, 'config'):
+            for var, value in saved_config_values.items():
+                if hasattr(active_sim.config, var):
+                    setattr(active_sim.config, var, value)
+            logger.info(f"[LOAD]   Restored {len(saved_config_values)} config values after IO reload")
+            
+            # DEBUG: Verify restoration worked with object ID
+            logger.info(f"[LOAD]   DEBUG: After restore, tankVolume={active_sim.config.tankVolume}, valveInMaxFlow={active_sim.config.valveInMaxFlow}")
+            logger.info(f"[LOAD]   DEBUG: Config object id after restore: {id(active_sim.config)}")
+
+        # Update GUI refs - CRITICAL: This must point to the restored config
         if hasattr(main_window, 'tanksim_config'):
             main_window.tanksim_config = active_sim.config
+            logger.info(f"[LOAD]   DEBUG: Updated main_window.tanksim_config (id={id(main_window.tanksim_config)})")
         if hasattr(main_window, 'set_simulation_status'):
             main_window.set_simulation_status(active_sim.status)
 
@@ -1056,6 +1098,232 @@ def _auto_connect_after_load(main_window: Any) -> None:
 
     except Exception as e:
         logger.warning(f"[LOAD] Auto-connect failed: {e}", exc_info=True)
+
+
+def _populate_all_config_to_gui(main_window: Any) -> None:
+    """
+    Populate ALL configuration parameters from config object to GUI entry fields.
+    This is the comprehensive GUI population that was missing - ensures every
+    config parameter updates its corresponding widget after load.
+    """
+    try:
+        logger.info("=" * 80)
+        logger.info("[LOAD-GUI] Populating ALL config parameters to GUI fields...")
+        logger.info("=" * 80)
+
+        # FIX: Use main_window.tanksim_config directly (updated at line 660)
+        # instead of retrieving from simulation_manager which may return stale reference
+        if not hasattr(main_window, 'tanksim_config'):
+            logger.warning("[LOAD-GUI] No tanksim_config in main_window")
+            return
+
+        config = main_window.tanksim_config
+        logger.info(f"[LOAD-GUI] DEBUG: Using main_window.tanksim_config (id={id(config)})")
+        logger.info(f"[LOAD-GUI] DEBUG: Config values - tankVolume={config.tankVolume}, valveInMaxFlow={config.valveInMaxFlow}")
+        count = 0
+
+        # 1. Simulation Interval
+        if hasattr(config, 'simulationInterval'):
+            print(f"Loading simulationInterval: {config.simulationInterval}")
+            logger.info(f"  [1/17] simulationInterval: {config.simulationInterval}")
+            if hasattr(main_window, 'simulationIntervalEntry'):
+                main_window.simulationIntervalEntry.blockSignals(True)
+                main_window.simulationIntervalEntry.setText(str(config.simulationInterval))
+                main_window.simulationIntervalEntry.blockSignals(False)
+                logger.info(f"    ✓ simulationIntervalEntry = '{config.simulationInterval}'")
+                count += 1
+
+        # 2. Tank Volume (convert liters to m³)
+        if hasattr(config, 'tankVolume'):
+            print(f"Loading tankVolume: {config.tankVolume}")
+            volume_m3 = config.tankVolume / 1000.0
+            logger.info(f"  [2/17] tankVolume: {config.tankVolume} L ({volume_m3:.3f} m³)")
+            if hasattr(main_window, 'volumeEntry'):
+                main_window.volumeEntry.blockSignals(True)
+                main_window.volumeEntry.setText(str(round(volume_m3, 2)))
+                main_window.volumeEntry.blockSignals(False)
+                logger.info(f"    ✓ volumeEntry = '{round(volume_m3, 2)}'")
+                count += 1
+
+        # 3. Valve In Max Flow
+        if hasattr(config, 'valveInMaxFlow'):
+            print(f"Loading valveInMaxFlow: {config.valveInMaxFlow}")
+            logger.info(f"  [3/17] valveInMaxFlow: {config.valveInMaxFlow}")
+            if hasattr(main_window, 'maxFlowInEntry'):
+                main_window.maxFlowInEntry.blockSignals(True)
+                main_window.maxFlowInEntry.setText(str(config.valveInMaxFlow))
+                main_window.maxFlowInEntry.blockSignals(False)
+                logger.info(f"    ✓ maxFlowInEntry = '{config.valveInMaxFlow}'")
+                count += 1
+
+        # 4. Valve Out Max Flow
+        if hasattr(config, 'valveOutMaxFlow'):
+            print(f"Loading valveOutMaxFlow: {config.valveOutMaxFlow}")
+            logger.info(f"  [4/17] valveOutMaxFlow: {config.valveOutMaxFlow}")
+            if hasattr(main_window, 'maxFlowOutEntry'):
+                main_window.maxFlowOutEntry.blockSignals(True)
+                main_window.maxFlowOutEntry.setText(str(config.valveOutMaxFlow))
+                main_window.maxFlowOutEntry.blockSignals(False)
+                logger.info(f"    ✓ maxFlowOutEntry = '{config.valveOutMaxFlow}'")
+                count += 1
+
+        # 5. Ambient Temperature
+        if hasattr(config, 'ambientTemp'):
+            print(f"Loading ambientTemp: {config.ambientTemp}")
+            logger.info(f"  [5/17] ambientTemp: {config.ambientTemp}")
+            if hasattr(main_window, 'ambientTempEntry'):
+                main_window.ambientTempEntry.blockSignals(True)
+                main_window.ambientTempEntry.setText(str(config.ambientTemp))
+                main_window.ambientTempEntry.blockSignals(False)
+                logger.info(f"    ✓ ambientTempEntry = '{config.ambientTemp}'")
+                count += 1
+
+        # 6. Digital Level Sensor High Trigger
+        if hasattr(config, 'digitalLevelSensorHighTriggerLevel'):
+            print(f"Loading digitalLevelSensorHighTriggerLevel: {config.digitalLevelSensorHighTriggerLevel}")
+            logger.info(f"  [6/17] digitalLevelSensorHighTriggerLevel: {config.digitalLevelSensorHighTriggerLevel}")
+            if hasattr(main_window, 'levelSwitchMaxHeightEntry'):
+                main_window.levelSwitchMaxHeightEntry.blockSignals(True)
+                main_window.levelSwitchMaxHeightEntry.setText(str(config.digitalLevelSensorHighTriggerLevel))
+                main_window.levelSwitchMaxHeightEntry.blockSignals(False)
+                logger.info(f"    ✓ levelSwitchMaxHeightEntry = '{config.digitalLevelSensorHighTriggerLevel}'")
+                count += 1
+
+        # 7. Digital Level Sensor Low Trigger
+        if hasattr(config, 'digitalLevelSensorLowTriggerLevel'):
+            print(f"Loading digitalLevelSensorLowTriggerLevel: {config.digitalLevelSensorLowTriggerLevel}")
+            logger.info(f"  [7/17] digitalLevelSensorLowTriggerLevel: {config.digitalLevelSensorLowTriggerLevel}")
+            if hasattr(main_window, 'levelSwitchMinHeightEntry'):
+                main_window.levelSwitchMinHeightEntry.blockSignals(True)
+                main_window.levelSwitchMinHeightEntry.setText(str(config.digitalLevelSensorLowTriggerLevel))
+                main_window.levelSwitchMinHeightEntry.blockSignals(False)
+                logger.info(f"    ✓ levelSwitchMinHeightEntry = '{config.digitalLevelSensorLowTriggerLevel}'")
+                count += 1
+
+        # 8. Heater Max Power (convert W to kW)
+        if hasattr(config, 'heaterMaxPower'):
+            print(f"Loading heaterMaxPower: {config.heaterMaxPower}")
+            power_kw = config.heaterMaxPower / 1000.0
+            logger.info(f"  [8/17] heaterMaxPower: {config.heaterMaxPower} W ({power_kw:.3f} kW)")
+            if hasattr(main_window, 'powerHeatingCoilEntry'):
+                main_window.powerHeatingCoilEntry.blockSignals(True)
+                main_window.powerHeatingCoilEntry.setText(str(round(power_kw, 2)))
+                main_window.powerHeatingCoilEntry.blockSignals(False)
+                logger.info(f"    ✓ powerHeatingCoilEntry = '{round(power_kw, 2)}'")
+                count += 1
+
+        # 9. Tank Heat Loss
+        if hasattr(config, 'tankHeatLoss'):
+            print(f"Loading tankHeatLoss: {config.tankHeatLoss}")
+            logger.info(f"  [9/17] tankHeatLoss: {config.tankHeatLoss}")
+            if hasattr(main_window, 'heatLossVatEntry'):
+                main_window.heatLossVatEntry.blockSignals(True)
+                main_window.heatLossVatEntry.setText(str(config.tankHeatLoss))
+                main_window.heatLossVatEntry.blockSignals(False)
+                logger.info(f"    ✓ heatLossVatEntry = '{config.tankHeatLoss}'")
+                count += 1
+
+        # 10. Liquid Specific Heat Capacity
+        if hasattr(config, 'liquidSpecificHeatCapacity'):
+            print(f"Loading liquidSpecificHeatCapacity: {config.liquidSpecificHeatCapacity}")
+            logger.info(f"  [10/17] liquidSpecificHeatCapacity: {config.liquidSpecificHeatCapacity}")
+            if hasattr(main_window, 'specificHeatCapacityEntry'):
+                main_window.specificHeatCapacityEntry.blockSignals(True)
+                main_window.specificHeatCapacityEntry.setText(str(config.liquidSpecificHeatCapacity))
+                main_window.specificHeatCapacityEntry.blockSignals(False)
+                logger.info(f"    ✓ specificHeatCapacityEntry = '{config.liquidSpecificHeatCapacity}'")
+                count += 1
+
+        # 11. Liquid Boiling Temperature
+        if hasattr(config, 'liquidBoilingTemp'):
+            print(f"Loading liquidBoilingTemp: {config.liquidBoilingTemp}")
+            logger.info(f"  [11/17] liquidBoilingTemp: {config.liquidBoilingTemp}")
+            if hasattr(main_window, 'boilingTempEntry'):
+                main_window.boilingTempEntry.blockSignals(True)
+                main_window.boilingTempEntry.setText(str(config.liquidBoilingTemp))
+                main_window.boilingTempEntry.blockSignals(False)
+                logger.info(f"    ✓ boilingTempEntry = '{config.liquidBoilingTemp}'")
+                count += 1
+
+        # 12. Liquid Specific Weight
+        if hasattr(config, 'liquidSpecificWeight'):
+            print(f"Loading liquidSpecificWeight: {config.liquidSpecificWeight}")
+            logger.info(f"  [12/17] liquidSpecificWeight: {config.liquidSpecificWeight}")
+            if hasattr(main_window, 'specificWeightEntry'):
+                main_window.specificWeightEntry.blockSignals(True)
+                main_window.specificWeightEntry.setText(str(config.liquidSpecificWeight))
+                main_window.specificWeightEntry.blockSignals(False)
+                logger.info(f"    ✓ specificWeightEntry = '{config.liquidSpecificWeight}'")
+                count += 1
+
+        # 13. Liquid Volume Time Delay
+        if hasattr(config, 'liquidVolumeTimeDelay'):
+            print(f"Loading liquidVolumeTimeDelay: {config.liquidVolumeTimeDelay}")
+            logger.info(f"  [13/17] liquidVolumeTimeDelay: {config.liquidVolumeTimeDelay}")
+            if hasattr(main_window, 'timeDelayfillingEntry'):
+                main_window.timeDelayfillingEntry.blockSignals(True)
+                main_window.timeDelayfillingEntry.setText(str(config.liquidVolumeTimeDelay))
+                main_window.timeDelayfillingEntry.blockSignals(False)
+                logger.info(f"    ✓ timeDelayfillingEntry = '{config.liquidVolumeTimeDelay}'")
+                count += 1
+
+        # 14. Liquid Temperature Time Delay
+        if hasattr(config, 'liquidTempTimeDelay'):
+            print(f"Loading liquidTempTimeDelay: {config.liquidTempTimeDelay}")
+            logger.info(f"  [14/17] liquidTempTimeDelay: {config.liquidTempTimeDelay}")
+            if hasattr(main_window, 'timeDelayTempEntry'):
+                main_window.timeDelayTempEntry.blockSignals(True)
+                main_window.timeDelayTempEntry.setText(str(config.liquidTempTimeDelay))
+                main_window.timeDelayTempEntry.blockSignals(False)
+                logger.info(f"    ✓ timeDelayTempEntry = '{config.liquidTempTimeDelay}'")
+                count += 1
+
+        # 15. Tank Color
+        if hasattr(config, 'tankColor'):
+            print(f"Loading tankColor: {config.tankColor}")
+            logger.info(f"  [15/17] tankColor: {config.tankColor}")
+            if hasattr(main_window, 'colorDropDown'):
+                found = False
+                for i in range(main_window.colorDropDown.count()):
+                    if main_window.colorDropDown.itemData(i) == config.tankColor:
+                        main_window.colorDropDown.blockSignals(True)
+                        main_window.colorDropDown.setCurrentIndex(i)
+                        main_window.colorDropDown.blockSignals(False)
+                        logger.info(f"    ✓ colorDropDown index {i} = '{config.tankColor}'")
+                        found = True
+                        count += 1
+                        break
+                if not found:
+                    logger.warning(f"    ⚠ Color '{config.tankColor}' not found in colorDropDown")
+
+        # 16. Display Level Switches
+        if hasattr(config, 'displayLevelSwitches'):
+            print(f"Loading displayLevelSwitches: {config.displayLevelSwitches}")
+            logger.info(f"  [16/17] displayLevelSwitches: {config.displayLevelSwitches}")
+            if hasattr(main_window, 'levelSwitchesCheckBox'):
+                main_window.levelSwitchesCheckBox.blockSignals(True)
+                main_window.levelSwitchesCheckBox.setChecked(config.displayLevelSwitches)
+                main_window.levelSwitchesCheckBox.blockSignals(False)
+                logger.info(f"    ✓ levelSwitchesCheckBox = {config.displayLevelSwitches}")
+                count += 1
+
+        # 17. Display Temperature
+        if hasattr(config, 'displayTemperature'):
+            print(f"Loading displayTemperature: {config.displayTemperature}")
+            logger.info(f"  [17/17] displayTemperature: {config.displayTemperature}")
+            if hasattr(main_window, 'analogValueTempCheckBox'):
+                main_window.analogValueTempCheckBox.blockSignals(True)
+                main_window.analogValueTempCheckBox.setChecked(config.displayTemperature)
+                main_window.analogValueTempCheckBox.blockSignals(False)
+                logger.info(f"    ✓ analogValueTempCheckBox = {config.displayTemperature}")
+                count += 1
+
+        logger.info("=" * 80)
+        logger.info(f"[LOAD-GUI] ✓ Config population complete: {count}/17 fields updated")
+        logger.info("=" * 80)
+
+    except Exception as e:
+        logger.error(f"[LOAD-GUI] ERROR in _populate_all_config_to_gui: {e}", exc_info=True)
 
 
 def _apply_gui_mode_visuals_after_load(main_window: Any) -> None:

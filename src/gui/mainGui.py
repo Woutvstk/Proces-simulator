@@ -104,6 +104,9 @@ class MainWindow(QMainWindow, Ui_MainWindow, ProcessSettingsMixin, IOConfigMixin
         self.mainConfig = mainConfig
         self.tanksim_config = None
         self.tanksim_status = None
+        
+        # Initialize loading state flag (used to prevent write_gui_values_to_status during load)
+        self._loading_state = False
 
         # Sidebar: simple single-widget animation approach
         try:

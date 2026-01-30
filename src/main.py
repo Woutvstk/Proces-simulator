@@ -364,8 +364,6 @@ if __name__ == "__main__":
                 # Update process values (Run simulation)
                 # Using the simulation manager's update method
                 dt = time.time() - timeLastUpdate
-                print(
-                    f"main 373: simRunning before update_simulation: {active_status.simRunning}")
                 simulationManager.update_simulation(dt, active_status)
 
                 # Update GUI display with new simulation results
