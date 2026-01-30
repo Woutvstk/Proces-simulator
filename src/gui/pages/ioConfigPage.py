@@ -1045,6 +1045,52 @@ class IOConfigMixin:
     Is combined with MainWindow via multiple inheritance
     """
     
+    @staticmethod
+    def _get_logo_display_address(attr_name, byte_num, bit_num=None):
+        """
+        Convert internal address to Logo display format (visual interpolator).
+        This is for DISPLAY ONLY - does not affect internal communication.
+        
+        Args:
+            attr_name: Attribute name (e.g., 'DIStart', 'DQValve', 'AITemp', 'AQHeater')
+            byte_num: Byte number from config
+            bit_num: Bit number from config (None for analog signals)
+        
+        Returns:
+            String representation for Logo display
+        """
+        # Digital/Analog Inputs: Use V notation
+        if attr_name.startswith('DI') or attr_name.startswith('AI'):
+            if bit_num is not None:
+                # Digital input: I0.0 -> V0.0
+                return f"V{byte_num}.{bit_num}"
+            else:
+                # Analog input: IW2 -> VW2
+                return f"VW{byte_num}"
+        
+        # Digital Outputs: Q0.0 -> Q1, Q0.1 -> Q2, etc.
+        elif attr_name.startswith('DQ'):
+            if bit_num is not None:
+                # Calculate sequential number: byte*8 + bit + 1
+                q_number = byte_num * 8 + bit_num + 1
+                return f"Q{q_number}"
+            else:
+                # Shouldn't happen, but fallback
+                return f"Q{byte_num}"
+        
+        # Analog Outputs: QW2 -> AQ1, QW4 -> AQ2, etc.
+        elif attr_name.startswith('AQ'):
+            # Calculate sequential number: byte/2 + 1 (assuming even bytes)
+            aq_number = byte_num // 2 + 1
+            return f"AQ{aq_number}"
+        
+        # Fallback for unknown types
+        else:
+            if bit_num is not None:
+                return f"V{byte_num}.{bit_num}"
+            else:
+                return f"VW{byte_num}"
+    
     def init_io_config_page(self):
         """Initialize all I/O config page components"""
         self.io_screen = IOScreen(self)
@@ -1953,9 +1999,9 @@ class IOConfigMixin:
                     byte_num = attr_value["byte"]
                     bit_num = attr_value["bit"]
                     
-                    # Use V for LOGO!, I/Q for other controllers
+                    # Use Logo display format or standard I/Q format
                     if is_logo:
-                        address = f"V{byte_num}.{bit_num}"
+                        address = self._get_logo_display_address(attr_name, byte_num, bit_num)
                     else:
                         io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
                         address = f"{io_prefix}{byte_num}.{bit_num}"
@@ -1967,9 +2013,9 @@ class IOConfigMixin:
                 else:
                     byte_num = attr_value["byte"]
                     
-                    # Use VW for LOGO!, IW/QW for other controllers
+                    # Use Logo display format or standard IW/QW format
                     if is_logo:
-                        address = f"VW{byte_num}"
+                        address = self._get_logo_display_address(attr_name, byte_num, None)
                     else:
                         io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
                         address = f"{io_prefix}W{byte_num}"

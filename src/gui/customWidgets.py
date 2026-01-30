@@ -148,9 +148,6 @@ class DroppableTableWidget(QTableWidget):
         # Determine original IO type (I or Q) from current address
         original_prefix = current_address[0] if current_address else 'I'
         
-        # Converteer naar V voor LOGO! indien nodig
-        io_prefix = self.get_address_prefix(original_prefix)
-        
         try:
             if data_type == 'bool':
                 if not byte_item or not bit_item or not byte_item.text() or not bit_item.text():
@@ -171,7 +168,8 @@ class DroppableTableWidget(QTableWidget):
                     self.blockSignals(False)
                     return
                 
-                new_address = f"{io_prefix}{byte_val}.{bit_val}"
+                # Generate address with Logo interpolator if Logo protocol is active
+                new_address = self._generate_display_address(original_prefix, byte_val, bit_val, row)
                 
             elif data_type in ['int', 'word']:
                 if not byte_item or not byte_item.text():
@@ -196,7 +194,8 @@ class DroppableTableWidget(QTableWidget):
                     bit_item.setText("")
                     self.blockSignals(False)
                 
-                new_address = f"{io_prefix}W{byte_val}"
+                # Generate address with Logo interpolator if Logo protocol is active
+                new_address = self._generate_display_address(original_prefix, byte_val, None, row)
             else:
                 return
             
@@ -868,4 +867,53 @@ class DroppableTableWidget(QTableWidget):
             if main_window.mainConfig.plcProtocol == "logo!":
                 return 'V'  # LOGO! uses V for both inputs and outputs
         
-        return io_type  # Return original prefix for non-LOGO controllers
+        return io_type  # Return original prefix for non-LOGO controllers    
+    def _generate_display_address(self, io_prefix, byte_val, bit_val, row):
+        """
+        Generate display address using Logo interpolator if Logo protocol is active.
+        
+        Args:
+            io_prefix: 'I' or 'Q' (original prefix)
+            byte_val: Byte number
+            bit_val: Bit number (None for analog signals)
+            row: Row number in table
+        
+        Returns:
+            Formatted address string
+        """
+        # Check if Logo protocol is active
+        is_logo = False
+        if self.io_screen and hasattr(self.io_screen, 'main_window'):
+            main_window = self.io_screen.main_window
+            if hasattr(main_window, 'mainConfig') and main_window.mainConfig:
+                is_logo = (main_window.mainConfig.plcProtocol == "logo!")
+        
+        if is_logo:
+            # Get the attribute name from the row to determine signal type
+            name_item = self.item(row, 0)
+            if name_item:
+                signal_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
+                
+                # Try to get attr_name from config
+                attr_name = None
+                if (self.io_screen and hasattr(self.io_screen, 'main_window') and 
+                    hasattr(main_window, 'tanksim_config') and main_window.tanksim_config):
+                    config = main_window.tanksim_config
+                    if signal_name in config.io_signal_mapping:
+                        attr_name = config.io_signal_mapping[signal_name]
+                
+                # If we have attr_name and the Logo interpolator method exists, use it
+                if attr_name and hasattr(main_window, '_get_logo_display_address'):
+                    return main_window._get_logo_display_address(attr_name, byte_val, bit_val)
+            
+            # Fallback to simple V notation if we can't determine attr_name
+            if bit_val is not None:
+                return f"V{byte_val}.{bit_val}"
+            else:
+                return f"VW{byte_val}"
+        else:
+            # Non-Logo protocol: use standard I/Q notation
+            if bit_val is not None:
+                return f"{io_prefix}{byte_val}.{bit_val}"
+            else:
+                return f"{io_prefix}W{byte_val}"

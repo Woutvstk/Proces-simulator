@@ -298,9 +298,34 @@ class ProcessSettingsMixin:
                 new_address = current_address
 
                 if to_logo:
-                    # Replace I or Q with V
-                    if current_address[0] in ['I', 'Q']:
-                        new_address = 'V' + current_address[1:]
+                    # Convert to Logo display format
+                    name_item = table.item(row, 0)
+                    byte_item = table.item(row, 2)
+                    bit_item = table.item(row, 3)
+                    
+                    if name_item and byte_item:
+                        signal_name = name_item.text()
+                        if hasattr(self, 'tanksim_config') and self.tanksim_config:
+                            if signal_name in self.tanksim_config.io_signal_mapping:
+                                attr_name = self.tanksim_config.io_signal_mapping[signal_name]
+                                
+                                try:
+                                    byte_num = int(byte_item.text())
+                                    bit_num = int(bit_item.text()) if bit_item and bit_item.text() else None
+                                    
+                                    # Use the Logo interpolator from IOConfigMixin
+                                    if hasattr(self, '_get_logo_display_address'):
+                                        new_address = self._get_logo_display_address(attr_name, byte_num, bit_num)
+                                    else:
+                                        # Fallback if method not available
+                                        if bit_num is not None:
+                                            new_address = f"V{byte_num}.{bit_num}"
+                                        else:
+                                            new_address = f"VW{byte_num}"
+                                except (ValueError, AttributeError):
+                                    # If parsing fails, use simple replacement
+                                    if current_address[0] in ['I', 'Q']:
+                                        new_address = 'V' + current_address[1:]
                 elif from_logo:
                     # Replace V with I or Q (determine from signal type)
                     if current_address[0] == 'V':
