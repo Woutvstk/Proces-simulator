@@ -72,6 +72,9 @@ class configuration:
         # PID Valve Controls - ANALOG (PLC Inputs)
         self.AIPidTankTempSP = {"byte": 12}
         self.AIPidTankLevelSP = {"byte": 14}
+        self.AIPidPfactor = {"byte": 16}
+        self.AIPidIfactor = {"byte": 18}
+        self.AIPidDfactor = {"byte": 20}
 
         # Custom signal name overrides (persisted via IO save/load)
         self.custom_signal_names: dict[str, str] = {}
@@ -93,9 +96,9 @@ class configuration:
             "Sim_WaterTemperatureMeasurement": "AITemperatureSensor",
 
             # PLC Controls Buttons
-            "Sim_PidValveStartButton": "DIPidValveStart",
-            "Sim_PidValveStopButton": "DIPidValveStop",
-            "Sim_PidValveResetButton": "DIPidValveReset",
+            "Sim_StartButton": "DIPidValveStart",
+            "Sim_StopButton": "DIPidValveStop",
+            "Sim_ResetButton": "DIPidValveReset",
 
             # Mode Switches
             "Sim_AutomaticMode": "DIPidValveAuto",
@@ -108,6 +111,11 @@ class configuration:
             # Setpoints
             "Sim_TemperatureSetpoint": "AIPidTankTempSP",
             "Sim_WaterLevelSetpoint": "AIPidTankLevelSP",
+
+            # PID Factors
+            "Sim_Pfactor": "AIPidPfactor",
+            "Sim_Ifactor": "AIPidIfactor",
+            "Sim_Dfactor": "AIPidDfactor",
 
             # General Controls - PLC Inputs => Simulator Outputs
             "Start": "DIStart",

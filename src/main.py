@@ -30,14 +30,6 @@ src_dir = Path(__file__).resolve().parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
-# Core imports
-
-# IO imports
-
-# Simulation imports
-
-# GUI imports
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -193,16 +185,10 @@ if __name__ == "__main__":
             # PLCSim communication can be slower; throttle slightly
             io_interval = active_config.simulationInterval
             if mainConfig.plcProtocol == "PLCSim S7-1500/1200/400/300/ET 200SP":
-                # Use a minimum interval of 50ms for better GUI responsiveness
-                io_interval = max(0.05, active_config.simulationInterval)
+                io_interval = max(0.03, active_config.simulationInterval)
 
             # Throttle calculations and data exchange
             if (time.time() - timeLastUpdate) > io_interval:
-
-                # DEBUG: Log connection status every 5 seconds
-                # if int(time.time()) % 5 == 0:
-                #    logger.info(f"[MAIN] Connection: valid={validPlcConnection}, error={connectionErrorOccurred}, protocol={mainConfig.plcProtocol}")
-
                 # Get process control from PLC or GUI
                 # Only try to use connection if: valid AND no error has occurred
                 if validPlcConnection and not connectionErrorOccurred:
@@ -246,14 +232,6 @@ if __name__ == "__main__":
                                     window, 'is_manual_mode') else False
                             except Exception:
                                 manual_mode = False
-
-                            # DEBUG: Log manual mode status
-                            # if int(time.time()) % 5 == 0:
-                                #    logger.info(f"[MAIN] manual_mode={manual_mode}, forced_values={len(forced_values)} items")
-
-                                # Update IO with force support
-                                # In Manual mode, don't read valve/heater from PLC (GUI controls them)
-                                # But still write sensor values to PLC
                             try:
                                 logger.debug(
                                     f"[MAIN] Calling ioHandler.updateIO (manual_mode={manual_mode})")

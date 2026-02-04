@@ -79,6 +79,8 @@ class status:
             # Slider/setpoint values (DO save these)
             "pidPidTankTempSPValue", "pidPidTankLevelSPValue",
             "temperatureSetpoint", "levelSetpoint",
+            # PID factor values (DO save these)
+            "pidPfactorValue", "pidIfactorValue", "pidDfactorValue",
             # NOTE: Removed pushbutton states - they're transient and should not persist:
             # generalStartCmd, generalStopCmd, generalResetCmd,
             # pidStartCmd, pidStopCmd, pidResetCmd,
@@ -125,6 +127,10 @@ class status:
         # PID Valve Controls - setpoint values (written by: gui)
         self.pidPidTankTempSPValue: int = 0
         self.pidPidTankLevelSPValue: int = 0
+        # PID Valve Controls - PID factor values (written by: gui)
+        self.pidPfactorValue: int = 1
+        self.pidIfactorValue: int = 1
+        self.pidDfactorValue: int = 1
 
     def get_actuator_control_source(self, plc_gui_control: str) -> str:
         """Return the control source for actuators: 'plc' or 'gui'.

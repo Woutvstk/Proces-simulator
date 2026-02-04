@@ -45,6 +45,7 @@ class TankSimSettingsMixin:
         self._init_simulation_button()
         self._init_pidvalve_mode_toggle()
         self._init_pidvalve_control_buttons()  # ADD THIS LINE
+        self._init_pid_factor_inputs()  # Initialize PID factor QLineEdit fields
         self._init_trend_graphs()
 
         # Always use analog valve control now (digital removed)
@@ -412,6 +413,69 @@ class TankSimSettingsMixin:
         except Exception as e:
             logger.error(f"Exception in _init_pidvalve_control_buttons: {e}")
 
+    def _init_pid_factor_inputs(self):
+        """Initialize PID factor QLineEdit input fields (P, I, D factors)."""
+        try:
+            from PyQt5.QtGui import QIntValidator
+            
+            # P Factor input
+            qline_pfactor = getattr(self, 'Qline_SimPfactor', None)
+            if qline_pfactor:
+                # Set validator to only allow integers 0-27648
+                validator_p = QIntValidator(0, 27648, self)
+                qline_pfactor.setValidator(validator_p)
+                qline_pfactor.setText("1")  # Default value
+                qline_pfactor.textChanged.connect(self._on_pfactor_changed)
+            
+            # I Factor input
+            qline_ifactor = getattr(self, 'Qline_SimIfactor', None)
+            if qline_ifactor:
+                validator_i = QIntValidator(0, 27648, self)
+                qline_ifactor.setValidator(validator_i)
+                qline_ifactor.setText("1")  # Default value
+                qline_ifactor.textChanged.connect(self._on_ifactor_changed)
+            
+            # D Factor input
+            qline_dfactor = getattr(self, 'Qline_SimDfactor', None)
+            if qline_dfactor:
+                validator_d = QIntValidator(0, 27648, self)
+                qline_dfactor.setValidator(validator_d)
+                qline_dfactor.setText("1")  # Default value
+                qline_dfactor.textChanged.connect(self._on_dfactor_changed)
+                
+        except Exception as e:
+            logger.error(f"Exception in _init_pid_factor_inputs: {e}")
+
+    def _on_pfactor_changed(self, text):
+        """Handle P factor input change."""
+        try:
+            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                value = int(text) if text else 0
+                value = max(0, min(27648, value))  # Clamp to valid range
+                self.tanksim_status.pidPfactorValue = value
+        except (ValueError, AttributeError) as e:
+            pass
+
+    def _on_ifactor_changed(self, text):
+        """Handle I factor input change."""
+        try:
+            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                value = int(text) if text else 0
+                value = max(0, min(27648, value))  # Clamp to valid range
+                self.tanksim_status.pidIfactorValue = value
+        except (ValueError, AttributeError) as e:
+            pass
+
+    def _on_dfactor_changed(self, text):
+        """Handle D factor input change."""
+        try:
+            if hasattr(self, 'tanksim_status') and self.tanksim_status:
+                value = int(text) if text else 0
+                value = max(0, min(27648, value))  # Clamp to valid range
+                self.tanksim_status.pidDfactorValue = value
+        except (ValueError, AttributeError) as e:
+            pass
+
     def update_button_manager_status(self):
         """Update button pulse manager with current status object. Call when tanksim_status becomes available."""
         if hasattr(self, '_button_pulse_manager') and self.tanksim_status is not None:
@@ -717,6 +781,25 @@ class TankSimSettingsMixin:
                         if label_level:
                             self._update_level_label(
                                 label_level, level_sp_value)
+                    
+                    # Update PID factor input fields
+                    qline_pfactor = getattr(self, 'Qline_SimPfactor', None)
+                    if qline_pfactor and hasattr(self.tanksim_status, 'pidPfactorValue'):
+                        qline_pfactor.blockSignals(True)
+                        qline_pfactor.setText(str(self.tanksim_status.pidPfactorValue))
+                        qline_pfactor.blockSignals(False)
+                    
+                    qline_ifactor = getattr(self, 'Qline_SimIfactor', None)
+                    if qline_ifactor and hasattr(self.tanksim_status, 'pidIfactorValue'):
+                        qline_ifactor.blockSignals(True)
+                        qline_ifactor.setText(str(self.tanksim_status.pidIfactorValue))
+                        qline_ifactor.blockSignals(False)
+                    
+                    qline_dfactor = getattr(self, 'Qline_SimDfactor', None)
+                    if qline_dfactor and hasattr(self.tanksim_status, 'pidDfactorValue'):
+                        qline_dfactor.blockSignals(True)
+                        qline_dfactor.setText(str(self.tanksim_status.pidDfactorValue))
+                        qline_dfactor.blockSignals(False)
                 except Exception as e:
                     logger.debug(
                         f"Error updating setpoint sliders in PLC mode: {e}")

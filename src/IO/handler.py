@@ -388,14 +388,25 @@ class IOHandler:
         # Analog Temperature Sensor
         if "AITemperatureSensor" in forced_values:
             value = int(forced_values["AITemperatureSensor"])
+            logger.debug(f"TEMP DEBUG: Using forced value = {value}")
         else:
             if hasattr(status, 'liquidTemperature'):
                 # Map temperature from 0°C to boilingTemp (default 100°C) to 0-27648
                 boiling_temp = getattr(config, 'liquidBoilingTemp', 100.0)
-                value = int(self.mapValue(0, boiling_temp, 0,
-                            analog_max, status.liquidTemperature))
+                
+                # Calculate the float value first
+                value_float = self.mapValue(0, boiling_temp, 0, analog_max, status.liquidTemperature)
+                value = int(value_float)
+                
+                # DEBUG: Always log temperature scaling with detailed info
+                logger.info(f"TEMP SCALING: Temp={status.liquidTemperature:.2f}°C, boiling={boiling_temp}°C, analog_max={analog_max}, float_value={value_float:.2f}, int_value={value}")
+                
+                # Debug logging for high temperatures
+                if status.liquidTemperature >= boiling_temp - 1:  # Within 1°C of boiling
+                    logger.info(f"Temp sensor NEAR BOILING: {status.liquidTemperature:.2f}°C → {value} (boiling={boiling_temp}°C, max={analog_max})")
             else:
                 value = 0
+                logger.debug(f"TEMP DEBUG: No liquidTemperature attribute, using value = 0")
 
         if self._is_enabled(config, 'AITemperatureSensor') and hasattr(config, 'AITemperatureSensor'):
             addr = config.AITemperatureSensor
@@ -548,6 +559,21 @@ class IOHandler:
                         setattr(status, attr, int(plc.GetAI(addr["byte"])))
                 except Exception:
                     pass
+        
+        # Read PID factor values
+        for name in ['Pfactor', 'Ifactor', 'Dfactor']:
+            key = f"AIPid{name}"
+            attr = f"pid{name}Value"
+            if key in forced_values:
+                setattr(status, attr, int(
+                    forced_values[key]) if forced_values[key] is not None else 0)
+            elif (mainConfig.plcGuiControl == "plc") and hasattr(config, key):
+                try:
+                    addr = getattr(config, key)
+                    if addr:
+                        setattr(status, attr, int(plc.GetAI(addr["byte"])))
+                except Exception:
+                    pass
 
     def _write_pidvalve_controls(self, plc, mainConfig, config, status, forced_values):
         """Write GUI values to PLC inputs for PIDValve controls (Start/Stop/Reset, Mode, SP)."""
@@ -599,6 +625,37 @@ class IOHandler:
         # Write analog setpoint sliders (TempSP, LevelSP) to PLC inputs
         for name in ['PidTankTempSP', 'PidTankLevelSP']:
             key = f"AI{name}"
+            attr = f"pid{name}Value"
+
+            # Determine value to write
+            if key in forced_values:
+                value = int(
+                    forced_values[key]) if forced_values[key] is not None else 0
+            elif hasattr(config, key) and hasattr(status, attr):
+                value = int(getattr(status, attr, 0))
+            else:
+                continue
+
+            # Write to PLC if address is configured
+            is_enabled = self._is_enabled(config, key)
+            has_attr = hasattr(config, key)
+            if is_enabled and has_attr:
+                addr = getattr(config, key)
+                if addr:
+                    cache_key = key
+                    # During force period, write even if value seems unchanged
+                    if self._is_in_force_write_period() or self._last_sent_ai.get(cache_key) != value:
+                        plc.SetAI(addr["byte"], value)
+                        self._last_sent_ai[cache_key] = value
+                        print(
+                            f"[HANDLER] Writing {key}={value} to byte {addr['byte']}")
+            else:
+                print(
+                    f"[HANDLER] Skipping {key}: is_enabled={is_enabled}, has_attr={has_attr}")
+        
+        # Write PID factor values (Pfactor, Ifactor, Dfactor) to PLC inputs
+        for name in ['Pfactor', 'Ifactor', 'Dfactor']:
+            key = f"AIPid{name}"
             attr = f"pid{name}Value"
 
             # Determine value to write

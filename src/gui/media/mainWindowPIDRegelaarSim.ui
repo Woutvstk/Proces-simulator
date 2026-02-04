@@ -2155,13 +2155,13 @@ QGroupBox::title {
                     <property name="minimumSize">
                      <size>
                       <width>350</width>
-                      <height>305</height>
+                      <height>335</height>
                      </size>
                     </property>
                     <property name="maximumSize">
                      <size>
                       <width>350</width>
-                      <height>340</height>
+                      <height>335</height>
                      </size>
                     </property>
                     <property name="styleSheet">
@@ -2198,13 +2198,13 @@ QGroupBox::title {
                         <property name="minimumSize">
                          <size>
                           <width>340</width>
-                          <height>310</height>
+                          <height>330</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>340</width>
-                          <height>310</height>
+                          <height>330</height>
                          </size>
                         </property>
                         <property name="palette">
@@ -2483,7 +2483,7 @@ QRadioButton:disabled {
                           <number>4</number>
                          </property>
                          <property name="bottomMargin">
-                          <number>7</number>
+                          <number>4</number>
                          </property>
                          <property name="spacing">
                           <number>4</number>
@@ -2506,7 +2506,7 @@ QRadioButton:disabled {
                              </property>
                              <property name="maximumSize">
                               <size>
-                               <width>16777215</width>
+                               <width>105</width>
                                <height>40</height>
                               </size>
                              </property>
@@ -2567,7 +2567,7 @@ QPushButton:pressed {
                              </property>
                              <property name="maximumSize">
                               <size>
-                               <width>16777215</width>
+                               <width>105</width>
                                <height>40</height>
                               </size>
                              </property>
@@ -2627,7 +2627,7 @@ QPushButton:pressed {
                              </property>
                              <property name="maximumSize">
                               <size>
-                               <width>16777215</width>
+                               <width>105</width>
                                <height>40</height>
                               </size>
                              </property>
@@ -2841,232 +2841,6 @@ QPushButton:pressed {
                             <string>Mode Selector (general states to program the plc)</string>
                            </property>
                           </widget>
-                         </item>
-                         <item row="5" column="0">
-                          <layout class="QVBoxLayout" name="SPSlidersPidTanKValve">
-                           <property name="spacing">
-                            <number>2</number>
-                           </property>
-                           <item>
-                            <layout class="QHBoxLayout" name="TempSPSliderPLCControl">
-                             <item>
-                              <widget class="QLabel" name="label_slider1_2">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>80</width>
-                                 <height>0</height>
-                                </size>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">color: #1e293b; font-weight: 600;</string>
-                               </property>
-                               <property name="text">
-                                <string>Temp SP</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QSlider" name="slider_PidTankTempSP">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>170</width>
-                                 <height>24</height>
-                                </size>
-                               </property>
-                               <property name="maximumSize">
-                                <size>
-                                 <width>100</width>
-                                 <height>24</height>
-                                </size>
-                               </property>
-                               <property name="toolTip">
-                                <string>Set the target temperature setpoint</string>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">
-QSlider::groove:horizontal {
-  border: 1px solid #cbd5e0;
-  background: #e2e8f0;
-  margin: 2px 0;
-  border-radius: 3px;
-}
-QSlider::handle:horizontal {
-  background: #3b82f6;
-  border: 1px solid #2563eb;
-  width: 18px;
-  margin: -8px 0;
-  border-radius: 9px;
-}
-QSlider::handle:horizontal:hover {
-  background: #2563eb;
-}
-              </string>
-                               </property>
-                               <property name="minimum">
-                                <number>0</number>
-                               </property>
-                               <property name="maximum">
-                                <number>300</number>
-                               </property>
-                               <property name="singleStep">
-                                <number>5</number>
-                               </property>
-                               <property name="pageStep">
-                                <number>1</number>
-                               </property>
-                               <property name="value">
-                                <number>0</number>
-                               </property>
-                               <property name="orientation">
-                                <enum>Qt::Horizontal</enum>
-                               </property>
-                               <property name="tickPosition">
-                                <enum>QSlider::NoTicks</enum>
-                               </property>
-                               <property name="tickInterval">
-                                <number>5</number>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QLabel" name="label_PidTankTempSP">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>50</width>
-                                 <height>34</height>
-                                </size>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">
-QSpinBox {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e0;
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: #1e293b;
-}
-QSpinBox::up-button, QSpinBox::down-button {
-  background-color: #f0f4f8;
-  border: 1px solid #cbd5e0;
-}
-              </string>
-                               </property>
-                               <property name="text">
-                                <string>0</string>
-                               </property>
-                              </widget>
-                             </item>
-                            </layout>
-                           </item>
-                           <item>
-                            <layout class="QHBoxLayout" name="LevelSPSliderPLCControl">
-                             <item>
-                              <widget class="QLabel" name="label_slider1_3">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>80</width>
-                                 <height>0</height>
-                                </size>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">color: #1e293b; font-weight: 600;</string>
-                               </property>
-                               <property name="text">
-                                <string>Level SP</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QSlider" name="slider_PidTankLevelSP">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>170</width>
-                                 <height>24</height>
-                                </size>
-                               </property>
-                               <property name="maximumSize">
-                                <size>
-                                 <width>100</width>
-                                 <height>24</height>
-                                </size>
-                               </property>
-                               <property name="toolTip">
-                                <string>Set the target water level setpoint</string>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">
-QSlider::groove:horizontal {
-  border: 1px solid #cbd5e0;
-  background: #e2e8f0;
-  margin: 2px 0;
-  border-radius: 3px;
-}
-QSlider::handle:horizontal {
-  background: #3b82f6;
-  border: 1px solid #2563eb;
-  width: 18px;
-  margin: -8px 0;
-  border-radius: 9px;
-}
-QSlider::handle:horizontal:hover {
-  background: #2563eb;
-}
-              </string>
-                               </property>
-                               <property name="minimum">
-                                <number>0</number>
-                               </property>
-                               <property name="maximum">
-                                <number>100</number>
-                               </property>
-                               <property name="pageStep">
-                                <number>1</number>
-                               </property>
-                               <property name="value">
-                                <number>0</number>
-                               </property>
-                               <property name="orientation">
-                                <enum>Qt::Horizontal</enum>
-                               </property>
-                               <property name="tickPosition">
-                                <enum>QSlider::TicksAbove</enum>
-                               </property>
-                               <property name="tickInterval">
-                                <number>10</number>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QLabel" name="label_PidTankLevelSP">
-                               <property name="minimumSize">
-                                <size>
-                                 <width>50</width>
-                                 <height>34</height>
-                                </size>
-                               </property>
-                               <property name="styleSheet">
-                                <string notr="true">
-QSpinBox {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e0;
-  border-radius: 4px;
-  padding: 4px 8px;
-  color: #1e293b;
-}
-QSpinBox::up-button, QSpinBox::down-button {
-  background-color: #f0f4f8;
-  border: 1px solid #cbd5e0;
-}
-              </string>
-                               </property>
-                               <property name="text">
-                                <string>0</string>
-                               </property>
-                              </widget>
-                             </item>
-                            </layout>
-                           </item>
-                          </layout>
                          </item>
                          <item row="3" column="0">
                           <widget class="QGroupBox" name="TemperatureControlradioButtons">
@@ -3347,6 +3121,302 @@ QGroupBox::title {
                            </layout>
                           </widget>
                          </item>
+                         <item row="5" column="0">
+                          <layout class="QVBoxLayout" name="SPSlidersPidTanKValve">
+                           <property name="spacing">
+                            <number>2</number>
+                           </property>
+                           <item>
+                            <layout class="QHBoxLayout" name="TempSPSliderPLCControl">
+                             <item>
+                              <widget class="QLabel" name="label_slider1_2">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>80</width>
+                                 <height>0</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">color: #1e293b; font-weight: 600;</string>
+                               </property>
+                               <property name="text">
+                                <string>Temp SP</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QSlider" name="slider_PidTankTempSP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>170</width>
+                                 <height>24</height>
+                                </size>
+                               </property>
+                               <property name="maximumSize">
+                                <size>
+                                 <width>100</width>
+                                 <height>24</height>
+                                </size>
+                               </property>
+                               <property name="toolTip">
+                                <string>Set the target temperature setpoint</string>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">
+QSlider::groove:horizontal {
+  border: 1px solid #cbd5e0;
+  background: #e2e8f0;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+QSlider::handle:horizontal {
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  width: 18px;
+  margin: -8px 0;
+  border-radius: 9px;
+}
+QSlider::handle:horizontal:hover {
+  background: #2563eb;
+}
+              </string>
+                               </property>
+                               <property name="minimum">
+                                <number>0</number>
+                               </property>
+                               <property name="maximum">
+                                <number>300</number>
+                               </property>
+                               <property name="singleStep">
+                                <number>5</number>
+                               </property>
+                               <property name="pageStep">
+                                <number>1</number>
+                               </property>
+                               <property name="value">
+                                <number>0</number>
+                               </property>
+                               <property name="orientation">
+                                <enum>Qt::Horizontal</enum>
+                               </property>
+                               <property name="tickPosition">
+                                <enum>QSlider::NoTicks</enum>
+                               </property>
+                               <property name="tickInterval">
+                                <number>5</number>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QLabel" name="label_PidTankTempSP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>50</width>
+                                 <height>34</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">
+QSpinBox {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #1e293b;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+  background-color: #f0f4f8;
+  border: 1px solid #cbd5e0;
+}
+              </string>
+                               </property>
+                               <property name="text">
+                                <string>0</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </item>
+                           <item>
+                            <layout class="QHBoxLayout" name="LevelSPSliderPLCControl">
+                             <item>
+                              <widget class="QLabel" name="label_slider1_3">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>80</width>
+                                 <height>0</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">color: #1e293b; font-weight: 600;</string>
+                               </property>
+                               <property name="text">
+                                <string>Level SP</string>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QSlider" name="slider_PidTankLevelSP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>170</width>
+                                 <height>24</height>
+                                </size>
+                               </property>
+                               <property name="maximumSize">
+                                <size>
+                                 <width>100</width>
+                                 <height>24</height>
+                                </size>
+                               </property>
+                               <property name="toolTip">
+                                <string>Set the target water level setpoint</string>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">
+QSlider::groove:horizontal {
+  border: 1px solid #cbd5e0;
+  background: #e2e8f0;
+  margin: 2px 0;
+  border-radius: 3px;
+}
+QSlider::handle:horizontal {
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  width: 18px;
+  margin: -8px 0;
+  border-radius: 9px;
+}
+QSlider::handle:horizontal:hover {
+  background: #2563eb;
+}
+              </string>
+                               </property>
+                               <property name="minimum">
+                                <number>0</number>
+                               </property>
+                               <property name="maximum">
+                                <number>100</number>
+                               </property>
+                               <property name="pageStep">
+                                <number>1</number>
+                               </property>
+                               <property name="value">
+                                <number>0</number>
+                               </property>
+                               <property name="orientation">
+                                <enum>Qt::Horizontal</enum>
+                               </property>
+                               <property name="tickPosition">
+                                <enum>QSlider::TicksAbove</enum>
+                               </property>
+                               <property name="tickInterval">
+                                <number>10</number>
+                               </property>
+                              </widget>
+                             </item>
+                             <item>
+                              <widget class="QLabel" name="label_PidTankLevelSP">
+                               <property name="minimumSize">
+                                <size>
+                                 <width>50</width>
+                                 <height>34</height>
+                                </size>
+                               </property>
+                               <property name="styleSheet">
+                                <string notr="true">
+QSpinBox {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: #1e293b;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+  background-color: #f0f4f8;
+  border: 1px solid #cbd5e0;
+}
+              </string>
+                               </property>
+                               <property name="text">
+                                <string>0</string>
+                               </property>
+                              </widget>
+                             </item>
+                            </layout>
+                           </item>
+                          </layout>
+                         </item>
+                         <item row="6" column="0">
+                          <layout class="QHBoxLayout" name="horizontalLayout_6">
+                           <item>
+                            <widget class="QLabel" name="label_8">
+                             <property name="font">
+                              <font>
+                               <family>Segoe UI,Arial,sans-serif</family>
+                               <pointsize>12</pointsize>
+                               <weight>75</weight>
+                               <bold>true</bold>
+                              </font>
+                             </property>
+                             <property name="text">
+                              <string>P</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLineEdit" name="Qline_SimPfactor">
+                             <property name="text">
+                              <string>1</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLabel" name="label_12">
+                             <property name="font">
+                              <font>
+                               <family>Segoe UI,Arial,sans-serif</family>
+                               <pointsize>12</pointsize>
+                               <weight>75</weight>
+                               <bold>true</bold>
+                              </font>
+                             </property>
+                             <property name="text">
+                              <string>I</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLineEdit" name="Qline_SimIfactor">
+                             <property name="text">
+                              <string>1</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLabel" name="label_21">
+                             <property name="font">
+                              <font>
+                               <family>Segoe UI,Arial,sans-serif</family>
+                               <pointsize>12</pointsize>
+                               <weight>75</weight>
+                               <bold>true</bold>
+                              </font>
+                             </property>
+                             <property name="text">
+                              <string>D</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QLineEdit" name="Qline_SimDfactor">
+                             <property name="text">
+                              <string>1</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </item>
                         </layout>
                        </widget>
                       </item>
@@ -3383,13 +3453,13 @@ QGroupBox::title {
                         <property name="minimumSize">
                          <size>
                           <width>340</width>
-                          <height>310</height>
+                          <height>330</height>
                          </size>
                         </property>
                         <property name="maximumSize">
                          <size>
                           <width>340</width>
-                          <height>310</height>
+                          <height>330</height>
                          </size>
                         </property>
                         <property name="font">
@@ -4863,8 +4933,8 @@ QGroupBox::title {
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>970</width>
-                    <height>953</height>
+                    <width>358</width>
+                    <height>886</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_tankSimScroll">
@@ -6852,8 +6922,8 @@ QPushButton:pressed {
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>295</width>
-                <height>154</height>
+                <width>998</width>
+                <height>977</height>
                </rect>
               </property>
               <property name="styleSheet">
@@ -9786,7 +9856,7 @@ QSpinBox::up-button, QSpinBox::down-button {
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup"/>
+  <buttongroup name="buttonGroup_2"/>
  </buttongroups>
 </ui>

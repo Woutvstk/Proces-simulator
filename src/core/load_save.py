@@ -879,6 +879,28 @@ def _sync_status_to_gui_after_load(main_window: Any, state_data: Dict[str, Any])
                 slider_level.blockSignals(True)
                 slider_level.setValue(status.pidPidTankLevelSPValue)
                 slider_level.blockSignals(False)
+            
+            # PID factor input fields
+            qline_pfactor = main_window.findChild(QLineEdit, "Qline_SimPfactor")
+            if qline_pfactor and hasattr(status, 'pidPfactorValue'):
+                qline_pfactor.blockSignals(True)
+                qline_pfactor.setText(str(status.pidPfactorValue))
+                qline_pfactor.blockSignals(False)
+                logger.info(f"[LOAD]   Qline_SimPfactor = {status.pidPfactorValue}")
+            
+            qline_ifactor = main_window.findChild(QLineEdit, "Qline_SimIfactor")
+            if qline_ifactor and hasattr(status, 'pidIfactorValue'):
+                qline_ifactor.blockSignals(True)
+                qline_ifactor.setText(str(status.pidIfactorValue))
+                qline_ifactor.blockSignals(False)
+                logger.info(f"[LOAD]   Qline_SimIfactor = {status.pidIfactorValue}")
+            
+            qline_dfactor = main_window.findChild(QLineEdit, "Qline_SimDfactor")
+            if qline_dfactor and hasattr(status, 'pidDfactorValue'):
+                qline_dfactor.blockSignals(True)
+                qline_dfactor.setText(str(status.pidDfactorValue))
+                qline_dfactor.blockSignals(False)
+                logger.info(f"[LOAD]   Qline_SimDfactor = {status.pidDfactorValue}")
 
         logger.info("[LOAD]   ✓ GUI sync complete")
 

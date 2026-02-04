@@ -2468,7 +2468,9 @@ class IOConfigMixin:
                     elif attr_name == "AILevelSensor":
                         value = int((status.liquidVolume / config.tankVolume) * plc_analog_max)
                     elif attr_name == "AITemperatureSensor":
-                        value = int(((status.liquidTemperature + 50) / 300) * plc_analog_max)
+                        # Map temperature from 0°C to boilingTemp to 0-plc_analog_max (consistent with handler.py)
+                        boiling_temp = getattr(config, 'liquidBoilingTemp', 100.0)
+                        value = int((status.liquidTemperature / boiling_temp) * plc_analog_max)
                     # General Controls - PLC Outputs (from PLC to GUI indicators)
                     elif attr_name == "DQIndicator1":
                         value = bool(getattr(status, 'indicator1', False))
@@ -2507,6 +2509,12 @@ class IOConfigMixin:
                         value = int(getattr(status, 'pidPidTankTempSPValue', 0))
                     elif attr_name == "AIPidTankLevelSP":
                         value = int(getattr(status, 'pidPidTankLevelSPValue', 0))
+                    elif attr_name == "AIPidPfactor":
+                        value = int(getattr(status, 'pidPfactorValue', 0))
+                    elif attr_name == "AIPidIfactor":
+                        value = int(getattr(status, 'pidIfactorValue', 0))
+                    elif attr_name == "AIPidDfactor":
+                        value = int(getattr(status, 'pidDfactorValue', 0))
                     # PID Controls and other dynamic signals - Try to get value from dynamic attributes created by handler
                     # Handler creates attributes like pidPidValveStartCmd for digital, pidPidTankTempSPValue for analog
                     elif attr_name.startswith("DI") or attr_name.startswith("AI"):

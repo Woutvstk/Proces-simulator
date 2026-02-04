@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Path to the NetToPLCSim directory (adjusted for the relative structure)
-_NETTOPLCSIM_DIR = os.path.join(_BASE_DIR, "..", "src", "plcCom", "NetToPLCsim")
+_NETTOPLCSIM_DIR = os.path.join(_BASE_DIR, "..", "src", "IO", "protocols", "PLCSimS7", "NetToPLCsim")
 
 # Full path to the NetToPLCSim executable and configuration file
 NETTOPLCSIM_EXE = os.path.join(_NETTOPLCSIM_DIR, "NetToPLCsim.exe")
@@ -129,11 +129,11 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
     
     # STAGE 1: Configure INI file
     print("=" * 60)
-    print("🔧 STAGE 1: Configuring INI File")
+    print(" STAGE 1: Configuring INI File")
     print("=" * 60)
     
     if not update_ini_file(NETTOPLCSIM_INI, INI_CONFIG):
-        print("❌ Cannot proceed without a valid INI configuration.")
+        print("Cannot proceed without a valid INI configuration.")
         return None, None
     
     # Retrieve dynamic port settings from the config
@@ -142,9 +142,9 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
     
     print(f"\n--- Port {start_port} Pre-Check (Initial Port) ---")
     if is_port_free(start_port):
-        print(f"✅ Port {start_port} is free. NetToPLCSim will attempt to start here.")
+        print(f"Port {start_port} is free. NetToPLCSim will attempt to start here.")
     else:
-        print(f"⚠️ Port {start_port} is busy. NetToPLCSim will try ports {start_port} through {start_port + port_try_limit - 1}.")
+        print(f"Port {start_port} is busy. NetToPLCSim will try ports {start_port} through {start_port + port_try_limit - 1}.")
 
     # Define execution path and command
     exe_dir = os.path.dirname(NETTOPLCSIM_EXE)
@@ -154,8 +154,8 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
         '-autostart',
     ]
     
-    print(f"\n🚀 Startup Command: {' '.join(command_list)}")
-    print(f"📂 Working Directory: {exe_dir}")
+    print(f"\nStartup Command: {' '.join(command_list)}")
+    print(f"Working Directory: {exe_dir}")
     
     nettoplcsim_process = None
     try:
@@ -167,7 +167,7 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
             # Do not redirect stdout/stderr so NetToPLCSim's console output is visible.
         )
         
-        print(f"✅ NetToPLCSim started (PID: {nettoplcsim_process.pid}).")
+        print(f" NetToPLCSim started (PID: {nettoplcsim_process.pid}).")
         
         print("  Waiting 2 seconds for initial launch...")
         time.sleep(2) 
@@ -176,13 +176,13 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
         
         if exit_code is not None:
             # The process crashed immediately
-            print(f"\n❌ NetToPLCSim crashed immediately with exit code: {exit_code}")
+            print(f"\nNetToPLCSim crashed immediately with exit code: {exit_code}")
             print("  ^ CHECK THE OUTPUT ABOVE THIS LINE FOR THE CRASH REASON (C# error message).")
             print("=" * 60)
             return None, None
         else:
             # STAGE 3: Stabilize and verify listening port
-            print(f"⏳ Waiting for server stabilization ({DRIVER_STABILIZATION_TIME} seconds)...")
+            print(f"Waiting for server stabilization ({DRIVER_STABILIZATION_TIME} seconds)...")
             time.sleep(DRIVER_STABILIZATION_TIME)
             
             print("\n--- Post-Stabilization Verification ---")
@@ -196,19 +196,19 @@ def start_nettoplcsim() -> Tuple[Optional[subprocess.Popen], Optional[int]]:
                     break
             
             if final_port: 
-                print(f"✅ NetToPLCSim is successfully listening on port {final_port}.")
-                print("✅ Server running successfully in the background. Ready for use.")
+                print(f"NetToPLCSim is successfully listening on port {final_port}.")
+                print("Server running successfully in the background. Ready for use.")
                 return nettoplcsim_process, final_port
             else:
-                print(f"❌ Error: NetToPLCSim is NOT listening on any attempted ports ({start_port} through {start_port + port_try_limit - 1}).")
+                print(f"Error: NetToPLCSim is NOT listening on any attempted ports ({start_port} through {start_port + port_try_limit - 1}).")
                 print("  The process is running, but the server failed to bind.")
                 # Return the process even if binding failed, so it can be terminated later
                 return nettoplcsim_process, None
             
     except FileNotFoundError:
-        print(f"❌ NetToPLCsim.exe not found: {NETTOPLCSIM_EXE}")
+        print(f"NetToPLCsim.exe not found: {NETTOPLCSIM_EXE}")
     except Exception as e:
-        print(f"❌ Unknown error during startup: {e}")
+        print(f"Unknown error during startup: {e}")
         
     return None, None # Return None for both process and port on critical error
 
@@ -223,10 +223,10 @@ def main():
 
         if nettoplcsim_process:
             print("\n" + "=" * 40)
-            print("✅ NetToPLCSim is running in the background.")
+            print("NetToPLCSim is running in the background.")
             if final_port:
                 print(f"🔌 Snap7 connection port: {final_port}")
-            print("🛑 Press **ENTER** in this window to stop NetToPLCSim.")
+            print(" Press **ENTER** in this window to stop NetToPLCSim.")
             print("=" * 40)
             
             # Keep the script alive until the user presses Enter or the process dies
@@ -239,7 +239,7 @@ def main():
                 except KeyboardInterrupt: 
                     raise 
         else:
-            print("\n❌ NetToPLCSim could not be started. Session terminated.")
+            print("\n NetToPLCSim could not be started. Session terminated.")
 
     except KeyboardInterrupt:
         print("\n\nScript session terminated by user (Ctrl+C).")
@@ -256,16 +256,16 @@ def main():
                 nettoplcsim_process.terminate() 
                 print("  Waiting 5 seconds for clean exit...")
                 nettoplcsim_process.wait(timeout=5)
-                print("  ✅ NetToPLCSim cleanly shut down.")
+                print("   NetToPLCSim cleanly shut down.")
             except subprocess.TimeoutExpired:
-                print("  ⚠️ Timeout - forcing stop (kill)...")
+                print("   Timeout - forcing stop (kill)...")
                 nettoplcsim_process.kill()
 
         print("\nScript session finished.")
         
         # Keep the console window open if it was the main process
         if nettoplcsim_process is None or nettoplcsim_process.poll() is not None:
-            print("\n🚨 Press ENTER to close this console window...")
+            print("\n Press ENTER to close this console window...")
             try:
                 # This input ensures the console window doesn't immediately close
                 input()

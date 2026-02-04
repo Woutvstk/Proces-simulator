@@ -33,9 +33,9 @@
         <Inputs>
             <Digital>
                 <!-- Control Buttons -->
-                <Signal description="Start button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveStartButton</Signal>
-                <Signal description="Stop button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveStopButton</Signal>
-                <Signal description="Reset button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_PidValveResetButton</Signal>
+                <Signal description="Start button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_StartButton</Signal>
+                <Signal description="Stop button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_StopButton</Signal>
+                <Signal description="Reset button" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_ResetButton</Signal>
                 <!-- Mode Switches -->
                 <Signal description="Mode: Automatic (controller adjusts valve and coil wattage)" type="bool" range="0-1" io_prefix="I" status="TRUE">Sim_AutomaticMode</Signal>
                 <Signal description="Mode: Manual (user adjusts valve and coil wattage)" type="bool" range="0-1" io_prefix="I" status="FALSE">Sim_ManualMode</Signal>
@@ -50,6 +50,10 @@
                 <!-- Control Setpoints -->
                 <Signal description="Desired water temperature (-50 to 100°C)" type="int" range="0-27648" io_prefix="I" status="0">Sim_TemperatureSetpoint</Signal>
                 <Signal description="Desired water level (0-100%)" type="int" range="0-27648" io_prefix="I" status="0">Sim_WaterLevelSetpoint</Signal>
+                <!-- PID Factors -->
+                <Signal description="PID Proportional factor (0-27648)" type="int" range="0-27648" io_prefix="I" status="0">Sim_Pfactor</Signal>
+                <Signal description="PID Integral factor (0-27648)" type="int" range="0-27648" io_prefix="I" status="0">Sim_Ifactor</Signal>
+                <Signal description="PID Derivative factor (0-27648)" type="int" range="0-27648" io_prefix="I" status="0">Sim_Dfactor</Signal>
             </Analog>
         </Inputs>
         <Outputs>

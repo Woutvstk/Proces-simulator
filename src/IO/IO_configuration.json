@@ -22,7 +22,7 @@
       "byte": "0",
       "bit": "1",
       "address": "I0.1",
-      "status": "FALSE",
+      "status": "TRUE",
       "description": "Water level is LOW (above threshold = true)",
       "range": "0-1"
     },
@@ -42,7 +42,7 @@
       "byte": "6",
       "bit": "",
       "address": "IW6",
-      "status": "4608",
+      "status": "18496",
       "description": "Current water temperature (°C)",
       "range": "0-27648"
     },
@@ -72,7 +72,7 @@
       "byte": "0",
       "bit": "2",
       "address": "Q0.2",
-      "status": "FALSE",
+      "status": "TRUE",
       "description": "Heater - Heat the water (ON/OFF)",
       "range": "0-1"
     },
@@ -102,12 +102,12 @@
       "byte": "8",
       "bit": "",
       "address": "QW8",
-      "status": "0",
+      "status": "27648",
       "description": "Heater power level (0-100%)",
       "range": "0-27648"
     },
     {
-      "name": "Sim_PidValveStartButton",
+      "name": "Sim_StartButton",
       "type": "bool",
       "byte": "0",
       "bit": "2",
@@ -117,7 +117,7 @@
       "range": "0-1"
     },
     {
-      "name": "Sim_PidValveStopButton",
+      "name": "Sim_StopButton",
       "type": "bool",
       "byte": "0",
       "bit": "3",
@@ -127,7 +127,7 @@
       "range": "0-1"
     },
     {
-      "name": "Sim_PidValveResetButton",
+      "name": "Sim_ResetButton",
       "type": "bool",
       "byte": "0",
       "bit": "4",
@@ -217,6 +217,36 @@
       "range": "0-27648"
     },
     {
+      "name": "Sim_Pfactor",
+      "type": "int",
+      "byte": "12",
+      "bit": "",
+      "address": "IW12",
+      "status": "1",
+      "description": "PID Proportional factor (0-27648)",
+      "range": "0-27648"
+    },
+    {
+      "name": "Sim_Ifactor",
+      "type": "int",
+      "byte": "14",
+      "bit": "",
+      "address": "IW14",
+      "status": "1",
+      "description": "PID Integral factor (0-27648)",
+      "range": "0-27648"
+    },
+    {
+      "name": "Sim_Dfactor",
+      "type": "int",
+      "byte": "16",
+      "bit": "",
+      "address": "IW16",
+      "status": "1",
+      "description": "PID Derivative factor (0-27648)",
+      "range": "0-27648"
+    },
+    {
       "name": "Start",
       "type": "bool",
       "byte": "1",
@@ -249,9 +279,9 @@
     {
       "name": "Control1",
       "type": "int",
-      "byte": "12",
+      "byte": "18",
       "bit": "",
-      "address": "IW12",
+      "address": "IW18",
       "status": "0",
       "description": "General Control slider 1 value",
       "range": "0-27648"
@@ -259,9 +289,9 @@
     {
       "name": "Control2",
       "type": "int",
-      "byte": "14",
+      "byte": "20",
       "bit": "",
-      "address": "IW14",
+      "address": "IW20",
       "status": "0",
       "description": "General Control slider 2 value",
       "range": "0-27648"
@@ -269,9 +299,9 @@
     {
       "name": "Control3",
       "type": "int",
-      "byte": "16",
+      "byte": "22",
       "bit": "",
-      "address": "IW16",
+      "address": "IW22",
       "status": "0",
       "description": "General Control slider 3 value",
       "range": "0-27648"
@@ -347,7 +377,5 @@
       "range": "0-27648"
     }
   ],
-  "custom_signal_names": {
-    "DQIndicator1": "test"
-  }
+  "custom_signal_names": {}
 }
