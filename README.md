@@ -1,8 +1,9 @@
-PLC-modbus-proces-simulator
+Proces-simulator
 
-- Modbus-tcp interface
 - Simulation logic
 - Visualisation
+- Simulation hub
+- Multi hardwrae interfaces implemented
 
 
 
