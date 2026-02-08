@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "timestamp": "2026-02-07T19:42:14.706326",
+  "timestamp": "2026-02-08T12:49:23.290780",
   "description": "PLC Simulator - Complete State Snapshot",
   "main_config": {
     "plcGuiControl": "plc",
@@ -35,7 +35,7 @@
   },
   "simulation_status": {
     "liquidVolume": 100.0,
-    "liquidTemperature": 0.0,
+    "liquidTemperature": 21.0,
     "valveInOpenFraction": 0.0,
     "valveOutOpenFraction": 0.0,
     "heaterPowerFraction": 0.0,
@@ -57,8 +57,8 @@
     "offsets": {
       "BoolInput": 0,
       "BoolOutput": 0,
-      "DWORDInput": 4,
-      "DWORDOutput": 4
+      "DWORDInput": 2,
+      "DWORDOutput": 2
     },
     "signals": [
       {
@@ -77,16 +77,76 @@
         "byte": "0",
         "bit": "1",
         "address": "I0.1",
-        "status": "FALSE",
+        "status": "TRUE",
         "description": "Water level is LOW (above threshold = true)",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_StartButton",
+        "type": "bool",
+        "byte": "0",
+        "bit": "2",
+        "address": "I0.2",
+        "status": "FALSE",
+        "description": "Start button",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_StopButton",
+        "type": "bool",
+        "byte": "0",
+        "bit": "3",
+        "address": "I0.3",
+        "status": "FALSE",
+        "description": "Stop button",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_TemperatureAnalogControl",
+        "type": "bool",
+        "byte": "0",
+        "bit": "4",
+        "address": "I0.4",
+        "status": "TRUE",
+        "description": "General bit to tell the plc to use analog temperature controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_TemperatureDigitalControl",
+        "type": "bool",
+        "byte": "0",
+        "bit": "5",
+        "address": "I0.5",
+        "status": "FALSE",
+        "description": "General bit to tell the plc to use digital temperature controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelAnalogControl",
+        "type": "bool",
+        "byte": "0",
+        "bit": "6",
+        "address": "I0.6",
+        "status": "TRUE",
+        "description": "General bit to tell the plc to use analog valve controls",
+        "range": "0-1"
+      },
+      {
+        "name": "Sim_WaterLevelDigitalControl",
+        "type": "bool",
+        "byte": "0",
+        "bit": "7",
+        "address": "I0.7",
+        "status": "FALSE",
+        "description": "General bit to tell the plc to use digital valve controls",
         "range": "0-1"
       },
       {
         "name": "Sim_WaterLevelMeasurement",
         "type": "int",
-        "byte": "4",
+        "byte": "2",
         "bit": "",
-        "address": "IW4",
+        "address": "IW2",
         "status": "6912",
         "description": "Current water level in tank (0-100%)",
         "range": "0-27648"
@@ -94,11 +154,61 @@
       {
         "name": "Sim_WaterTemperatureMeasurement",
         "type": "int",
+        "byte": "4",
+        "bit": "",
+        "address": "IW4",
+        "status": "5806",
+        "description": "Current water temperature (\u00c2\u00b0C)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_TemperatureSetpoint",
+        "type": "int",
         "byte": "6",
         "bit": "",
         "address": "IW6",
         "status": "0",
-        "description": "Current water temperature (\u00c2\u00b0C)",
+        "description": "Desired water temperature (-50 to 100\u00c2\u00b0C)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_WaterLevelSetpoint",
+        "type": "int",
+        "byte": "8",
+        "bit": "",
+        "address": "IW8",
+        "status": "0",
+        "description": "Desired water level (0-100%)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_Pfactor",
+        "type": "int",
+        "byte": "10",
+        "bit": "",
+        "address": "IW10",
+        "status": "1",
+        "description": "PID Proportional factor (0-27648)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_Ifactor",
+        "type": "int",
+        "byte": "12",
+        "bit": "",
+        "address": "IW12",
+        "status": "1",
+        "description": "PID Integral factor (0-27648)",
+        "range": "0-27648"
+      },
+      {
+        "name": "Sim_Dfactor",
+        "type": "int",
+        "byte": "14",
+        "bit": "",
+        "address": "IW14",
+        "status": "1",
+        "description": "PID Derivative factor (0-27648)",
         "range": "0-27648"
       },
       {
@@ -134,9 +244,9 @@
       {
         "name": "Sim_InletValvePosition",
         "type": "int",
-        "byte": "4",
+        "byte": "2",
         "bit": "",
-        "address": "QW4",
+        "address": "QW2",
         "status": "0",
         "description": "Upper inlet valve position (0-100% open)",
         "range": "0-27648"
@@ -144,9 +254,9 @@
       {
         "name": "Sim_OutletValvePosition",
         "type": "int",
-        "byte": "6",
+        "byte": "4",
         "bit": "",
-        "address": "QW6",
+        "address": "QW4",
         "status": "0",
         "description": "Lower outlet valve position (0-100% open)",
         "range": "0-27648"
@@ -154,151 +264,11 @@
       {
         "name": "Sim_HeaterPowerLevel",
         "type": "int",
-        "byte": "8",
+        "byte": "6",
         "bit": "",
-        "address": "QW8",
+        "address": "QW6",
         "status": "0",
         "description": "Heater power level (0-100%)",
-        "range": "0-27648"
-      },
-      {
-        "name": "Sim_StartButton",
-        "type": "bool",
-        "byte": "0",
-        "bit": "2",
-        "address": "I0.2",
-        "status": "FALSE",
-        "description": "Start button",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_StopButton",
-        "type": "bool",
-        "byte": "0",
-        "bit": "3",
-        "address": "I0.3",
-        "status": "FALSE",
-        "description": "Stop button",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_ResetButton",
-        "type": "bool",
-        "byte": "0",
-        "bit": "4",
-        "address": "I0.4",
-        "status": "FALSE",
-        "description": "Reset button",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_AutomaticMode",
-        "type": "bool",
-        "byte": "0",
-        "bit": "5",
-        "address": "I0.5",
-        "status": "TRUE",
-        "description": "Mode: Automatic (controller adjusts valve and coil wattage)",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_ManualMode",
-        "type": "bool",
-        "byte": "0",
-        "bit": "6",
-        "address": "I0.6",
-        "status": "FALSE",
-        "description": "Mode: Manual (user adjusts valve and coil wattage)",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_TemperatureAnalogControl",
-        "type": "bool",
-        "byte": "0",
-        "bit": "7",
-        "address": "I0.7",
-        "status": "TRUE",
-        "description": "General bit to tell the plc to use analog temperature controls",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_TemperatureDigitalControl",
-        "type": "bool",
-        "byte": "1",
-        "bit": "0",
-        "address": "I1.0",
-        "status": "FALSE",
-        "description": "General bit to tell the plc to use digital temperature controls",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_WaterLevelAnalogControl",
-        "type": "bool",
-        "byte": "1",
-        "bit": "1",
-        "address": "I1.1",
-        "status": "TRUE",
-        "description": "General bit to tell the plc to use analog valve controls",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_WaterLevelDigitalControl",
-        "type": "bool",
-        "byte": "1",
-        "bit": "2",
-        "address": "I1.2",
-        "status": "FALSE",
-        "description": "General bit to tell the plc to use digital valve controls",
-        "range": "0-1"
-      },
-      {
-        "name": "Sim_TemperatureSetpoint",
-        "type": "int",
-        "byte": "8",
-        "bit": "",
-        "address": "IW8",
-        "status": "0",
-        "description": "Desired water temperature (-50 to 100\u00c2\u00b0C)",
-        "range": "0-27648"
-      },
-      {
-        "name": "Sim_WaterLevelSetpoint",
-        "type": "int",
-        "byte": "10",
-        "bit": "",
-        "address": "IW10",
-        "status": "0",
-        "description": "Desired water level (0-100%)",
-        "range": "0-27648"
-      },
-      {
-        "name": "Sim_Pfactor",
-        "type": "int",
-        "byte": "12",
-        "bit": "",
-        "address": "IW12",
-        "status": "1",
-        "description": "PID Proportional factor (0-27648)",
-        "range": "0-27648"
-      },
-      {
-        "name": "Sim_Ifactor",
-        "type": "int",
-        "byte": "14",
-        "bit": "",
-        "address": "IW14",
-        "status": "1",
-        "description": "PID Integral factor (0-27648)",
-        "range": "0-27648"
-      },
-      {
-        "name": "Sim_Dfactor",
-        "type": "int",
-        "byte": "16",
-        "bit": "",
-        "address": "IW16",
-        "status": "1",
-        "description": "PID Derivative factor (0-27648)",
         "range": "0-27648"
       }
     ],

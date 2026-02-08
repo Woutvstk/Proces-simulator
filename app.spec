@@ -24,6 +24,7 @@ datas = [
     ('src/core', 'core'),
     ('src/IO', 'IO'),
     ('src/simulations', 'simulations'),
+    ('saved_states', 'saved_states'),  # Include saved state files
 ]
 
 # Binaries
@@ -57,11 +58,11 @@ exe = EXE(
     a.datas,
     [],
     name="Proces_Simulator",
-    debug=True,
+    debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

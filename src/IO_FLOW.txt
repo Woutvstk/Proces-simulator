@@ -1,165 +1,432 @@
-# IO Flow - How Signals Get From GUI to PLC and Back
+# IO Flow - Signal Journey From Definition to PLC Communication
 
-## The Basic Idea
+This document explains how signals move through the system, from initial XML definitions 
+through user mapping to actual PLC communication. Understanding this flow is essential for 
+debugging IO issues and adding new signals.
 
-Signals defined in XML → User maps them to addresses in GUI → IO handler exchanges data with PLC → Simulation sees the values
+================================================================================
+## Overview - The Big Picture
+================================================================================
 
-Force functionality lets you override any signal for testing.
+The IO system follows a clear pipeline:
 
-## 1. Signal Definitions (XML Files)
+    XML Definitions → User Mapping → Configuration Storage → Runtime Exchange
+         ↓                ↓                   ↓                    ↓
+    Signal specs    Drag & drop       JSON files         PLC communication
+    (tree view)     (IO table)      (persistence)        (IO handler)
 
-Files: `IO/IO_treeList_<simulation>.xml`
+Each stage has specific responsibilities and well-defined interfaces.
 
-Each simulation has its own XML with:
-- **GeneralControls** - Common stuff (Start/Stop/Reset, general sliders)
-- **Simulation-specific** - Tank valves, level sensors, etc
+================================================================================
+## Stage 1: Signal Definitions (XML Files)
+================================================================================
 
-Each signal lists:
-- Name (e.g., "DQValveIn")
-- Type (bool/int)
-- Range (0-1 for digital, 0-27648 for analog)
-- IO prefix ("I" for inputs, "Q" for outputs)
+Location: `IO/IO_treeList_<simulation>.xml`
 
-When you switch simulations, the GUI loads the matching XML file automatically.
+Each simulation defines its signals in XML format. When you switch simulations, the 
+corresponding XML file loads automatically.
 
-## 2. User Mapping (IO Config Page)
+### XML Structure Example
 
-The IO config page (`ioConfigPage.py`) shows two parts:
-- Left tree: Available signals from XML
-- Right table: Mapped signals with addresses
+```xml
+<root>
+    <category name="GeneralControls">
+        <subcategory name="Digital">
+            <signal name="DIStart" type="Bool" range="0-1" io_prefix="I" 
+                    description="Start command"/>
+        </subcategory>
+    </category>
+    
+    <category name="TankSim">
+        <subcategory name="Outputs">
+            <signal name="DQValveIn" type="Bool" range="0-1" io_prefix="Q"
+                    description="Inlet valve control"/>
+            <signal name="AQHeaterFraction" type="Int" range="0-27648" io_prefix="Q"
+                    description="Heater power 0-100%"/>
+        </subcategory>
+        <subcategory name="Inputs">
+            <signal name="AITemperature" type="Int" range="0-27648" io_prefix="I"
+                    description="Temperature sensor 0-100°C"/>
+        </subcategory>
+    </category>
+</root>
+```
 
-User workflow:
-1. Drag signal from tree to table
-2. Assign byte/bit address (or use auto-assignment)
-3. Optionally set byte offsets
-4. Save to `IO_configuration.json`
+### Signal Attributes
 
-**LOGO mode quirk**: Addresses display in LOGO format (V0.0, Q1, AQ2) but internally use standard S7 format (I0.0, Q0.0, QW2). The interpolator handles translation before conflict checks and after any address changes.
+- **name**: Must match attribute name in config.py
+- **type**: "Bool" for digital, "Int" for analog (16-bit word)
+- **range**: "0-1" for digital, "0-27648" for analog (S7 INT range)
+- **io_prefix**: "I" for inputs (to PLC), "Q" for outputs (from PLC)
+- **description**: Human-readable explanation
 
-## 3. Force Functionality
+### Direction Convention (CRITICAL!)
 
-Force lets you override any signal value for testing. Super useful for debugging without changing PLC code.
+**From PLC perspective:**
+- **I (Input)**: PLC reads these → Simulation WRITES sensors here
+- **Q (Output)**: PLC writes these → Simulation READS actuators from here
 
-How it works:
-- Enable force checkbox in IO table
-- Set force value
-- `get_forced_io_values()` collects all forced signals
-- IO handler checks forced values FIRST, before PLC/simulation values
+Common confusion: An inlet valve the PLC controls is "Q" (PLC output), even though 
+it's an "input" to the process. Always think from PLC perspective!
 
-Force dict format:
+================================================================================
+## Stage 2: User Mapping (IO Config Page)
+================================================================================
+
+### Left Panel - IO Tree
+
+Displays all available signals from XML in hierarchical view. Signals can be dragged 
+to the table for mapping.
+
+### Right Panel - IO Table
+
+**Columns:**
+1. **Signal Name** - Editable for custom names
+2. **Type** - Bool or Int (read-only)
+3. **Byte** - PLC byte address
+4. **Bit** - Bit within byte (digital only)
+5. **Address** - Computed (e.g., "I0.0" or "IW4")
+6. **Status** - Current runtime value
+7. **Description** - From XML
+8. **Range** - From XML
+9. **Force** - Enable force override
+10. **Force Value** - Value when forced
+
+### Custom Signal Names
+
+Users can rename signals by editing the "Signal Name" column:
+- Original name stored in cell's UserRole data
+- Custom name stored in `config.custom_signal_names` dict
+- Persists through save/load operations
+- Used in GUI tooltips and visualization
+
+**Storage format:**
 ```python
-{
-    "DQValveIn": True,       # Forced to ON
-    "AQHeaterFraction": 15000  # Forced to specific analog value
+config.custom_signal_names = {
+    'AITemperature': 'Tank_Temp_PV',  # Keyed by attribute name
+    'DQValveIn': 'Inlet_Valve'
 }
 ```
 
-Clears with one click via `clear_all_forces()`.
+### Byte Offsets
 
-## 4. IO Handler (The Middleman)
+Global offsets apply to all signals of a type:
+- **BoolInput**: Digital inputs (I memory)
+- **BoolOutput**: Digital outputs (Q memory)
+- **DWORDInput**: Analog inputs (IW memory)
+- **DWORDOutput**: Analog outputs (QW memory)
 
-File: `IO/handler.py`
+Example: BoolInput offset of 5 → signal at byte 0, bit 0 becomes I5.0
 
-Main job: Exchange data between PLC and simulation status
+### Address Conflict Detection
 
-`updateIO()` does two things:
+System checks for overlapping addresses before saving:
 
-**A) PLC → Simulation (Read actuators):**
-1. Read PLC outputs (Q bytes)
-2. Check forced values first
-3. Extract signal values using byte/bit addresses
-4. Write to simulation status
+**Digital:** Same byte AND bit = conflict
+**Analog:** Overlapping word addresses = conflict (words are 2 bytes)
 
-**B) Simulation → PLC (Write sensors):**
-1. Read simulation status (temperatures, levels, etc)
-2. Check forced values first  
-3. Apply byte offsets if configured
-4. Write to PLC inputs (I bytes)
+**LOGO mode:** Addresses converted to LOGO format (V0.0, Q1, AQ2) before comparison
 
-**Manual mode handling**: When manual mode is active, GUI values override PLC actuator outputs. The check looks like: `forced_values → manual mode values → PLC values` in that priority order.
+Conflicts highlighted in red. Saving disabled until resolved.
 
-**Important**: In manual mode with PLC connected, sensors still go to the PLC (so your PLC program can read them), but actuators come from GUI/forced values.
+### Force Functionality
 
-## 5. Protocol Manager
+Force overrides allow testing specific signal values:
 
-File: `core/protocolManager.py`
-
-Handles the actual PLC communication. Abstracts away protocol differences so IO handler doesn't care if you're using LOGO, S7-1500, or PLCSim.
-
-Each protocol implements:
-- `GetDI/SetDI, GetDO/SetDO` - Digital IO
-- `GetAI/SetAI, GetAO/SetAO` - Analog IO
-- `connect/disconnect/isConnected` - Connection management
-
-## 6. Main Loop Integration
-
-File: `main.py`
-
-The main loop ties everything together:
-
+**Priority chain:**
 ```
-while running:
-    Process Qt events
-    
-    if PLC connected:
-        forced_values = get_forced_io_values()
-        ioHandler.updateIO(plc, config, status, forced_values, manual_mode)
-    else:
-        ioHandler.resetOutputs()  # Zero out actuators
-    
-    sim_mgr.update_simulation(dt)  # Run physics
-    update_tanksim_display()       # Refresh GUI
-    
-    # PLCSim gets extra processEvents() here for responsiveness
-    if PLCSim_mode:
-        app.processEvents()
+Runtime value = Forced Value (if enabled)
+                OR Manual Mode Value (if manual mode active)
+                OR PLC Value (normal operation)
 ```
 
-**Timing quirk**: PLCSim uses min 50ms interval (vs 100ms+ for simulation) to keep GUI responsive. Each PLCSim API call through pythonnet has ~40-50ms overhead, so with 15-20 calls per cycle things can get sluggish without the extra processEvents().
+Use cases:
+- Test simulation with specific valve position
+- Simulate sensor failure
+- Override safety interlocks for testing
 
-## 7. GUI Mode (No PLC)
+### LOGO Mode Address Translation
 
-When `plcGuiControl == "gui"`:
-- No PLC connection
-- General Controls dock provides manual inputs
-- Simulation runs standalone
-- Good for testing simulation logic without hardware
+**Display format (what user sees):**
+- Digital inputs: V0.0, V0.1
+- Digital outputs: Q1, Q2
+- Analog inputs: VW2, VW4
+- Analog outputs: AQ1, AQ2
 
-## Signal Direction (Always Confusing)
+**Internal format (stored in files):**
+- Digital inputs: I0.0, I0.1
+- Digital outputs: Q0.0, Q0.1
+- Analog inputs: IW2, IW4
+- Analog outputs: QW2, QW4
 
-From PLC perspective:
-- **PLC Inputs (I)**: Simulator WRITES here (sensors going TO the PLC)
-- **PLC Outputs (Q)**: Simulator READS here (actuators coming FROM the PLC)
+Translation ("interpolation") happens automatically when in LOGO mode.
 
-Data flow:
+================================================================================
+## Stage 3: Configuration Storage (JSON Files)
+================================================================================
+
+Location: `IO/IO_configuration.json`
+
+### JSON Structure
+
+```json
+{
+  "signals": [
+    {
+      "name": "DQValveIn",
+      "type": "Bool",
+      "byte": "0",
+      "bit": "0",
+      "address": "Q0.0",
+      "io_prefix": "Q",
+      "description": "Inlet valve control"
+    }
+  ],
+  "offsets": {
+    "BoolInput": 0,
+    "BoolOutput": 0,
+    "DWORDInput": 2,
+    "DWORDOutput": 2
+  },
+  "custom_signal_names": {
+    "AITemperature": "Tank_Temp_PV",
+    "DQValveIn": "Inlet_Valve"
+  }
+}
 ```
-Simulation sensors → IO Handler → PLC Inputs (I)
-PLC Outputs (Q) → IO Handler → Simulation actuators
+
+### Loading Process (Critical!)
+
+When loading IO configuration or state file:
+
+1. Read JSON file
+2. Parse signals, offsets, custom_signal_names
+3. **Save custom_signal_names temporarily** (prevents deletion)
+4. Completely clear IO table:
+   - Call `_clear_row_data()` on all rows (cleanup)
+   - Call `clearContents()` (remove items)
+   - Call `setRowCount(0)` (remove rows)
+5. **Restore custom_signal_names** from temp storage
+6. Add fresh rows for each signal
+7. Populate cells with signal data
+8. Apply custom names where defined
+
+**Why save/restore custom names?** The `_clear_row_data()` method removes custom names 
+from the config dict. We must preserve them during the clear operation or they're lost forever.
+
+**Why complete table clear?** Prevents mixing old and new signals. Without removing rows, 
+loading a config with fewer signals leaves old signals in the table.
+
+### State File Integration
+
+State files embed complete IO configuration:
+```json
+{
+  "version": "2.0",
+  "main_config": {...},
+  "simulation_config": {...},
+  "simulation_status": {...},
+  "io_config": {
+    "signals": [...],
+    "custom_signal_names": {...}
+  }
+}
 ```
 
-Force overrides can intercept at any point.
+On load: Extract `io_config` → Write to `IO_configuration.json` → Load from file
 
-## Typical Workflow
+This ensures custom names flow correctly through the state restoration process.
 
-1. Start app → Load PIDtankValve simulation
-2. XML loaded → Signals appear in IO tree
-3. Drag signals to table → Assign addresses (or let auto-assignment handle it)
-4. Save config → Stored in IO_configuration.json
-5. Connect to PLC → Protocol manager initializes
-6. Main loop runs:
-   - Read PLC outputs (with force overrides)
-   - Update simulation physics
-   - Write sensors to PLC (with offsets & force overrides)
-7. User can force values anytime for testing
-8. Disconnect → All actuators reset to 0
+================================================================================
+## Stage 4: Runtime Exchange (IO Handler)
+================================================================================
 
-## Key Files Reference
+Location: `IO/handler.py`
 
-- **XML Definitions**: `IO/IO_treeList_*.xml`
-- **Config Storage**: `IO/IO_configuration.json`
-- **IO Logic**: `IO/handler.py`
-- **GUI Mapping**: `gui/pages/ioConfigPage.py`
-- **Protocol Layer**: `core/protocolManager.py`
-- **Main Loop**: `main.py`
-- **Sim Config**: `simulations/PIDtankValve/config.py`
-- **Sim State**: `simulations/PIDtankValve/status.py`
+### Main Method: updateIO()
+
+Called every cycle from main loop:
+
+```python
+ioHandler.updateIO(
+    protocol,        # Active protocol instance (or None)
+    mainConfig,      # Application configuration
+    config,          # Simulation configuration
+    status,          # Simulation status (shared state)
+    forced_values,   # Dict of forced signal overrides
+    manual_mode      # Boolean: GUI controls override PLC?
+)
+```
+
+### Exchange Sequence
+
+**Step 1: Read PLC Outputs (Actuators)**
+- Call protocol.GetDO() for digital outputs
+- Call protocol.GetAO() for analog outputs
+- Extract bit values for digital signals
+- Convert word values for analog signals
+
+**Step 2: Apply Priority Chain**
+For each actuator:
+```python
+if signal in forced_values:
+    value = forced_values[signal]  # HIGHEST
+elif manual_mode and signal in gui_values:
+    value = gui_values[signal]     # SECOND
+else:
+    value = plc_value              # LOWEST
+```
+
+**Step 3: Write to Simulation Status**
+```python
+status.valveInOpen = actuator_value
+status.heaterPowerFraction = actuator_value / 27648.0
+```
+
+**Step 4: Read from Simulation Status**
+```python
+temperature_raw = int(status.temperature * 276.48)  # Scale to 0-27648
+level_raw = int(status.liquidLevel * 276.48)
+```
+
+**Step 5: Apply Force Overrides for Sensors**
+```python
+if 'AITemperature' in forced_values:
+    temperature_raw = forced_values['AITemperature']
+```
+
+**Step 6: Write to PLC Inputs**
+- Apply byte offsets
+- Call protocol.SetDI() for digital inputs
+- Call protocol.SetAI() for analog inputs
+
+### Forced Write Period
+
+After connection established:
+- Enter 3-second forced write period
+- Aggressively write all outputs every cycle
+- Ensures PLC sees correct initial values
+- Prevents race conditions during startup
+
+### Button Pulse Management
+
+Momentary buttons (Start, Stop, Reset):
+1. Button pressed → Set to True + start 200ms pulse timer
+2. Write True to PLC
+3. After 200ms → Pulse manager auto-clears to False
+4. Next cycle writes False to PLC
+
+Mimics real momentary push-buttons.
+
+### Manual Mode Behavior
+
+When manual mode active AND PLC connected:
+- **Actuators:** GUI controls override PLC outputs
+- **Sensors:** Still go to PLC (PLC can read simulation state)
+
+Use case: Test simulation logic without running PLC program, while still allowing 
+PLC to monitor sensors.
+
+### Protocol Abstraction
+
+All protocols implement same interface:
+```python
+# Digital IO
+protocol.GetDI(byte, bit) / SetDI(byte, bit, value)
+protocol.GetDO(byte, bit) / SetDO(byte, bit, value)
+
+# Analog IO  
+protocol.GetAI(byte) / SetAI(byte, value)
+protocol.GetAO(byte) / SetAO(byte, value)
+```
+
+Works identically whether using S7-1200, LOGO!, or PLCSim.
+
+### PLCSim Performance Optimization
+
+PLCSim via NetToPLCsim has high TCP overhead (40+ calls per cycle):
+
+**Solution:**
+- ThreadPoolExecutor with 6 workers (concurrent calls)
+- Semaphore limiting 4 simultaneous operations
+- 3ms throttle between calls
+- Minimum IO interval: 20ms
+
+Result: Acceptable GUI responsiveness even with heavy IO.
+
+================================================================================
+## Signal Direction Reference (Always Confusing!)
+================================================================================
+
+**From PLC perspective:**
+
+**PLC Inputs (I memory):**
+- PLC READS these
+- Simulation WRITES these
+- Examples: Sensors (temperature, level, switches)
+
+**PLC Outputs (Q memory):**
+- PLC WRITES these
+- Simulation READS these
+- Examples: Actuators (valves, heaters, motors)
+
+**Mnemonic:** Think of PLC as "boss":
+- Inputs = What boss wants to know (sensors TO the PLC)
+- Outputs = What boss wants to control (commands FROM the PLC)
+
+================================================================================
+## Troubleshooting Common Issues
+================================================================================
+
+### Custom names disappear after loading state
+
+**Cause:** Table clear deleted custom names from config.
+
+**Solution:** Save/restore custom_signal_names around clear operation (now implemented).
+
+### Address conflicts not detected in LOGO mode
+
+**Cause:** Comparison used internal format instead of LOGO format.
+
+**Solution:** Convert to LOGO format before conflict detection (now implemented).
+
+### Force values not working
+
+**Debug steps:**
+1. Check `get_forced_io_values()` returns correct dict
+2. Verify IO handler checks forced_values BEFORE plc_values
+3. Confirm force checkbox sets flag in row_data
+
+### Signals not updating during runtime
+
+**Debug steps:**
+1. Check connection status LED (green = connected)
+2. Verify signal in IO table with valid address
+3. Check for red conflicts
+4. Verify address within config.lowestByte/highestByte range
+5. Add logging in IO handler to see raw values
+
+### Table shows old signals after loading
+
+**Cause:** Table not completely cleared before load.
+
+**Solution:** Use complete clear sequence with setRowCount(0) (now implemented).
+
+================================================================================
+## Key Takeaways
+================================================================================
+
+1. **Flow:** XML → Table → JSON → Runtime exchange
+2. **Direction:** Always think from PLC perspective (I vs Q)
+3. **Priority:** Forced > Manual > PLC
+4. **Custom names:** Saved/restored during table clear to survive reload
+5. **LOGO mode:** Display format ≠ Storage format (automatic translation)
+6. **Force:** Highest priority, bypasses everything
+7. **Table clear:** Must remove rows completely to prevent data mixing
+8. **Button pulses:** 200ms automatic timing
+9. **PLCSim:** Threading + throttling for performance
+
+================================================================================
+Document Version: 2.0
+Last Updated: February 2026
+================================================================================

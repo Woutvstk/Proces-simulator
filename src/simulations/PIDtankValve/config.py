@@ -214,13 +214,18 @@ class configuration:
                 logger.warning("No signals found in IO configuration")
                 return
 
-            # Load custom signal names from config if present
+            # Load custom signal names from config if present (for state/IO load)
+            # Custom names ARE loaded to support state restore and IO config load
             if 'custom_signal_names' in config_data:
                 try:
                     self.custom_signal_names = config_data['custom_signal_names'].copy()
-                    logger.info(f"Loaded {len(self.custom_signal_names)} custom signal name(s)")
+                    logger.info(f"Loaded {len(self.custom_signal_names)} custom signal name(s) from file")
                 except Exception as e:
                     logger.warning(f"Could not load custom signal names: {e}")
+            else:
+                # No custom names in file - this is a fresh start or default config
+                # Keep existing custom names (empty on first load)
+                logger.info("No custom signal names in file")
 
             # Reset enabled signals; will be repopulated based on file content
             self.enabled_attrs.clear()

@@ -526,6 +526,25 @@ class DroppableTableWidget(QTableWidget):
     
     def _clear_row_data(self, row):
         """Clear all data of a row"""
+        # Get signal name before clearing to remove custom name
+        name_item = self.item(row, 0)
+        if name_item:
+            # Get canonical signal name
+            signal_name = name_item.data(Qt.UserRole) if name_item.data(Qt.UserRole) else name_item.text()
+            
+            # Remove custom name from config if it exists
+            if hasattr(self, 'io_screen') and self.io_screen:
+                main_window = self.io_screen.main_window
+                if hasattr(main_window, 'tanksim_config'):
+                    config = main_window.tanksim_config
+                    # Get attribute name from signal name
+                    if hasattr(config, 'io_signal_mapping') and signal_name in config.io_signal_mapping:
+                        attr_name = config.io_signal_mapping[signal_name]
+                        # Remove custom name
+                        if hasattr(config, 'custom_signal_names') and attr_name in config.custom_signal_names:
+                            del config.custom_signal_names[attr_name]
+                            logger.info(f"[IO] Removed custom name for {signal_name} (attr: {attr_name})")
+        
         if row in self.row_data:
             if row in self.forced_rows:
                 del self.forced_rows[row]  # Also clear force when clearing data
@@ -550,19 +569,36 @@ class DroppableTableWidget(QTableWidget):
         return len(rows_to_clear)
     
     def get_used_addresses(self):
-        """Retrieve all used addresses"""
+        """Retrieve all used addresses
+        
+        In PLC mode: Digital and analog I/O cannot overlap (bits and words share address space)
+        In LOGO mode: Digital and analog I/O CAN overlap (separate address spaces)
+        """
         used = {}
+        
+        # Check if in LOGO mode
+        is_logo = False
+        try:
+            if self.io_screen and hasattr(self.io_screen, 'main_window'):
+                main_window = self.io_screen.main_window
+                if hasattr(main_window, 'mainConfig') and main_window.mainConfig:
+                    is_logo = (main_window.mainConfig.plcProtocol == "logo!")
+        except Exception:
+            pass
+        
         for row in range(self.rowCount()):
             addr_item = self.item(row, 4)
             data_type = self.item(row, 1)
             if addr_item and addr_item.text():
                 address = addr_item.text()
                 if '.' in address:
+                    # Digital signal (bit-level)
                     prefix_byte, bit = address.rsplit('.', 1)
                     if prefix_byte not in used:
                         used[prefix_byte] = set()
                     used[prefix_byte].add(int(bit))
                 else:
+                    # Analog signal (word-level)
                     if data_type and data_type.text() in ['int', 'word']:
                         try:
                             byte_num = int(address[2:]) if len(address) > 2 and address[1] == 'W' else 0
@@ -570,12 +606,20 @@ class DroppableTableWidget(QTableWidget):
                             continue
                         prefix = address[:2]
                         base_prefix = prefix[0]
-                        for b in [byte_num, byte_num + 1]:
-                            byte_key = f"{base_prefix}{b}"
-                            if byte_key not in used:
-                                used[byte_key] = set(range(8))
-                            else:
-                                used[byte_key].update(range(8))
+                        
+                        # In PLC mode: Mark all bits as used (prevent digital/analog overlap)
+                        # In LOGO mode: Don't mark bits as used (allow digital/analog overlap)
+                        if not is_logo:
+                            for b in [byte_num, byte_num + 1]:
+                                byte_key = f"{base_prefix}{b}"
+                                if byte_key not in used:
+                                    used[byte_key] = set(range(8))
+                                else:
+                                    used[byte_key].update(range(8))
+                        else:
+                            # In LOGO mode: Mark word addresses separately (don't block bits)
+                            word_key = f"{prefix}{byte_num}"
+                            used[word_key] = 'word'  # Special marker for word addresses
         return used
     
     def get_byte_offset(self, prefix, data_type):
@@ -595,14 +639,31 @@ class DroppableTableWidget(QTableWidget):
         return 0
     
     def find_free_address(self, prefix, data_type):
-        """Find the first free address"""
+        """Find the first free address
+        
+        In PLC mode: Avoid bytes that have any digital signals
+        In LOGO mode: Digital and analog can coexist on same byte
+        """
         used = self.get_used_addresses()
         offset = self.get_byte_offset(prefix, data_type)
+        
+        # Check if in LOGO mode
+        is_logo = False
+        try:
+            if self.io_screen and hasattr(self.io_screen, 'main_window'):
+                main_window = self.io_screen.main_window
+                if hasattr(main_window, 'mainConfig') and main_window.mainConfig:
+                    is_logo = (main_window.mainConfig.plcProtocol == "logo!")
+        except Exception:
+            pass
         
         if data_type == 'bool':
             for byte_num in range(offset, 256):
                 byte_key = f"{prefix}{byte_num}"
                 used_bits = used.get(byte_key, set())
+                # Skip if it's a 'word' marker (only check in PLC mode, LOGO allows overlap)
+                if not is_logo and used_bits == 'word':
+                    continue
                 for bit in range(8):
                     if bit not in used_bits:
                         return (byte_num, bit, f"{prefix}{byte_num}.{bit}")
@@ -610,12 +671,22 @@ class DroppableTableWidget(QTableWidget):
         elif data_type in ['int', 'word']:
             start_byte = offset if offset % 2 == 0 else offset + 1
             for byte_num in range(start_byte, 254, 2):
-                byte1_key = f"{prefix}{byte_num}"
-                byte2_key = f"{prefix}{byte_num + 1}"
-                is_byte1_free = byte1_key not in used or len(used[byte1_key]) == 0
-                is_byte2_free = byte2_key not in used or len(used[byte2_key]) == 0
-                if is_byte1_free and is_byte2_free:
-                    return (byte_num, None, f"{prefix}W{byte_num}")
+                # Check for word conflicts
+                word_key = f"{prefix}W{byte_num}"
+                if word_key in used:
+                    continue  # Word address already used
+                
+                # In PLC mode: Check if ANY bits are used in these bytes
+                # In LOGO mode: Skip this check (digital and analog can overlap)
+                if not is_logo:
+                    byte1_key = f"{prefix}{byte_num}"
+                    byte2_key = f"{prefix}{byte_num + 1}"
+                    is_byte1_free = byte1_key not in used or len(used[byte1_key]) == 0
+                    is_byte2_free = byte2_key not in used or len(used[byte2_key]) == 0
+                    if not (is_byte1_free and is_byte2_free):
+                        continue  # Bytes have digital signals, skip in PLC mode
+                
+                return (byte_num, None, f"{prefix}W{byte_num}")
             return (start_byte, None, f"{prefix}W{start_byte}")
         return (offset, 0, f"{prefix}{offset}.0")
     
@@ -921,6 +992,157 @@ class IOScreen:
         
         return False, None
     
+    def load_table_from_io_configuration_file(self, io_config_path):
+        """
+        Load IO table from IO_configuration.json file (used after state load).
+        This loads only the signals that are in the file.
+        Based on load_io_configuration() but without file dialog and with proper popup.
+        
+        Args:
+            io_config_path: Path to IO_configuration.json file
+        """
+        try:
+            import json
+            from PyQt5.QtWidgets import QMessageBox
+            
+            # Read IO_configuration.json
+            with open(io_config_path, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+            
+            if 'signals' not in config_data:
+                logger.warning("[IO] Invalid IO configuration - no signals found")
+                return
+            
+            num_signals = len(config_data['signals'])
+            logger.info(f"[IO] Loading {num_signals} signals from IO_configuration.json to table")
+            
+            # Get table reference
+            table = self.main_window.findChild(type(None).__class__, 'tableWidget_IO')
+            if table is None:
+                # Try alternative method
+                if hasattr(self.main_window, 'tableWidget_IO'):
+                    table = self.main_window.tableWidget_IO
+                else:
+                    logger.error("[IO] Could not find tableWidget_IO")
+                    return
+            
+            # COMPLETELY CLEAR table - remove ALL rows first
+            logger.info(f"[IO] Completely clearing table ({table.rowCount()} rows)")
+            
+            # CRITICAL: Save custom_signal_names BEFORE clearing (because _clear_row_data deletes them)
+            saved_custom_names = {}
+            if hasattr(self.main_window, 'tanksim_config'):
+                config = self.main_window.tanksim_config
+                if hasattr(config, 'custom_signal_names'):
+                    saved_custom_names = config.custom_signal_names.copy()
+                    logger.info(f"[IO] Saved {len(saved_custom_names)} custom names before clearing")
+            
+            table.blockSignals(True)
+            
+            # Clear row data first (to clean up row_data dict etc, but this also removes custom names!)
+            row_count = table.rowCount()
+            for row in range(row_count):
+                table._clear_row_data(row)
+            
+            # Restore custom_signal_names after clearing
+            if saved_custom_names and hasattr(self.main_window, 'tanksim_config'):
+                config = self.main_window.tanksim_config
+                if not hasattr(config, 'custom_signal_names'):
+                    config.custom_signal_names = {}
+                config.custom_signal_names.update(saved_custom_names)
+                logger.info(f"[IO] Restored {len(saved_custom_names)} custom names after clearing")
+            
+            # Then remove ALL rows
+            table.clearContents()  # Clear all items first
+            table.setRowCount(0)    # Then remove all rows
+            logger.info("[IO] Table completely cleared (all rows removed)")
+            
+            # Unblock signals briefly to allow table to update
+            table.blockSignals(False)
+            app = table.window().qApp if hasattr(table.window(), 'qApp') else None
+            if app:
+                app.processEvents()
+            
+            # Block signals again for loading
+            table.blockSignals(True)
+            logger.info("[IO] Table ready for loading")
+            
+            # Load offsets if present
+            if 'offsets' in config_data:
+                self.byte_offsets = config_data['offsets'].copy()
+                # Update offset GUI fields if they exist
+                try:
+                    if hasattr(self.main_window, 'QLineEdit_BoolInput'):
+                        self.main_window.QLineEdit_BoolInput.setText(str(config_data['offsets'].get('BoolInput', 0)))
+                    if hasattr(self.main_window, 'QLineEdit_BoolOutput'):
+                        self.main_window.QLineEdit_BoolOutput.setText(str(config_data['offsets'].get('BoolOutput', 0)))
+                    if hasattr(self.main_window, 'QLineEdit_DWORDInput'):
+                        self.main_window.QLineEdit_DWORDInput.setText(str(config_data['offsets'].get('DWORDInput', 2)))
+                    if hasattr(self.main_window, 'QLineEdit_DWORDOutput'):
+                        self.main_window.QLineEdit_DWORDOutput.setText(str(config_data['offsets'].get('DWORDOutput', 2)))
+                except Exception as e:
+                    logger.warning(f"[IO] Could not update offset GUI fields: {e}")
+            
+            # Add rows for each signal and populate
+            logger.info(f"[IO] Adding {num_signals} new rows to table")
+            from gui.pages.ioConfigPage import EditableTableWidgetItem, ReadOnlyTableWidgetItem
+            from PyQt5.QtCore import Qt
+            
+            for idx, signal in enumerate(config_data['signals']):
+                # Add new row
+                table.insertRow(idx)
+                
+                # Get canonical name
+                canonical_name = signal.get('name', '')
+                display_name = canonical_name
+                
+                # Check for custom names
+                if hasattr(self.main_window, 'tanksim_config'):
+                    config = self.main_window.tanksim_config
+                    if hasattr(config, 'io_signal_mapping') and canonical_name in config.io_signal_mapping:
+                        attr_name = config.io_signal_mapping[canonical_name]
+                        if hasattr(config, 'custom_signal_names') and attr_name in config.custom_signal_names:
+                            display_name = config.custom_signal_names[attr_name]
+                            logger.debug(f"[IO] Applying custom name '{display_name}' for signal '{canonical_name}'")
+                
+                # Create table items
+                name_item = EditableTableWidgetItem(display_name)
+                name_item.setData(Qt.UserRole, canonical_name)
+                table.setItem(idx, 0, name_item)
+                table.setItem(idx, 1, ReadOnlyTableWidgetItem(signal.get('type', '')))
+                table.setItem(idx, 2, EditableTableWidgetItem(signal.get('byte', '')))
+                table.setItem(idx, 3, EditableTableWidgetItem(signal.get('bit', '')))
+                table.setItem(idx, 4, ReadOnlyTableWidgetItem(signal.get('address', '')))
+                table.setItem(idx, 5, ReadOnlyTableWidgetItem(signal.get('status', '')))
+                table.setItem(idx, 6, ReadOnlyTableWidgetItem(signal.get('description', '')))
+                table.setItem(idx, 7, ReadOnlyTableWidgetItem(signal.get('range', '')))
+                table._save_row_data(idx)
+            
+            table.blockSignals(False)
+            
+            logger.info(f"[IO] ✓ Loaded {num_signals} signals to table")
+            
+            # Save configuration
+            self.save_configuration()
+            
+            # Show success popup
+            QMessageBox.information(
+                self.main_window, 
+                "IO Configuration Loaded", 
+                f"Successfully loaded {num_signals} signals to IO table"
+            )
+            
+        except Exception as e:
+            logger.error(f"[IO] Error loading table from IO_configuration.json: {e}", exc_info=True)
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self.main_window,
+                "Load Error",
+                f"Failed to load IO configuration: {str(e)}"
+            )
+        
+        return False, None
+    
     def validate_and_fix_manual_address(self, row):
         """Validate a manually entered address"""
         table = self.main_window.tableWidget_IO
@@ -1006,6 +1228,13 @@ class IOScreen:
             'offsets': self.byte_offsets.copy(),
             'signals': []
         }
+        
+        # Save custom signal names if they exist
+        if hasattr(self.main_window, 'tanksim_config'):
+            config = self.main_window.tanksim_config
+            if hasattr(config, 'custom_signal_names') and config.custom_signal_names:
+                config_data['custom_signal_names'] = config.custom_signal_names.copy()
+                logger.info(f"[IO] Saving {len(config.custom_signal_names)} custom signal names to IO_configuration.json")
 
         for row in range(table.rowCount()):
             name_item = table.item(row, 0)
@@ -1173,7 +1402,7 @@ class IOConfigMixin:
             attr_name: The attribute name (e.g., "DQ_motorStartCmd")
             
         Returns:
-            Internal format address (e.g., "Q0.0", "QW2", "I0.0")
+            Internal format address (e.g., "Q0.0", "QW0", "I0.0")
         """
         try:
             # Digital Outputs: Q1 -> Q0.0, Q2 -> Q0.1, etc.
@@ -1183,10 +1412,10 @@ class IOConfigMixin:
                 bit_num = q_num - 1
                 return f"Q{byte_num}.{bit_num}"
             
-            # Analog Outputs: AQ1 -> QW2, AQ2 -> QW4, etc.
+            # Analog Outputs: AQ1 -> QW0, AQ2 -> QW2, AQ3 -> QW4, etc.
             elif logo_address.startswith('AQ'):
                 aq_num = int(logo_address[2:])
-                byte_num = (aq_num - 1) * 2 + 2
+                byte_num = (aq_num - 1) * 2
                 return f"QW{byte_num}"
             
             # Inputs: V0.0 -> I0.0, V0.1 -> I0.1, etc.
@@ -1280,7 +1509,7 @@ class IOConfigMixin:
             attr_name: The attribute name (e.g., "DQ_motorStartCmd")
             
         Returns:
-            Internal format address (e.g., "Q0.0", "QW2", "I0.0")
+            Internal format address (e.g., "Q0.0", "QW0", "I0.0")
         """
         try:
             # Digital Outputs: Q1 -> Q0.0, Q2 -> Q0.1, etc.
@@ -1290,10 +1519,10 @@ class IOConfigMixin:
                 bit_num = q_num - 1
                 return f"Q{byte_num}.{bit_num}"
             
-            # Analog Outputs: AQ1 -> QW2, AQ2 -> QW4, etc.
+            # Analog Outputs: AQ1 -> QW0, AQ2 -> QW2, AQ3 -> QW4, etc.
             elif logo_address.startswith('AQ'):
                 aq_num = int(logo_address[2:])
-                byte_num = (aq_num - 1) * 2 + 2
+                byte_num = (aq_num - 1) * 2
                 return f"QW{byte_num}"
             
             # Inputs: V0.0 -> I0.0, V0.1 -> I0.1, etc.
@@ -1613,7 +1842,7 @@ class IOConfigMixin:
                         self.treeWidget_IO.signal_data[signal_name] = signal_info
     
     def load_all_tags_to_table(self):
-        """Load all draggable tags from tree into table (respects enabled_attrs from config)"""
+        """Load all draggable tags from tree into table (ALWAYS loads ALL tags from tree, ignores IO_configuration.json)"""
         if not hasattr(self, 'treeWidget_IO') or self.treeWidget_IO is None:
             QMessageBox.warning(self, "Error", "No tags available to load")
             return
@@ -1623,17 +1852,18 @@ class IOConfigMixin:
             return
         
         try:
-            # Get enabled attributes from config to filter signals
-            enabled_attrs = set()
-            if self.io_screen and hasattr(self.io_screen, 'main_window'):
-                main_window = self.io_screen.main_window
-                if hasattr(main_window, 'tanksim_config'):
-                    config = main_window.tanksim_config
-                    if hasattr(config, 'enabled_attrs'):
-                        enabled_attrs = config.enabled_attrs
-                        print(f"[IO] Loading tags: {len(enabled_attrs)} enabled attributes in config")
+            table = self.tableWidget_IO
+            
+            # CLEAR entire table first before loading all tags
+            logger.info("[IO] Clearing table before loading all tags")
+            table.blockSignals(True)
+            for row in range(table.rowCount()):
+                table._clear_row_data(row)
+            table.blockSignals(False)
+            logger.info("[IO] Table cleared")
             
             # Get all signal items from the tree (leaf nodes only)
+            # NO FILTERING - load ALL tags from tree
             all_signals = []
             
             def collect_signals(item):
@@ -1643,22 +1873,6 @@ class IOConfigMixin:
                     signal_name = item.text(0)
                     # Skip category labels and empty items
                     if signal_name and signal_name not in ['Inputs', 'Outputs', 'Digital', 'Analog', 'TankSim', 'ConveyorSim', 'GeneralControls']:
-                        # Check if this signal is enabled in config
-                        if enabled_attrs:
-                            # Get attribute name from signal name
-                            attr_name = None
-                            if hasattr(self.io_screen, 'main_window'):
-                                main_window = self.io_screen.main_window
-                                if hasattr(main_window, 'tanksim_config'):
-                                    config = main_window.tanksim_config
-                                    if hasattr(config, 'io_signal_mapping'):
-                                        # io_signal_mapping is dict: signal_name -> attr_name
-                                        attr_name = config.io_signal_mapping.get(signal_name)
-                            
-                            # Only add signal if its attribute is enabled
-                            if attr_name and attr_name not in enabled_attrs:
-                                return  # Skip this signal - not enabled
-                        
                         # Get signal data if available
                         signal_data = None
                         if hasattr(self.treeWidget_IO, 'signal_data') and signal_name in self.treeWidget_IO.signal_data:
@@ -2286,6 +2500,116 @@ class IOConfigMixin:
             
         except Exception as e:
             return  # Silent fail for auto-reload
+    
+    def load_table_from_config(self):
+        """
+        Load table from config's enabled_attrs (used after state load).
+        This loads only the signals that are in IO_configuration.json (enabled_attrs).
+        Different from load_all_tags_to_table() which loads ALL tags from tree.
+        """
+        if not hasattr(self, 'tableWidget_IO') or self.tableWidget_IO is None:
+            logger.warning("tableWidget_IO not initialized")
+            return
+        
+        if not hasattr(self, 'tanksim_config'):
+            logger.warning("tanksim_config not available")
+            return
+        
+        try:
+            config = self.tanksim_config
+            table = self.tableWidget_IO
+            
+            # Clear table first
+            table.setRowCount(0)
+            table.blockSignals(True)
+            
+            # Get enabled attributes (these are the saved signals)
+            enabled_attrs = getattr(config, 'enabled_attrs', [])
+            if not enabled_attrs:
+                logger.info("[IO] No enabled_attrs in config - table will be empty")
+                table.blockSignals(False)
+                return
+            
+            logger.info(f"[IO] Loading {len(enabled_attrs)} signals from config to table")
+            
+            # Get reverse mapping: attr_name -> signal_name
+            attr_to_signal = {}
+            if hasattr(config, 'io_signal_mapping'):
+                for signal_name, attr_name in config.io_signal_mapping.items():
+                    attr_to_signal[attr_name] = signal_name
+            
+            # Add each enabled signal to table
+            row = 0
+            for attr_name in enabled_attrs:
+                # Get signal name from attribute
+                signal_name = attr_to_signal.get(attr_name, attr_name)
+                
+                # Get signal data from tree
+                signal_data = None
+                if hasattr(self.treeWidget_IO, 'signal_data') and signal_name in self.treeWidget_IO.signal_data:
+                    signal_data = self.treeWidget_IO.signal_data[signal_name]
+                
+                # Get address from config
+                attr_value = getattr(config, attr_name, None)
+                if attr_value is None:
+                    continue
+                
+                # Add row
+                table.setRowCount(row + 1)
+                
+                # Set signal name (use custom name if available)
+                display_name = signal_name
+                if hasattr(config, 'custom_signal_names') and attr_name in config.custom_signal_names:
+                    display_name = config.custom_signal_names[attr_name]
+                
+                name_item = EditableTableWidgetItem(display_name)
+                name_item.setData(Qt.UserRole, signal_name)  # Store canonical name
+                table.setItem(row, 0, name_item)
+                
+                # Set type
+                data_type = signal_data.get('type', 'bool') if signal_data else 'bool'
+                table.setItem(row, 1, ReadOnlyTableWidgetItem(data_type))
+                
+                # Set address from config
+                if "bit" in attr_value:
+                    byte_num = attr_value["byte"]
+                    bit_num = attr_value["bit"]
+                    io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
+                    address = f"{io_prefix}{byte_num}.{bit_num}"
+                    
+                    table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
+                    table.setItem(row, 3, EditableTableWidgetItem(str(bit_num)))
+                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
+                else:
+                    byte_num = attr_value["byte"]
+                    io_prefix = "Q" if attr_name.startswith(("DQ", "AQ")) else "I"
+                    address = f"{io_prefix}W{byte_num}"
+                    
+                    table.setItem(row, 2, EditableTableWidgetItem(str(byte_num)))
+                    table.setItem(row, 3, EditableTableWidgetItem(""))
+                    table.setItem(row, 4, ReadOnlyTableWidgetItem(address))
+                
+                # Status column
+                status_text = signal_data.get('status', 'FALSE') if signal_data else 'FALSE'
+                status_item = ReadOnlyTableWidgetItem(status_text)
+                status_item.setBackground(QColor(200, 230, 245))  # Blue
+                table.setItem(row, 5, status_item)
+                
+                # Description and range
+                if signal_data:
+                    table.setItem(row, 6, ReadOnlyTableWidgetItem(signal_data.get('description', '')))
+                    table.setItem(row, 7, ReadOnlyTableWidgetItem(signal_data.get('range', '')))
+                
+                table._save_row_data(row)
+                row += 1
+            
+            table.blockSignals(False)
+            logger.info(f"[IO] ✓ Loaded {row} signals to table from config")
+            
+        except Exception as e:
+            logger.error(f"[IO] Error loading table from config: {e}", exc_info=True)
+            if hasattr(self, 'tableWidget_IO'):
+                self.tableWidget_IO.blockSignals(False)
         
     def _update_table_from_config(self):
         """Update the GUI table with addresses from the config"""

@@ -506,6 +506,19 @@ def load_state_interactive(main_window: Any) -> bool:
             # 1. Activate protocol from loaded config (must be second to set up protocolManager)
             _activate_protocol_after_load(main_window)
 
+            # 1.5 CRITICAL: Write saved IO signals to IO_configuration.json BEFORE reload
+            # This ensures only saved signals are loaded
+            if 'io_config' in state_data:
+                import json
+                io_config_data = state_data['io_config']
+                num_signals = len(io_config_data.get('signals', []))
+                logger.info(f"[LOAD] Writing {num_signals} saved signals to IO_configuration.json")
+                
+                with open(io_config_output_path, 'w', encoding='utf-8') as f:
+                    json.dump(io_config_data, f, indent=2, ensure_ascii=False)
+                
+                logger.info("[LOAD]   ✓ IO_configuration.json updated with saved signals")
+
             # 2. Reload IO configuration
             _reload_io_config_after_load(
                 main_window, str(io_config_output_path))
@@ -525,8 +538,10 @@ def load_state_interactive(main_window: Any) -> bool:
             # CRITICAL: Clear flag to re-enable write_gui_values_to_status()
             main_window._loading_state = False
             logger.info("[LOAD] ✓ Loading flag cleared - write_gui_values_to_status() re-enabled")
+            
         except Exception as e:
             logger.error(f"Post-load sync failed: {e}", exc_info=True)
+            main_window._loading_state = False  # Clear flag even on error
             QMessageBox.warning(
                 main_window,
                 "Load Complete (Partial)",
@@ -534,11 +549,13 @@ def load_state_interactive(main_window: Any) -> bool:
             )
             return True
 
+        logger.info(f"[LOAD] ========== SHOWING SUCCESS POPUP ==========")
         QMessageBox.information(
             main_window,
             "Load Successful",
             f"State loaded from:\n{file_path}\n\n{message}"
         )
+        logger.info(f"[LOAD] ========== SUCCESS POPUP SHOWN ==========")
 
         return True
 
@@ -660,8 +677,12 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
 
         # CRITICAL FIX: Save config values BEFORE IO reload (which resets them)
         saved_config_values = {}
+        # NOTE: Do NOT save custom_signal_names here! 
+        # They are already in IO_configuration.json from the state file
+        # and will be loaded correctly by load_io_config_from_file()
         if hasattr(active_sim, 'config'):
             config = active_sim.config
+            
             if hasattr(config, 'importExportVariableList'):
                 for var in config.importExportVariableList:
                     if hasattr(config, var):
@@ -669,8 +690,9 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
                 logger.info(f"[LOAD]   Saved {len(saved_config_values)} config values before IO reload")
 
         # Load IO config (WARNING: This may reset config values!)
+        # This will load custom_signal_names from IO_configuration.json (which was written from state file)
         active_sim.config.load_io_config_from_file(io_config_path)
-        logger.info("[LOAD]   IO config loaded")
+        logger.info("[LOAD]   IO config loaded (including custom signal names from state)")
 
         # CRITICAL FIX: Restore config values AFTER IO reload
         if saved_config_values and hasattr(active_sim, 'config'):
@@ -682,6 +704,11 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
             # DEBUG: Verify restoration worked with object ID
             logger.info(f"[LOAD]   DEBUG: After restore, tankVolume={active_sim.config.tankVolume}, valveInMaxFlow={active_sim.config.valveInMaxFlow}")
             logger.info(f"[LOAD]   DEBUG: Config object id after restore: {id(active_sim.config)}")
+        
+        # Log custom signal names that were loaded from IO_configuration.json
+        if hasattr(active_sim, 'config') and hasattr(active_sim.config, 'custom_signal_names'):
+            num_custom = len(active_sim.config.custom_signal_names)
+            logger.info(f"[LOAD]   Custom signal names loaded from state: {num_custom} names")
 
         # Update GUI refs - CRITICAL: This must point to the restored config
         if hasattr(main_window, 'tanksim_config'):
@@ -694,11 +721,41 @@ def _reload_io_config_after_load(main_window: Any, io_config_path: str) -> None:
         if hasattr(main_window, 'load_io_tree'):
             main_window.load_io_tree()
 
-        if hasattr(main_window, 'load_all_tags_to_table'):
-            main_window.load_all_tags_to_table()
-
-        if hasattr(main_window, '_update_table_from_config'):
-            main_window._update_table_from_config()
+        # Load table from config (which now contains only saved signals after load_state)
+        # Use load_table_from_io_configuration_file() instead of load_all_tags_to_table()
+        # because we want only the enabled signals from IO_configuration.json, not ALL tree tags
+        io_screen = None
+        
+        # Try multiple methods to find IO Config page
+        if hasattr(main_window, 'io_screen'):
+            io_screen = main_window.io_screen
+            logger.info("[LOAD]   Found io_screen via main_window.io_screen")
+        
+        if not io_screen and hasattr(main_window, 'stackedWidget_generalControls'):
+            try:
+                io_widget = main_window.stackedWidget_generalControls.widget(2)
+                if io_widget:
+                    io_screen = io_widget
+                    logger.info("[LOAD]   Found io_screen via stackedWidget index 2")
+            except Exception as e:
+                logger.warning(f"[LOAD]   Could not get io_screen from stacked widget: {e}")
+        
+        # Try findChild as fallback
+        if not io_screen:
+            try:
+                from PyQt5.QtWidgets import QWidget
+                io_screen = main_window.findChild(QWidget, "io_screen")
+                if io_screen:
+                    logger.info("[LOAD]   Found io_screen via findChild")
+            except Exception:
+                pass
+        
+        if io_screen and hasattr(io_screen, 'load_table_from_io_configuration_file'):
+            logger.info("[LOAD]   Calling load_table_from_io_configuration_file()...")
+            io_screen.load_table_from_io_configuration_file(io_config_path)
+            logger.info("[LOAD]   ✓ Table loaded from IO_configuration.json (saved signals only)")
+        else:
+            logger.warning(f"[LOAD]   Could not find io_screen or load_table_from_io_configuration_file method (io_screen={io_screen}, has_method={hasattr(io_screen, 'load_table_from_io_configuration_file') if io_screen else False})")
 
         # Start forced write period
         if hasattr(main_window, 'mainConfig') and hasattr(main_window.mainConfig, 'ioHandler'):
